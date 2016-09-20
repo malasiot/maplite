@@ -1,0 +1,24 @@
+// Protocol Version 1
+
+package mesh_tile;
+
+option optimize_for = LITE_RUNTIME;
+
+message Tile {
+        
+        message Channel {
+                required string name = 1 ;
+                optional uint32 dimensions = 2 [default = 1] ;
+                repeated float data = 3 ;
+        }
+
+        message Mesh {
+                repeated float coords = 8;
+                repeated uint64 triangles = 9 ;
+
+        }
+
+        required Mesh mesh = 4 ;
+        repeated Channel channels = 5;
+
+}
