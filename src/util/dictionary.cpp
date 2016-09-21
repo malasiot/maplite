@@ -148,4 +148,16 @@ int Dictionary::count(const string &str) const
     return cc ;
 }
 
+uint64_t Dictionary::capacity() const
+{
+    uint64_t bytes = 0;
+
+    ContainerType::const_iterator it = container_.begin() ;
+
+    for( ; it != container_.end() ; ++it )
+        bytes += it->first.capacity() + it->second.capacity() ;
+
+    return bytes ;
+}
+
 bool Dictionary::empty() const { return container_.empty() ; }

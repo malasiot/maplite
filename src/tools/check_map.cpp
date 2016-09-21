@@ -32,9 +32,12 @@ int main(int argc, char *argv[])
     if ( mapFile.empty()  )
         printUsageAndExit() ;
 
-    mapsforge::MapFile reader ;
+    std::shared_ptr<mapsforge::TileIndex> ti(new mapsforge::TileIndex(1000000)) ;
+    mapsforge::MapFile reader(ti) ;
 
     reader.open(mapFile) ;
-    reader.readTile(142, 95, 8);
+    reader.readTile(1145, 771, 11);
+     reader.readTile(1144, 771, 11);
+      reader.readTile(1145, 772, 11);
 
 }

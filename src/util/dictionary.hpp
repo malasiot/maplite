@@ -48,6 +48,8 @@ class Dictionary
     int count(const std::regex &kx) const ;
     int count(const std::string &) const ;
 
+    uint64_t capacity() const ;
+
 	bool empty() const ;
 
     void dump() const ;
