@@ -6,6 +6,7 @@
 #include <boost/filesystem.hpp>
 
 #include "mapsforge_map_reader.hpp"
+#include "theme.hpp"
 
 using namespace std ;
 namespace fs = boost::filesystem ;
@@ -39,5 +40,8 @@ int main(int argc, char *argv[])
     reader.readTile(1145, 771, 11);
      reader.readTile(1144, 771, 11);
       reader.readTile(1145, 772, 11);
+
+     mapsforge::RenderTheme theme ;
+     theme.read("/home/malasiot/Downloads/elevate4/Elevate.xml") ;
 
 }

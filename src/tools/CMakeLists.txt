@@ -17,6 +17,11 @@ SET ( CHECK_MAP_SOURCES
 	${SRC_ROOT}/util/dictionary.cpp
 	${SRC_ROOT}/util/dictionary.hpp
 
+	${SRC_ROOT}/renderer/theme.cpp
+	${SRC_ROOT}/renderer/theme.hpp
+
+	${SRC_ROOT}/3rdparty/pugixml/pugixml.cpp
+
 	${SRC_ROOT}/tools/check_map.cpp
 )
 
