@@ -7,9 +7,11 @@
 
 #include "mapsforge_map_reader.hpp"
 #include "theme.hpp"
+#include "renderer.hpp"
 
 using namespace std ;
 namespace fs = boost::filesystem ;
+using namespace mapsforge ;
 
 
 void printUsageAndExit()
@@ -34,14 +36,24 @@ int main(int argc, char *argv[])
         printUsageAndExit() ;
 
     std::shared_ptr<mapsforge::TileIndex> ti(new mapsforge::TileIndex(1000000)) ;
-    mapsforge::MapFile reader(ti) ;
+    MapFile reader(ti) ;
 
     reader.open(mapFile) ;
-    reader.readTile(1145, 771, 11);
-     reader.readTile(1144, 771, 11);
-      reader.readTile(1145, 772, 11);
+    VectorTile tile = reader.readTile(1145, 771, 11);
 
-     mapsforge::RenderTheme theme ;
-     theme.read("/home/malasiot/Downloads/elevate4/Elevate.xml") ;
+    mapsforge::RenderTheme theme ;
+    theme.read("/home/malasiot/Downloads/elevate4/Elevate.xml") ;
+
+    Renderer r(theme) ;
+
+    ImageBuffer buf(256, 256) ;
+
+    BBox bbox ;
+    tms::tileLatLonBounds(1145, (1 << 11 ) - 771 - 1, 11, bbox.miny_, bbox.minx_, bbox.maxy_, bbox.maxx_) ;
+
+    r.render(buf, tile, bbox, 11, theme.defaultLayer(), 128) ;
+
+    buf.saveToPNG("/tmp/render.png") ;
+
 
 }

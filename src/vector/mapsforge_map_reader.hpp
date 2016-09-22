@@ -13,8 +13,6 @@
 
 namespace mapsforge {
 
-
-
 struct LatLon {
     double lat_, lon_ ;
 };

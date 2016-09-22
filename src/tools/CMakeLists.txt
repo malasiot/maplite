@@ -19,6 +19,13 @@ SET ( CHECK_MAP_SOURCES
 
 	${SRC_ROOT}/renderer/theme.cpp
 	${SRC_ROOT}/renderer/theme.hpp
+	${SRC_ROOT}/renderer/css_color_parser.cpp
+
+	${SRC_ROOT}/renderer/renderer.cpp
+	${SRC_ROOT}/renderer/renderer.hpp
+
+	${SRC_ROOT}/renderer/image_buffer.cpp
+	${SRC_ROOT}/renderer/image_buffer.hpp
 
 	${SRC_ROOT}/3rdparty/pugixml/pugixml.cpp
 
@@ -27,4 +34,5 @@ SET ( CHECK_MAP_SOURCES
 
 
 ADD_EXECUTABLE(mf_check_map ${CHECK_MAP_SOURCES})
-TARGET_LINK_LIBRARIES(mf_check_map ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(mf_check_map ${Boost_LIBRARIES} ${CAIRO_LIBRARY} ${FONTCONFIG_LIBRARIES}
+	${FREETYPE_LIBRARIES} ${HARFBUZZ_LIBRARIES} ${PNG_LIBRARIES})
