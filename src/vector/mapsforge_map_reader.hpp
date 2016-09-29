@@ -10,12 +10,11 @@
 
 #include "dictionary.hpp"
 #include "cache.hpp"
+#include "tile_key.hpp"
+#include "geometry.hpp"
 
 namespace mapsforge {
 
-struct LatLon {
-    double lat_, lon_ ;
-};
 
 struct POI {
     double lat_, lon_ ;
@@ -25,6 +24,8 @@ struct POI {
 struct Way {
     std::vector<std::vector<LatLon>> coords_ ; // line or polygon
     Dictionary tags_ ;
+    int layer_ ;
+    bool is_closed_ ;
 };
 
 struct VectorTile {
@@ -74,7 +75,7 @@ public:
 
     const MapFileInfo &getMapFileInfo() const { return info_ ; }
 
-    VectorTile readTile(int32_t tx, int32_t ty, uint8_t tz);
+    VectorTile readTile(const TileKey &);
 
     void readTiles() ;
 

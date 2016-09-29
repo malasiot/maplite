@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <string>
 
-#include "geom_helpers.hpp"
+#include "geometry.hpp"
 
 struct ZoomInterval {
     ZoomInterval(): min_zoom_(-1), max_zoom_(-1), simplify_threshold_(0) {}

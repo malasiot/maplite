@@ -19,7 +19,8 @@ SET ( TILE_SERVER_SOURCES
 #	${SRC_ROOT}/server/mesh_tile_renderer.cpp
 #	${SRC_ROOT}/server/mesh_tile_renderer.hpp
 
-	${SRC_ROOT}/map/geom_helpers.cpp
+	${SRC_ROOT}/renderer/tms.cpp
+	${SRC_ROOT}/renderer/tms.hpp
 
 
 	${SRC_ROOT}/server/connection.cpp

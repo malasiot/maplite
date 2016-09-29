@@ -8,11 +8,11 @@
 #include "mapsforge_map_reader.hpp"
 #include "theme.hpp"
 #include "renderer.hpp"
+#include "tile_key.hpp"
 
 using namespace std ;
 namespace fs = boost::filesystem ;
 using namespace mapsforge ;
-
 
 void printUsageAndExit()
 {
@@ -39,7 +39,10 @@ int main(int argc, char *argv[])
     MapFile reader(ti) ;
 
     reader.open(mapFile) ;
-    VectorTile tile = reader.readTile(1145, 771, 11);
+
+    TileKey key(146560, 98747, 18, true) ;
+
+    VectorTile tile = reader.readTile(key);
 
     mapsforge::RenderTheme theme ;
     theme.read("/home/malasiot/Downloads/elevate4/Elevate.xml") ;
@@ -48,10 +51,9 @@ int main(int argc, char *argv[])
 
     ImageBuffer buf(256, 256) ;
 
-    BBox bbox ;
-    tms::tileLatLonBounds(1145, (1 << 11 ) - 771 - 1, 11, bbox.miny_, bbox.minx_, bbox.maxy_, bbox.maxx_) ;
 
-    r.render(buf, tile, bbox, 11, theme.defaultLayer(), 128) ;
+
+    r.render(buf, tile, key, theme.defaultLayer(), 128) ;
 
     buf.saveToPNG("/tmp/render.png") ;
 

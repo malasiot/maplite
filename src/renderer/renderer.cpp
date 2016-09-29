@@ -1,21 +1,34 @@
 #include "renderer.hpp"
+#include "geometry.hpp"
+
 #include "theme.hpp"
 
 #include <fstream>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
+#include <array>
+
+#include "svg/rendering.hpp"
 
 using namespace std ;
 using namespace mapsforge ;
 
-class ResourceCache {
 
-};
+extern void latlon_to_tms(const std::vector<std::vector<LatLon>> &latlon,  std::vector<std::vector<Coord>> &coords) ;
 
-class CollisionChecker {
+extern void sample_linear_geometry(
+                    const std::vector< std::vector<Coord>> geom,
+                    const cairo_matrix_t &cmm,
+                    float gap,
+                    float initial_gap,
+                    float box_len,
+                    std::vector<Coord> &samples,
+                    std::vector<double> &angles) ;
 
-};
+void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<vector<Coord>> &res) ;
+
 
 Renderer::Renderer(const mapsforge::RenderTheme &theme):
     cache_(new ResourceCache), theme_(theme)
@@ -23,22 +36,106 @@ Renderer::Renderer(const mapsforge::RenderTheme &theme):
 
 }
 
-static void get_rgb_color(uint32_t clr, double r, double g, double b) {
+static void get_argb_color(uint32_t clr, double &a, double &r, double &g, double &b) {
+    a = ((clr >> 24) & 0xff) / 255.0;
     r = ((clr >> 16) & 0xff) / 255.0;
     g = ((clr >> 8) & 0xff) / 255.0;
     b = ((clr >> 0) & 0xff) / 255.0;
 }
 
 
-bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const BBox &box, uint8_t zoom, const string &layer, unsigned int query_buffer)
+void get_poi_from_area(const Way &way, const vector<Coord> &coords, double &mx, double &my) {
+    mx = my = 0.0 ;
+    for(uint i=0 ; i<coords.size()-1 ; i++) {
+        const Coord &c = coords[i] ;
+        mx += c.x_ ;
+        my += c.y_ ;
+    }
+
+    mx /= coords.size()-1 ;
+    my /= coords.size()-1 ;
+}
+
+
+class WayInstructionSorter {
+public:
+    WayInstructionSorter(const vector<Way> &ways, const vector<pair<uint, RenderInstructionPtr>> &inst): ways_(ways), instructions_(inst) {}
+
+    bool operator() (const pair<uint, RenderInstructionPtr> &a, const pair<uint, RenderInstructionPtr> &b) {
+
+        if ( a.second->z_order_ == b.second->z_order_ )
+            return ( ways_[a.first].layer_ < ways_[b.first].layer_ ) ;
+        else
+            return  (a.second->z_order_ < b.second->z_order_) ;
+    }
+
+    const vector<Way> &ways_ ;
+    const vector<pair<uint, RenderInstructionPtr>> &instructions_ ;
+};
+
+class POIInstructionSorter {
+public:
+    POIInstructionSorter() {}
+
+    bool operator() (const Renderer::POIInstruction &a, const Renderer::POIInstruction &b) {
+        return  (a.ri_->priority_ > b.ri_->priority_) ;
+    }
+
+};
+
+void Renderer::filterWays(const string &layer, uint8_t zoom, const std::vector<Way> &ways,
+                          std::vector<std::pair<uint, RenderInstructionPtr> > &instructions)
 {
+
+    for( uint32_t idx = 0 ; idx < ways.size() ; ++idx  ) {
+        const Way &way = ways[idx] ;
+        vector<RenderInstructionPtr> ris ;
+
+        if ( theme_.match(layer, way.tags_, zoom, way.is_closed_, true, ris)) {
+            for( const auto &ri: ris ) {
+                instructions.push_back(make_pair(idx, ri)) ;
+            }
+        }
+    }
+
+    std::sort(instructions.begin(), instructions.end(), WayInstructionSorter(ways, instructions)) ;
+
+}
+
+void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, const std::vector<mapsforge::POI> &pois,
+                          std::vector<POIInstruction> &instructions)
+{
+    for( uint32_t idx = 0 ; idx < pois.size() ; ++idx  ) {
+        const POI &poi = pois[idx] ;
+        vector<RenderInstructionPtr> ris ;
+
+        if ( theme_.match(layer, poi.tags_, zoom, false, false, ris)) {
+            for( const auto &ri: ris ) {
+                double mx, my ;
+                tms::latlonToMeters(poi.lat_, poi.lon_, mx, my) ;
+
+                if ( box.contains(mx, my))
+                    instructions.emplace_back(mx, my, 0, ri, poi.tags_.get(ri->key_), idx) ;
+            }
+        }
+    }
+
+
+    std::sort(instructions.begin(), instructions.end(), POIInstructionSorter()) ;
+}
+
+bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const TileKey &key, const string &layer, unsigned int query_buffer)
+{
+    BBox box ;
+    tms::tileLatLonBounds(key.x(), key.y(), key.z(), box.miny_, box.minx_, box.maxy_, box.maxx_) ;
+    uint8_t zoom = key.z();
+
     BBox target_extents, query_extents ;
 
     tms::latlonToMeters(box.miny_, box.minx_, target_extents.minx_, target_extents.miny_) ;
     tms::latlonToMeters(box.maxy_, box.maxx_, target_extents.maxx_, target_extents.maxy_) ;
 
     const double scale = target_extents.width()/target.width() ;
-    const double scale_denom = scale/0.00028;
 
     // inflate target box with buffer to avoid rendering artifacts of labels accross tiles
 
@@ -68,7 +165,6 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const BBox &b
     ctx.cmm_ = cmm ;
     ctx.cr_ = cr ;
     ctx.scale_ = scale ;
-    ctx.colc_.reset(new CollisionChecker()) ;
     ctx.extents_ = target_extents ;
 
     // set map background here
@@ -79,38 +175,111 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const BBox &b
     cairo_rectangle(cr, target_extents.minx_, target_extents.miny_, target_extents.width(), target_extents.height()) ;
     cairo_restore(cr) ;
 
+    double a, r, g, b;
+    get_argb_color(theme_.backgroundColor(), a, r, g, b) ;
 
-    double r, g, b;
-    get_rgb_color(theme_.backgroundColor(), r, g, b) ;
+    if ( a == 1 ) cairo_set_source_rgb(cr, r, g, b);
+    else cairo_set_source_rgba(cr, r, g, b, a) ;
 
-    cairo_set_source_rgb(cr, r, g, b);
     cairo_fill_preserve(cr) ;
     cairo_clip(cr) ;
+
+    // initialize context
+
+    ctx.scale_ = ( zoom > 12 ) ? pow(1.5, zoom - 12 ) : 1.0 ;
 
     // set global parameters
 
     cairo_set_antialias (cr, CAIRO_ANTIALIAS_SUBPIXEL); //?
 
-    for( const POI &poi: tile.pois_ ) {
-        vector<RenderInstructionPtr> inst_list ;
-        theme_.match(layer, poi.tags_, zoom, false, false, inst_list) ;
+    // sort ways based on layer attribute
 
-        double mx, my ;
-        tms::latlonToMeters(poi.lat_, poi.lon_, mx, my) ;
+    vector<pair<uint32_t, RenderInstructionPtr>> way_instructions ;
+    vector<POIInstruction> poi_instructions ;
 
-        for( const RenderInstructionPtr &ip: inst_list ) {
-            if ( ip->type() == RenderInstruction::Circle ) {
-                CircleInstruction &ins = *std::dynamic_pointer_cast<CircleInstruction>(ip) ;
-                drawCircle(&ctx, mx, my, ins) ;
+    filterWays(layer, zoom, tile.ways_, way_instructions ) ;
+
+    for( auto &ip: way_instructions ) {
+
+        const Way &way = tile.ways_[ip.first] ;
+        RenderInstructionPtr ri = ip.second ;
+
+        vector<vector<Coord>> coords ;
+        latlon_to_tms(way.coords_, coords) ;
+
+        if ( ri->type() == RenderInstruction::Area ) {
+            drawArea(ctx, coords, *ri.get()) ;
+        }
+        else if ( ri->type() == RenderInstruction::Line ) {
+            drawLine(ctx, coords, *ri.get()) ;
+        }
+        else if ( ri->type() == RenderInstruction::Symbol || ri->type() == RenderInstruction::Caption ) {
+            double mx, my ;
+            get_poi_from_area(way, coords[0], mx, my) ;
+            if ( query_extents.contains(mx, my) )
+                poi_instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_)) ;
+        }
+        else if ( ri->type() == RenderInstruction::LineSymbol ) {
+            RenderInstruction &line = *ri.get() ;
+            vector<Coord> pts ;
+            vector<double> angles ;
+
+            double gap = ( line.repeat_ ) ? line.repeat_gap_ : 0.0 ;
+            double initial_gap = ( line.repeat_ ) ? line.repeat_start_ : 0.0 ;
+
+            sample_linear_geometry(coords, ctx.cmm_, gap, initial_gap, line.symbol_width_,  pts, angles) ;
+
+            for( uint i=0 ; i<pts.size() ; i++ ) {
+                const Coord &c = pts[i] ;
+                if ( query_extents.contains(c.x_, c.y_) )
+                    poi_instructions.emplace_back(c.x_, c.y_, angles[i], ri) ;
             }
-            else if ( ip->type() == RenderInstruction::Symbol ) {
-                SymbolInstruction &ins = *std::dynamic_pointer_cast<SymbolInstruction>(ip) ;
-                drawSymbol(&ctx, mx, my, ins) ;
+        }
+        else if ( ri->type() == RenderInstruction::PathText ) {
+            RenderInstruction &line = *ri.get() ;
+            vector<Coord> pts ;
+            vector<double> angles ;
+
+            double gap = ( line.repeat_ ) ? line.repeat_gap_ : 0.0 ;
+            double initial_gap = ( line.repeat_ ) ? line.repeat_start_ : 0.0 ;
+            string label = way.tags_.get(line.key_) ;
+
+            sample_linear_geometry(coords, ctx.cmm_, gap, initial_gap, line.font_size_ * label.length(), pts, angles) ;
+
+
+            for( uint i=0 ; i<pts.size() ; i++ ) {
+                const Coord &c = pts[i] ;
+                if ( query_extents.contains(c.x_, c.y_) )
+                    poi_instructions.emplace_back(c.x_, c.y_, angles[i], ri, label) ;
             }
-            else if ( ip->type() == RenderInstruction::Caption ) {
-                CaptionInstruction &ins = *std::dynamic_pointer_cast<CaptionInstruction>(ip) ;
-                drawCaption(&ctx, mx, my, poi.tags_.get(ins.key_, "?"), ins ) ;
-            }
+        }
+    }
+
+    filterPOIs(layer, zoom, query_extents, tile.pois_, poi_instructions ) ;
+
+    for( auto &ip: poi_instructions  ) {
+
+        RenderInstructionPtr ri = ip.ri_ ;
+        double mx = ip.x_, my = ip.y_ ;
+        double angle = ip.angle_ ;
+        string label = ip.label_ ;
+
+        switch ( ri->type() ) {
+        case RenderInstruction::Circle:
+            drawCircle(ctx, mx, my, *ri.get()) ;
+            break ;
+        case RenderInstruction::Symbol:
+            drawSymbol(ctx, mx, my, 0.0, *ri.get()) ;
+            break ;
+        case RenderInstruction::LineSymbol:
+            drawSymbol(ctx, mx, my, angle, *ri.get()) ;
+            break ;
+        case RenderInstruction::Caption:
+            drawCaption(ctx, mx, my, 0.0, label, *ri.get() ) ;
+            break ;
+        case RenderInstruction::PathText:
+            drawCaption(ctx, mx, my, angle, label, *ri.get() ) ;
+            break ;
         }
     }
 
@@ -118,134 +287,337 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const BBox &b
     cairo_destroy(cr) ;
 }
 
-void Renderer::drawCircle(Renderer::RenderingContext *ctx, double px, double py, const CircleInstruction &)
+
+void Renderer::applySimpleStroke(cairo_t *cr, float stroke_width, uint32_t stroke_clr, const vector<float> &dash_array,
+                                 uint cap, uint join)
 {
 
-}
+    cairo_set_line_width (cr, stroke_width) ;
 
-void Renderer::drawSymbol(Renderer::RenderingContext *ctx, double px, double py, const SymbolInstruction &)
-{
-
-}
-
-void Renderer::drawCaption(Renderer::RenderingContext *ctx, double px, double py, const string &label, const CaptionInstruction &)
-{
-
-}
-
-
-#if 0
-// dispatch to renderers
-
-void Renderer::renderFeatures(RenderingContext *cr, const FeatureCollection &col,  const std::vector<sld::SymbolizerPtr> &symbolizers)
-{
-    for( int i=0 ; i<symbolizers.size() ; i++ )
-    {
-        sld::SymbolizerPtr p_ = symbolizers[i] ;
-
-        switch ( p_->type() )
-        {
-            case sld::Symbolizer::Point:
-                renderPoints(cr, col, *static_cast<const sld::PointSymbolizer *>(p_.get())) ;
-                break ;
-            case sld::Symbolizer::Line:
-                renderLines(cr, col, *static_cast<const sld::LineSymbolizer *>(p_.get())) ;
-                break ;
-            case sld::Symbolizer::Polygon:
-                renderPolygons(cr, col, *static_cast<const sld::PolygonSymbolizer *>(p_.get())) ;
-                break ;
-            case sld::Symbolizer::Text:
-                renderText(cr, col, *static_cast<const sld::TextSymbolizer *>(p_.get())) ;
-                break ;
-        }
-    }
-
-}
-
-void Renderer::renderLines(RenderingContext *cr, const FeatureCollection &col, const sld::LineSymbolizer &smb)
-{
-    if ( smb.stroke->gstroke )
-        renderLinesGraphicStroke(cr, col, smb) ;
-    else if ( smb.stroke->gfill )
-        renderLinesGraphicFill(cr, col, smb) ;
+    if ( cap == RenderInstruction::RoundCap )
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND) ;
+    else if ( cap == RenderInstruction::Square )
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_SQUARE) ;
     else
-        renderLinesSimpleStroke(cr, col, smb) ;
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT) ;
+
+    if ( join == RenderInstruction::RoundJoin )
+        cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND) ;
+    else if ( join == RenderInstruction::Bevel )
+        cairo_set_line_join(cr, CAIRO_LINE_JOIN_BEVEL) ;
+    else
+        cairo_set_line_join(cr, CAIRO_LINE_JOIN_MITER);
+
+    if ( !dash_array.empty() )  {
+
+        uint n = dash_array.size() ;
+        vector<double> dashes(n) ;
+
+        for(int i=0 ; i<n ; i++ )
+            dashes[i] = (double)dash_array[i] ;
+
+        cairo_set_dash(cr, dashes.data(), n, 0 ) ;
+    }
+
+    double a, r, g, b;
+    get_argb_color(stroke_clr, a, r, g, b) ;
+
+    if ( a == 1 ) cairo_set_source_rgb(cr, r, g, b) ;
+    else cairo_set_source_rgba(cr, r, g, b, a) ;
 }
 
-void Renderer::renderText(RenderingContext *cr, const FeatureCollection &col, const sld::TextSymbolizer &smb)
+void Renderer::applySimpleFill(cairo_t *cr, uint32_t fill_clr)
 {
-    if ( smb.linePlacement ) renderLinesText(cr, col, smb) ;
-    else if ( smb.pointPlacement ) renderPointsText(cr, col, smb) ;
+    double a, r, g, b;
+    get_argb_color(fill_clr, a, r, g, b);
+
+    if ( a == 1 ) cairo_set_source_rgb(cr, r, g, b) ;
+    else cairo_set_source_rgba(cr, r, g, b, a) ;
 }
 
-void Renderer::renderPoints(RenderingContext *cr, const FeatureCollection &col, const sld::PointSymbolizer &smb)
+void Renderer::drawCircle(Renderer::RenderingContext &ctx, double px, double py, const RenderInstruction &)
 {
-    for( int i=0 ; i<smb.graphics.size() ; i++ )
-        renderPointsGraphic(cr, col, *smb.graphics[i]) ;
+
 }
 
 
-void Renderer::renderRaster(RenderingContext *ctx, const RasterData &raster, const std::vector<sld::SymbolizerPtr> &symbolizers)
+
+void Renderer::drawSymbol(Renderer::RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &symbol)
 {
-    cairo_matrix_t cmm ;
+    cairo_t *cr = ctx.cr_ ;
 
-    cairo_matrix_init_identity(&cmm) ;
+    float sw = 20, sh = 20 ;
+    if ( symbol.symbol_scaling_ == RenderInstruction::CustomSize ) {
+        sw = symbol.symbol_width_ ; sh = symbol.symbol_height_ ;
+    }
+    else if ( symbol.symbol_scaling_ == RenderInstruction::Percent ) {
+        sw *= symbol.symbol_percent_ ;
+        sh *= symbol.symbol_percent_ ;
+    }
 
-    cairo_matrix_scale(&cmm, 1/ctx->scale, -1/ctx->scale) ;
-    cairo_matrix_translate(&cmm, -ctx->extents.minx, -ctx->extents.maxy) ;
+    cairo_rectangle_t extents ;
+    cairo_surface_t *surface = renderGraphic(cr, symbol.src_, sw, sh, extents, 1.0) ;
 
-    for( int i=0 ; i<symbolizers.size() ; i++ )
+    if ( !surface ) return ;
+
+    double anchor_x = 0.5, anchor_y = 0.5, disp_x = 0, disp_y = 0, rotation = 0 ;
+
+    double ofx =  extents.width * anchor_x ;
+    double ofy =  extents.height * anchor_y ;
+
+    cairo_matrix_transform_point(&ctx.cmm_, &px, &py) ;
+
+    if ( ctx.colc_.addLabelBox(px, py, angle, extents.width + collision_extra, extents.height + collision_extra)  )
     {
-        sld::SymbolizerPtr p_ = symbolizers[i] ;
+        cairo_save(cr) ;
 
-        if ( p_->type() == sld::Symbolizer::Raster )
-        {
-            const sld::RasterSymbolizer *rs = static_cast<const sld::RasterSymbolizer *>(p_.get()) ;
+        cairo_translate(cr, px, py + symbol.dy_) ;
+        cairo_rotate(cr, angle) ;
+        cairo_translate(cr, -ofx, -ofy) ;
 
-            double opacity = 1.0 ;
+        cairo_set_source_surface (cr, surface, 0, 0);
+        cairo_paint(cr) ;
+/*
+        cairo_rectangle(cr, 0, 0, extents.width, extents.height);
+        cairo_set_source_rgb(cr, 0, 0, 0);
+        cairo_stroke(cr) ;
+*/
+        cairo_restore(cr) ;
 
-            Feature f ;
-            rs->opacity.eval(f).toNumber(opacity) ;
+    }
 
-            cairo_t *cr = ctx->cr ;
+    cairo_surface_destroy(surface) ;
+}
 
-            cairo_surface_t *img_surf = cairo_image_surface_create_for_data((unsigned char *)raster.image, CAIRO_FORMAT_ARGB32, raster.width, raster.height, raster.stride) ;
 
-            cairo_status_t status = cairo_surface_status(img_surf) ;
-            if ( status ==  CAIRO_STATUS_NO_MEMORY || status == CAIRO_STATUS_READ_ERROR ) continue ;
 
-            cairo_save(cr) ;
+void cairo_path_from_geometry(cairo_t *cr, const vector<vector<Coord>> &geom, bool close)
+{
+    for( uint i=0 ; i<geom.size() ; i++ ) {
+        const vector<Coord> &ring = geom[i];
 
-            cairo_transform(cr, &ctx->cmm) ;
-            cairo_translate(cr, raster.minx, raster.maxy) ;
-            cairo_scale(cr, raster.px, -raster.py) ;
+        int n = ring.size() ;
 
-            cairo_set_source_surface(cr, img_surf, 0, 0) ;
-            cairo_paint_with_alpha(cr, opacity);
+        for(int j=0 ; j<n ; j++) {
 
-            cairo_restore(cr) ;
+            double x0 = ring[j].x_ ;
+            double y0 = ring[j].y_ ;
 
-            cairo_surface_destroy(img_surf) ;
+            if ( j == 0 ) cairo_move_to(cr, x0, y0) ;
+            else cairo_line_to(cr, x0, y0) ;
         }
+
+        if ( close ) cairo_close_path(cr) ;
     }
 }
 
-string Renderer::resolveHRef(const string &href)
+void Renderer::drawLine(Renderer::RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &line) {
+
+    cairo_t *cr = ctx.cr_ ;
+
+    cairo_save(cr) ;
+
+    if ( line.src_.empty() ) {
+        cairo_save(cr) ;
+        cairo_transform(cr, &ctx.cmm_) ;
+
+        double offset = line.dy_ ;
+
+        cairo_device_to_user_distance(cr, &offset, &offset) ;
+
+        if ( line.dy_ == 0 )
+           cairo_path_from_geometry(cr, coords, false) ;
+        else {
+            vector<vector<Coord>> offset_coords ;
+            offset_geometry(coords,  offset, offset_coords) ;
+            cairo_path_from_geometry(cr, offset_coords, false) ;
+        }
+
+        cairo_restore(cr) ;
+
+        float stroke_width = ( line.scale_ != RenderInstruction::None ) ? line.stroke_width_ * ctx.scale_ : line.stroke_width_ ;
+        vector<float> stroke_dash_array(line.stroke_dash_array_) ;
+
+        if ( line.scale_ == RenderInstruction::All ) {
+            for( auto &v: stroke_dash_array )
+                v += ctx.scale_ ;
+        }
+
+        applySimpleStroke(cr, stroke_width, line.stroke_, stroke_dash_array, line.stroke_line_cap_, line.stroke_line_join_) ;
+
+        cairo_stroke(cr) ;
+
+    }
+    else {
+
+        cairo_save(cr) ;
+        cairo_transform(cr, &ctx.cmm_) ;
+        cairo_path_from_geometry(cr, coords, false) ;
+        cairo_restore(cr) ;
+
+        float sw = 20, sh = 20 ;
+        if ( line.symbol_scaling_ == RenderInstruction::CustomSize ) {
+            sw = line.symbol_width_ ; sh = line.symbol_height_ ;
+        }
+        else if ( line.symbol_scaling_ == RenderInstruction::CustomSize ) {
+            sw *= line.symbol_percent_ ;
+            sh *= line.symbol_percent_ ;
+        }
+
+        cairo_rectangle_t extents ;
+        cairo_surface_t *surface = renderGraphic(cr, line.src_, sw, sh, extents, 1.0 );
+        if ( !surface ) return ;
+
+        float stroke_width = ( line.scale_ != RenderInstruction::None ) ? line.stroke_width_ * ctx.scale_ : line.stroke_width_ ;
+        cairo_set_line_width(cr, stroke_width);
+
+        cairo_pattern_t *pattern = cairo_pattern_create_for_surface(surface) ;
+
+        cairo_set_source(cr, pattern);
+        cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING) ;
+
+        cairo_stroke(cr) ;
+
+        cairo_surface_destroy(surface) ;
+
+
+    }
+
+    cairo_restore(cr) ;
+}
+
+cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, double width, double height, cairo_rectangle_t &rect, double scale)
 {
-    string res ;
+    if ( boost::ends_with(src, ".png") ) {
 
-    if ( boost::starts_with(href, "file://") )
+        cairo_surface_t *is = 0 ;
+
+        ResourcePtr cached_data ;
+        if ( cache_->find(src, cached_data) )
+            is = dynamic_cast<CairoSurface *>(cached_data.get())->surface_ ;
+        else {
+            is = cairo_image_surface_create_from_png(src.c_str()) ;
+            if ( cairo_surface_status(is) != CAIRO_STATUS_SUCCESS ) return nullptr ;
+            cache_->save(src, ResourcePtr(new CairoSurface(is))) ;
+        }
+
+        if ( is )
+        {
+            double orig_width = cairo_image_surface_get_width(is) ;
+            double orig_height = cairo_image_surface_get_height(is) ;
+
+            double scale = ( height > 0 ) ? height/orig_height : 1.0 ;
+
+            rect.x = 0 ;
+            rect.y = 0 ;
+            rect.width = orig_width * scale ;
+            rect.height = orig_height * scale ;
+
+            cairo_surface_t *rs = cairo_recording_surface_create( CAIRO_CONTENT_COLOR_ALPHA, &rect) ;
+
+            cairo_t *ctx = cairo_create(rs) ;
+
+            cairo_save(ctx) ;
+            cairo_scale(ctx, scale, scale) ;
+
+            cairo_set_source_surface(ctx, is, 0, 0) ;
+
+            cairo_paint(ctx) ;
+            cairo_restore(ctx) ;
+
+            cairo_destroy(ctx) ;
+
+            return rs ;
+        }
+        else return 0 ;
+
+    }
+    else if ( boost::ends_with(src, ".svg") )
     {
-        res = href.substr(7) ;
 
-        boost::filesystem::path resource_path(res), absolute_path ;
+        std::shared_ptr<svg::DocumentInstance> doc ;
 
-        absolute_path = boost::filesystem::absolute(resource_path, resourceDir) ;
+        ResourcePtr cached_data ;
 
-        res = absolute_path.string() ;
+        if ( cache_->find(src, cached_data) )
+            doc = dynamic_cast<SVGDocumentResource *>(cached_data.get())->instance_ ;
+        else {
+            ifstream strm(src.c_str()) ;
+            doc.reset(new svg::DocumentInstance) ;
+            if ( !doc->load(strm) ) return nullptr ;
+            cache_->save(src, ResourcePtr(new SVGDocumentResource(doc))) ;
+        }
+
+        rect.x = 0 ;
+        rect.y = 0 ;
+        rect.width  = width ;
+        rect.height = height ;
+
+        cairo_surface_t *rs = cairo_recording_surface_create( CAIRO_CONTENT_COLOR_ALPHA, &rect) ;
+
+        cairo_t *ctx = cairo_create(rs) ;
+
+        doc->renderToTarget(ctx, 0, 0, width, height, 96) ;
+
+        cairo_destroy(ctx) ;
+
+ //       cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
+
+        return rs ;
+
     }
 
-    return res ;
+    return nullptr ;
 
 }
-#endif
+
+
+void Renderer::drawArea(Renderer::RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &area) {
+
+    cairo_t *cr = ctx.cr_ ;
+
+    cairo_save(cr) ;
+
+    cairo_save(cr) ;
+    cairo_transform(cr, &ctx.cmm_) ;
+    cairo_path_from_geometry(cr, coords, true) ;
+    cairo_restore(cr) ;
+
+    if ( area.src_.empty() ) {
+
+        applySimpleFill(cr, area.fill_) ;
+        cairo_fill_preserve(cr) ;
+
+        float stroke_width = ( area.scale_ != RenderInstruction::None ) ? area.stroke_width_ * ctx.scale_ : area.stroke_width_ ;
+
+        applySimpleStroke(cr, stroke_width, area.stroke_, vector<float>(), RenderInstruction::RoundCap, RenderInstruction::RoundJoin) ;
+        cairo_stroke(cr) ;
+    } else {
+        float sw = 20, sh = 20 ;
+        if ( area.symbol_scaling_ == RenderInstruction::CustomSize ) {
+            sw = area.symbol_width_ ; sh = area.symbol_height_ ;
+        }
+        else if ( area.symbol_scaling_ == RenderInstruction::Percent ) {
+            sw *= area.symbol_percent_ ;
+            sh *= area.symbol_percent_ ;
+        }
+        cairo_rectangle_t extents ;
+        cairo_surface_t *surface = renderGraphic(cr, area.src_, sw, sh, extents, 1.0);
+        if ( !surface ) return ;
+
+        cairo_pattern_t *pattern = cairo_pattern_create_for_surface(surface) ;
+
+        cairo_set_source(cr, pattern);
+        cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING) ;
+
+        cairo_fill(cr) ;
+
+        cairo_surface_destroy(surface) ;
+    }
+
+    cairo_restore(cr) ;
+}
+
+

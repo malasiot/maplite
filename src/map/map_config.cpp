@@ -13,7 +13,8 @@
 #include "rapidjson/error/error.h"
 #include "rapidjson/error/en.h"
 
-#include "geom_helpers.hpp"
+#include "geometry.hpp"
+#include "tms.hpp"
 
 using namespace std ;
 

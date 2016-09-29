@@ -6,7 +6,7 @@
 #include <memory>
 #include <mutex>
 
-#include "geom_helpers.hpp"
+#include "geometry.hpp"
 #include "dictionary.hpp"
 #include "shader_config.hpp"
 

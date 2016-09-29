@@ -10,7 +10,8 @@
 #include <sqlite3.h>
 #include <spatialite.h>
 
-#include "geom_helpers.hpp"
+#include "geometry.hpp"
+#include "tms.hpp"
 
 struct EncodedVertex {
     int32_t x_, y_ ;
@@ -33,7 +34,7 @@ public:
     BBox box(uint32_t buffer = 128) const {
         BBox res ;
         tms::tileBounds(tx_, ty_, tz_, res.minx_, res.miny_, res.maxx_, res.maxy_, buffer) ;
-        res.srid_ = 3857 ;
+
         return res ;
    }
 
@@ -59,7 +60,6 @@ private:
 
     void compute_extents() {
         tms::tileBounds(tx_, ty_, tz_, box_.minx_, box_.miny_, box_.maxx_, box_.maxy_) ;
-        box_.srid_ = 3857 ;
     }
 
     void tile_coords(double x, double y, int &tx, int &ty) {

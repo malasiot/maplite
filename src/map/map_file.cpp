@@ -166,7 +166,7 @@ static string makeBBoxQuery(const std::string &tableName, const std::string &geo
     else
         sql << "ST_ForceLHR(ST_Intersection(" << geomColumn << ",BuildMBR(" ;
 
-    sql << bbox.minx_ << ',' << bbox.miny_ << ',' << bbox.maxx_ << ',' << bbox.maxy_ << "," << bbox.srid_ ;
+    sql << bbox.minx_ << ',' << bbox.miny_ << ',' << bbox.maxx_ << ',' << bbox.maxy_ << "," << 3857 ;
     sql << ")))" ;
 
 
@@ -178,7 +178,7 @@ static string makeBBoxQuery(const std::string &tableName, const std::string &geo
     sql << " WHERE " ;
 
     sql << "__table__.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = BuildMBR(" ;
-    sql << bbox.minx_ << ',' << bbox.miny_ << ',' << bbox.maxx_ << ',' << bbox.maxy_ << "," << bbox.srid_ << ")) AND _geom_ NOT NULL" ;
+    sql << bbox.minx_ << ',' << bbox.miny_ << ',' << bbox.maxx_ << ',' << bbox.maxy_ << "," << 3857 << ")) AND _geom_ NOT NULL" ;
 
     return sql.str() ;
 }

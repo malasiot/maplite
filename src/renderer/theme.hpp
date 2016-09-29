@@ -17,9 +17,16 @@ typedef std::shared_ptr<Rule> RulePtr ;
 struct RenderInstruction ;
 typedef std::shared_ptr<RenderInstruction> RenderInstructionPtr ;
 
+struct SymbolInstruction ;
+
 struct Layer ;
 typedef std::shared_ptr<Layer> LayerPtr ;
 
+struct ThemeParseContext {
+    std::map<std::string,  RenderInstruction *> imap_ ;
+    std::string root_dir_ ;
+    uint32_t order_ ;
+};
 // mapsforge render theme v4
 
 class RenderTheme {
@@ -29,31 +36,39 @@ public:
 
     // load theme from file
 
-    bool read(const std::string &file_name) ;
+    bool read(const std::string &file_name, const std::string &resource_dir = std::string()) ;
 
     // match feature against theme to determine render instructions
 
-    void match(const std::string &layer, const Dictionary &tags, uint8_t zoom, bool is_closed, bool is_way,
+    bool match(const std::string &layer, const Dictionary &tags, uint8_t zoom, bool is_closed, bool is_way,
                std::vector<RenderInstructionPtr> &ris) const ;
 
     std::string defaultLayer() const { return default_layer_ ; }
     uint32_t backgroundColor() const { return map_bg_ ; }
 
 private:
+
+
+    friend class RenderInstruction ;
+
     std::map<std::string, LayerPtr> layers_ ;
     std::vector<RulePtr> rules_ ;
     std::string default_layer_ ;
     std::string default_lang_ ;
     std::string version_ ;
     uint32_t map_bg_, map_bg_outside_ ;
+    std::string resource_dir_ ;
 
 private:
     LayerPtr get_safe_layer(const std::string &id) const ;
-    RulePtr parse_rule(pugi::xml_node &node) ;
+    RulePtr parse_rule(pugi::xml_node &node, ThemeParseContext &) ;
     void get_categories(const LayerPtr &layer, std::set<std::string> &) const ;
 };
 
 struct Layer {
+
+    Layer(): z_order_(0), visible_(true), enabled_(true) {}
+
     std::string id_ ;
     std::map<std::string, std::string> names_ ;
     std::vector<std::string> categories_ ;
@@ -62,30 +77,34 @@ struct Layer {
     std::vector<LayerPtr> children_ ;
     LayerPtr parent_ ;
     bool visible_, enabled_ ;
+    uint8_t z_order_ ;
 };
 
 struct Rule {
     enum ElementType { Node, Way, Any } ;
     enum ClosedType { Yes, No, Both } ;
 
-    std::string k_, cat_ ;
-    std::vector<std::string> v_ ; // list of possible values
+    std::string cat_ ;
+    std::vector<std::string> k_, v_ ; // list of possible keys/values
 
     uint e_, closed_ ;
 
     uint8_t zoom_min_, zoom_max_ ; // 0  means undefined
 
+
     std::vector<RulePtr> children_ ; // sub-rules
     RulePtr parent_ ;
     std::vector<RenderInstructionPtr> instructions_ ;
 
-    void match(const std::set<std::string> &categories, const Dictionary &tags, uint8_t zoom, bool is_closed, bool is_way,
+    bool match(const std::set<std::string> &categories, const Dictionary &tags, uint8_t zoom, bool is_closed, bool is_way,
                std::vector<RenderInstructionPtr> &ris) const ;
 };
 
 struct RenderInstruction {
+
     enum Type { Area, Line, Caption, Circle, LineSymbol, PathText, Symbol } ;
     enum Scale { All, None, Stroke } ;
+    enum SymbolScaling { DefaultSize, CustomSize, Percent } ;
     enum Display { Allways, Never, IfSpace } ;
     enum LineCap { Butt, RoundCap, Square } ;
     enum LineJoin { Miter, RoundJoin, Bevel } ;
@@ -93,95 +112,43 @@ struct RenderInstruction {
     enum FontStyle { Bold, BoldItalic, Italic, Normal } ;
     enum Position {  Auto, Center, Below, BelowLeft, BelowRight, Above, AboveLeft, AboveRight, Left, Right } ;
 
-    virtual Type type() const = 0 ;
-    virtual bool parse(pugi::xml_node &node) = 0 ;
+    Type type() { return type_ ; }
 
-    std::string cat_ ;
-};
+    RenderInstruction(): z_order_(0), priority_(0) {}
 
-struct AreaInstruction: public RenderInstruction {
-    virtual Type type() const { return Area ; }
-    virtual bool parse(pugi::xml_node &node)  ;
+    std::string cat_, key_, id_ ;
+    uint32_t z_order_ ; // order with which instructions were encountered in theme file determining the order of drawing
+    int32_t priority_ ;
+    Type type_ ;
 
     std::string src_ ;
     uint symbol_width_, symbol_height_, symbol_percent_ ;
+    uint symbol_scaling_ ;
     uint32_t fill_, stroke_ ;
     float stroke_width_ ;
-    uint scale_ ;
-};
-
-struct LineInstruction: public RenderInstruction {
-    virtual Type type() const { return Line ; }
-    virtual bool parse(pugi::xml_node &node)  ;
-
-    std::string src_ ;
-    uint symbol_width_, symbol_height_, symbol_percent_ ;
     float dy_ ;
-    uint scale_, stroke_line_cap_, stroke_line_join_ ;
-    uint32_t stroke_ ;
-    float stroke_width_ ;
+    uint scale_, display_, stroke_line_cap_, stroke_line_join_ ;
     std::vector<float> stroke_dash_array_ ;
-};
+    std::string symbol_id_ ;
+    float font_size_ ;
+    uint font_family_, position_, font_style_ ;
+    RenderInstruction *symbol_ ;
+    float repeat_gap_, repeat_start_, radius_ ;
+    bool align_center_, rotate_, repeat_, scale_radius_ ;
 
-struct CaptionInstruction: public RenderInstruction {
-    virtual Type type() const { return Caption ; }
-    virtual bool parse(pugi::xml_node &node)  ;
+private:
 
-    int priority_ ;
-    std::string key_, symbol_id_ ;
-    uint32_t fill_, stroke_ ;
-    float font_size_, stroke_width_, dy_ ;
-    uint font_family_, position_, display_, font_style_ ;
-};
+    friend class RenderTheme ;
 
-struct SymbolInstruction: public RenderInstruction {
-    virtual Type type() const { return Symbol ; }
-    virtual bool parse(pugi::xml_node &node)  ;
-
-    std::string id_, src_ ;
-    int priority_ ;
-    uint symbol_width_, symbol_height_, symbol_percent_ ;
-    uint display_ ;
-};
-
-
-struct CircleInstruction: public RenderInstruction {
-    virtual Type type() const { return Circle ; }
-    virtual bool parse(pugi::xml_node &node)  ;
-
-    uint32_t fill_, stroke_ ;
-    float radius_, stroke_width_ ;
-    bool scale_radius_ ;
-};
-
-struct LineSymbolInstruction: public RenderInstruction {
-    virtual Type type() const { return LineSymbol ; }
-    virtual bool parse(pugi::xml_node &node)  ;
-
-    std::string src_  ;
-    uint scale_, display_ ;
-    float dy_, repeat_gap_, repeat_start_ ;
-    bool align_center_, rotate_, repeat_ ;
-    uint symbol_width_, symbol_height_, symbol_percent_ ;
-    int priority_ ;
+    bool parse_line(pugi::xml_node &node, ThemeParseContext &ctx)  ;
+    bool parse_area(pugi::xml_node &node, ThemeParseContext &ctx)  ;
+    bool parse_symbol(pugi::xml_node &node, ThemeParseContext &ctx)  ;
+    bool parse_caption(pugi::xml_node &node, ThemeParseContext &ctx)  ;
+    bool parse_circle(pugi::xml_node &node, ThemeParseContext &ctx)  ;
+    bool parse_line_symbol(pugi::xml_node &node, ThemeParseContext &ctx)  ;
+    bool parse_path_text(pugi::xml_node &node, ThemeParseContext &ctx)  ;
 
 };
-
-struct PathTextInstruction: public RenderInstruction {
-    virtual Type type() const { return PathText ; }
-    virtual bool parse(pugi::xml_node &node)  ;
-
-    int priority_ ;
-    uint display_, font_style_, scale_, font_family_ ;
-    std::string key_  ;
-    bool repeat_, rotate_ ;
-    float dy_, repeat_gap_, repeat_start_, font_size_, stroke_width_ ;
-    uint32_t fill_, stroke_ ;
-};
-
-
-
-
 
 }
 

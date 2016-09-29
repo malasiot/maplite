@@ -1,5 +1,5 @@
 #include "mapsforge_map_reader.hpp"
-#include "geom_helpers.hpp"
+#include "tms.hpp"
 
 #include <fstream>
 #include <iomanip>
@@ -239,12 +239,14 @@ struct TileData {
     }
 };
 
-VectorTile MapFile::readTile(int32_t tx, int32_t ty, uint8_t tz)
+VectorTile MapFile::readTile(const TileKey &key)
 {
     // crop zoom level to map zoom interval
 
+    TileKey gt = key.toGoogle() ;
+
     uint8_t zoom ;
-    zoom = std::min(info_.max_zoom_level_, tz) ;
+    zoom = std::min(info_.max_zoom_level_, gt.z()) ;
     zoom = std::max(info_.min_zoom_level_, zoom) ;
 
     // find subfile containing requested zoom level
@@ -270,25 +272,25 @@ VectorTile MapFile::readTile(int32_t tx, int32_t ty, uint8_t tz)
 
     bool use_bitmask = false;
 
-    if ( tz < si.base_zoom_ ) {
+    if ( gt.z() < si.base_zoom_ ) {
         // calculate the XY numbers of the upper left and lower right sub-tiles
-        const int zoom_diff = (int8_t)si.base_zoom_ - (int8_t)tz ;
-        base_tile_min_x = tx << zoom_diff ;
-        base_tile_min_y = ty << zoom_diff ;
+        const int zoom_diff = (int8_t)si.base_zoom_ - (int8_t)gt.z() ;
+        base_tile_min_x = gt.x() << zoom_diff ;
+        base_tile_min_y = gt.y() << zoom_diff ;
         base_tile_max_x = base_tile_min_x + ( 1 << zoom_diff ) - 1 ;
         base_tile_max_y = base_tile_min_y + ( 1 << zoom_diff ) - 1 ;
-    } else if ( tz > si.base_zoom_ ) {
+    } else if ( gt.z() > si.base_zoom_ ) {
         // calculate the XY numbers of the parent base tile
-        const int zoom_diff = (int8_t)tz - (int8_t)si.base_zoom_  ;
-        base_tile_min_x = tx >> zoom_diff ;
-        base_tile_min_y = ty >> zoom_diff ;
+        const int zoom_diff = (int8_t)gt.z() - (int8_t)si.base_zoom_  ;
+        base_tile_min_x = gt.x() >> zoom_diff ;
+        base_tile_min_y = gt.y() >> zoom_diff ;
         base_tile_max_x = base_tile_min_x ;
         base_tile_max_y = base_tile_min_y  ;
 
         use_bitmask = true;
     } else {
-        base_tile_min_x = tx ;
-        base_tile_min_y = ty ;
+        base_tile_min_x = gt.x() ;
+        base_tile_min_y = gt.y() ;
         base_tile_max_x = base_tile_min_x ;
         base_tile_max_y = base_tile_min_y  ;
     }
@@ -345,7 +347,9 @@ VectorTile MapFile::readTile(int32_t tx, int32_t ty, uint8_t tz)
             }
         }
 
-     return std::move(tile) ;
+    exportTileDataOSM(tile, "/tmp/oo.osm");
+
+     return tile ;
 }
 
 void MapFile::readHeader()
@@ -717,6 +721,7 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
     for(uint i=0 ; i<n_data_blocks ; i++) {
         Way way ;
         way.tags_ = tags ;
+        way.layer_ = layer ;
 
         uint64_t n_way_coord_blocks = read_var_uint64() ;
 
@@ -734,6 +739,12 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
             else
                 readWayNodesSingleDelta(way.coords_[j], lat_orig, lon_orig);
         }
+
+        const vector<LatLon> &coords = way.coords_[0] ;
+        double lat_diff = fabs(coords.front().lat_ - coords.back().lat_) ;
+        double lon_diff = fabs(coords.front().lon_ - coords.back().lon_) ;
+
+        way.is_closed_ = ( lat_diff < 1.0e-5 && lon_diff < 1.0e-5 ) ;
 
 
         ways[i] = std::move(way) ;

@@ -13,7 +13,6 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/osm/osm_document.cpp
 
 	${SRC_ROOT}/map/map_file.cpp
-	${SRC_ROOT}/map/geom_helpers.cpp
 	${SRC_ROOT}/map/map_config.cpp
 
 	${SRC_ROOT}/util/dictionary.cpp
@@ -32,7 +31,9 @@ SET ( OSM2MFTILES_SOURCES
 
 	${SRC_ROOT}/map/map_config.hpp
 	${SRC_ROOT}/map/map_file.hpp
-	${SRC_ROOT}/map/geom_helpers.hpp
+
+	${SRC_ROOT}/renderer/tms.cpp
+	${SRC_ROOT}/renderer/tms.hpp
 
 	${SRC_ROOT}/util/dictionary.hpp
 	${SRC_ROOT}/util/xml_reader.hpp
