@@ -75,7 +75,14 @@ private:
     const double collision_extra = 10 ;
 };
 
+class DebugRenderer {
 
+public:
+
+    DebugRenderer() {}
+
+    bool render(ImageBuffer &target, const TileKey &key) ;
+} ;
 
 
 #endif

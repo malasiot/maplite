@@ -1,7 +1,8 @@
 #include "map_server_handler_factory.hpp"
 #include "request.hpp"
 #include "raster_request_handler.hpp"
-#include "vector_tile_request_handler.hpp"
+#include "mapsforge_tile_request_handler.hpp"
+#include "debug_tile_request_handler.hpp"
 #include "gl_tile_request_handler.hpp"
 #include "pugixml.hpp"
 #include "shader_config.hpp"
@@ -13,17 +14,13 @@ using namespace std ;
 namespace fs = boost::filesystem ;
 using namespace http ;
 
-MapServerHandlerFactory::MapServerHandlerFactory(const string &root_folders, bool enable_gl)
+MapServerHandlerFactory::MapServerHandlerFactory(const string &root_folders)
 {
     // parse maps
 
     vector<string> tokens ;
     boost::split(tokens, root_folders, boost::is_any_of(";"),boost::algorithm::token_compress_on);
-/*
-    glsl::ProgramList gl_programs ;
 
-    if ( enable_gl ) gl_.reset(new GLRenderingLoop()) ;
-*/
     for( string &folder: tokens) {
 
         fs::path rp(folder) ;
@@ -71,13 +68,14 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &root_folders, boo
             string key = p.attribute("key").as_string() ;
             string src = p.attribute("src").as_string() ;
             string type = p.attribute("type").as_string() ;
+            string theme = p.attribute("theme").as_string() ;
 
             if ( key.empty() ) {
                 LOG_WARN_STREAM("XML [" << cfg_file << "] error: key attribute missing from tiles element" ) ;
                 continue ;
             }
 
-            if ( src.empty() ) {
+            if ( src.empty() && type != "debug" ) {
                 LOG_WARN_STREAM("XML [" << cfg_file << "] error: src attribute missing from tiles element" ) ;
                 continue ;
             }
@@ -90,6 +88,11 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &root_folders, boo
             try {
                 fs::path src_path  = fs::canonical(rp / src) ;
                 src = src_path.native() ;
+
+                if ( !theme.empty() ) {
+                    fs::path theme_path = fs::canonical(rp / theme ) ;
+                    theme = theme_path.native() ;
+                }
             }
             catch ( fs::filesystem_error &e ) {
                 LOG_WARN(e.what()) ;
@@ -98,28 +101,10 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &root_folders, boo
 
             if ( type == "raster" )
                 tile_request_handlers_[key] = make_shared<RasterRequestHandler>(key, src) ;
-            else if ( type == "vector" )
-                tile_request_handlers_[key] = make_shared<VectorTileRequestHandler>(key, src) ;
-/*            else if ( type == "gl" && enable_gl ) {
-                string prog = p.attribute("config").as_string() ;
-
-                try {
-                    prog  = fs::canonical(rp / prog).native() ;
-
-                    if ( prog.empty() || !gl_programs.load(prog) ) {
-                        LOG_WARN_STREAM("XML [" << cfg_file << "] error: cannot load OpenGL render programs" ) ;
-                        continue ;
-                    }
-                }
-                catch ( fs::filesystem_error &e ) {
-                    LOG_WARN(e.what()) ;
-                    continue ;
-                }
-
-                tile_request_handlers_[key] = make_shared<GLTileRequestHandler>(key, src, gl_) ;
-            }
-            */
-
+            else if ( type == "mapsforge" )
+                tile_request_handlers_[key] = make_shared<MapsforgeTileRequestHandler>(key, src, theme) ;
+            else if ( type == "debug" )
+                tile_request_handlers_[key] = make_shared<DebugTileRequestHandler>(key) ;
         }
 
   }

@@ -21,7 +21,7 @@ Logger &get_current_logger() {
 }
 
 int main(int argc, char *argv[]) {
-    std::shared_ptr<MapServer> srv(new MapServer("/home/malasiot/source/mbtools/build/data/", "5000")) ;
+    std::shared_ptr<MapServer> srv(new MapServer("/home/malasiot/source/mftools/build/data/", "5000")) ;
 
     LOG_INFO("Starting server");
 

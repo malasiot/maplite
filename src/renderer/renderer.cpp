@@ -621,3 +621,37 @@ void Renderer::drawArea(Renderer::RenderingContext &ctx, const std::vector<std::
 }
 
 
+bool DebugRenderer::render(ImageBuffer &target, const TileKey &key)
+{
+    cairo_t *cr = cairo_create(target.surface_) ;
+
+    stringstream str ;
+
+    str << key.x() << '/' << key.y() << '/' << (int)key.z()  ;
+
+    string label = str.str() ;
+
+    cairo_rectangle(cr, 0, 0, 255, 255) ;
+    cairo_set_source_rgba(cr, 0, 0, 0, 0.2);
+
+    cairo_fill(cr) ;
+
+    cairo_select_font_face(cr, "Arial",
+          CAIRO_FONT_SLANT_NORMAL,
+          CAIRO_FONT_WEIGHT_BOLD);
+
+    cairo_set_font_size(cr, 12);
+
+    cairo_text_extents_t extents ;
+    cairo_text_extents(cr, label.c_str(), &extents);
+
+    cairo_move_to(cr, 128 - extents.width/2, 128);
+
+    cairo_set_source_rgba(cr, 1, 0, 0, 1);
+    cairo_show_text(cr, label.c_str());
+
+    cairo_destroy(cr) ;
+
+    return true ;
+
+}

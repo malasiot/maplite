@@ -24,6 +24,7 @@ public:
 private:
 
     friend class Renderer ;
+    friend class DebugRenderer ;
 
     cairo_surface_t *surface_ ;
 };

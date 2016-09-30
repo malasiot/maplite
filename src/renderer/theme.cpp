@@ -266,6 +266,8 @@ bool RenderTheme::read(const std::string &file_name, const string &resource_dir)
         rules_.push_back(r) ;
 
     }
+
+    return true ;
 }
 
 bool RenderTheme::match(const string &layer_id, const Dictionary &tags, uint8_t zoom, bool is_closed, bool is_way, std::vector<RenderInstructionPtr> &ris) const

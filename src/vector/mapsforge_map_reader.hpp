@@ -79,10 +79,7 @@ public:
 
     void readTiles() ;
 
-
-
 private:
-
 
     struct SubFileInfo {
         uint8_t base_zoom_ ;

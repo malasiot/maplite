@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
     reader.open(mapFile) ;
 
-    TileKey key(146560, 98747, 18, true) ;
+    TileKey key(4580, 5106, 13, false) ;
 
     VectorTile tile = reader.readTile(key);
 

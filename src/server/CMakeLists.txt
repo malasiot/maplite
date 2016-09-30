@@ -48,8 +48,8 @@ SET ( TILE_SERVER_SOURCES
 	${SRC_ROOT}/server/gl_rendering_loop.hpp
 	${SRC_ROOT}/server/tile_request_handler.hpp
 	${SRC_ROOT}/server/tile_request_handler.cpp
-	${SRC_ROOT}/server/vector_tile_request_handler.hpp
-	${SRC_ROOT}/server/vector_tile_request_handler.cpp
+	${SRC_ROOT}/server/mapsforge_tile_request_handler.hpp
+	${SRC_ROOT}/server/mapsforge_tile_request_handler.cpp
 	${SRC_ROOT}/server/asset_request_handler.hpp
 	${SRC_ROOT}/server/asset_request_handler.cpp
 
@@ -69,15 +69,44 @@ SET ( TILE_SERVER_SOURCES
 	${SRC_ROOT}/server/raster_tile_source.hpp
 	${SRC_ROOT}/server/raster_request_handler.cpp
 	${SRC_ROOT}/server/raster_request_handler.hpp
-#	${SRC_ROOT}/server/gl_tile_request_handler.cpp
-#	${SRC_ROOT}/server/gl_tile_request_handler.hpp
+	${SRC_ROOT}/server/debug_tile_request_handler.cpp
+	${SRC_ROOT}/server/debug_tile_request_handler.hpp
 	${SRC_ROOT}/server/png_writer.cpp
 	${SRC_ROOT}/server/png_writer.hpp
+
+	${SRC_ROOT}/vector/mapsforge_map_reader.cpp
+	${SRC_ROOT}/vector/mapsforge_map_reader.hpp
+	${SRC_ROOT}/renderer/tms.cpp
+	${SRC_ROOT}/renderer/tms.hpp
+	${SRC_ROOT}/util/dictionary.cpp
+	${SRC_ROOT}/util/dictionary.hpp
+
+	${SRC_ROOT}/renderer/theme.cpp
+	${SRC_ROOT}/renderer/theme.hpp
+
+	${SRC_ROOT}/renderer/svg/rendering.cpp
+	${SRC_ROOT}/renderer/svg/rendering.hpp
+	${SRC_ROOT}/renderer/svg/document.cpp
+	${SRC_ROOT}/renderer/svg/document.hpp
+	${SRC_ROOT}/renderer/svg/util.hpp
+	${SRC_ROOT}/renderer/svg/util.cpp
+
+	${SRC_ROOT}/renderer/render_text.cpp
+	${SRC_ROOT}/renderer/collision_checker.cpp
+	${SRC_ROOT}/renderer/collision_checker.hpp
+	${SRC_ROOT}/renderer/renderer.cpp
+	${SRC_ROOT}/renderer/renderer.hpp
+	${SRC_ROOT}/renderer/geom_util.cpp
+
+	${SRC_ROOT}/renderer/image_buffer.cpp
+	${SRC_ROOT}/renderer/image_buffer.hpp
+
 )
 
 ADD_LIBRARY(mapserver STATIC ${TILE_SERVER_SOURCES} ${MT_PROTO_SOURCES} ${MT_PROTO_HEADERS})
 TARGET_LINK_LIBRARIES(mapserver ${SQLITE3_LIBRARY} ${Boost_LIBRARIES} ${PROTOBUF_LIBRARIES} ${PNG_LIBRARIES}
-${GLFW_LIBRARIES} ${GLEW_LIBRARIES} ${OPENGL_LIBRARIES} ${OPENJPEG_LIBRARIES} X11 Xxf86vm Xrandr Xi pthread dl z)
+${GLFW_LIBRARIES} ${GLEW_LIBRARIES} ${OPENGL_LIBRARIES} ${OPENJPEG_LIBRARIES} ${CAIRO_LIBRARY} ${FONTCONFIG_LIBRARIES}
+	${FREETYPE_LIBRARIES} ${HARFBUZZ_LIBRARIES} ${PNG_LIBRARIES}  ${GEOS_LIBRARY} X11 Xxf86vm Xrandr Xi pthread dl z )
 
 ADD_EXECUTABLE(tileserver ${SRC_ROOT}/server/tile_server.cpp)
 TARGET_LINK_LIBRARIES(tileserver mapserver)

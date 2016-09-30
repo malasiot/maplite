@@ -179,7 +179,6 @@ void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<ve
             cl->add(Coordinate(c.x_, c.y_)) ;
         }
 
-
         LineString *ls = gfactory->createLineString(cl);
 
         BufferParameters bp(8, BufferParameters::CAP_ROUND, BufferParameters::JOIN_ROUND, 4) ;
@@ -202,7 +201,6 @@ void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<ve
             res[j][i] = Coord(c.x, c.y) ;
         }
 
-        delete ls ;
         delete bgeom ;
     }
     delete gfactory ;
