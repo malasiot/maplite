@@ -75,7 +75,8 @@ public:
 
     const MapFileInfo &getMapFileInfo() const { return info_ ; }
 
-    VectorTile readTile(const TileKey &);
+    // read tile data corresponding to given tile key +- offset around it
+    VectorTile readTile(const TileKey &, int offset = 1);
 
     void readTiles() ;
 

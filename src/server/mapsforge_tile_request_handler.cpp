@@ -14,7 +14,7 @@ using namespace http ;
 
 std::shared_ptr<mapsforge::TileIndex> MapsforgeTileRequestHandler::tile_index_ ;
 
-MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const string &map_file, const string &theme_file):
+MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const string &map_file, const string &theme_file, bool debug):
     TileRequestHandler(id, map_file)
 {
     if ( !tile_index_) tile_index_.reset(new mapsforge::TileIndex(1000000)) ;
@@ -35,7 +35,7 @@ MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const
          return ;
     }
 
-    renderer_.reset(new Renderer(theme_)) ;
+    renderer_.reset(new Renderer(theme_, map_file_->getMapFileInfo().lang_preference_, debug)) ;
 }
 
 

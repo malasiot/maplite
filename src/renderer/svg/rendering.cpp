@@ -1417,7 +1417,7 @@ void DocumentInstance::renderToTarget(cairo_t *target, float x, float y, float s
     render(cr, sw, sh, dpi) ;
     cairo_destroy(cr) ;
 
- //   cairo_surface_write_to_png(rsurf, "/tmp/cairo.png") ;
+  //  cairo_surface_write_to_png(rsurf, "/tmp/cairo.png") ;
 
     // paste on the target context
 

@@ -21,7 +21,7 @@ class Renderer {
 
 public:
 
-    Renderer(const mapsforge::RenderTheme &theme) ;
+    Renderer(const mapsforge::RenderTheme &theme, const std::string &languages, bool debug=false) ;
 
     bool render(ImageBuffer &target, const mapsforge::VectorTile &tile,
                 const TileKey &key,
@@ -56,13 +56,15 @@ private:
 
     friend class POIInstructionSorter ;
 
-    void filterWays(const std::string &layer, uint8_t zoom, const std::vector<mapsforge::Way> &ways, std::vector<std::pair<uint, mapsforge::RenderInstructionPtr>> &instructions ) ;
+    void filterWays(const std::string &layer, uint8_t zoom, const BBox &box, cairo_matrix_t &cmm, const std::vector<mapsforge::Way> &ways,
+                    std::vector<std::pair<uint, mapsforge::RenderInstructionPtr>> &winstructions,
+                    std::vector<POIInstruction> &poi_instructions, int32_t &count) ;
     void filterPOIs(const string &layer, uint8_t zoom, const BBox &box, const std::vector<mapsforge::POI> &pois,
-                     std::vector<POIInstruction> &instructions) ;
+                     std::vector<POIInstruction> &instructions, int32_t &count) ;
 
     void drawCircle(RenderingContext &ctx, double px, double py, const mapsforge::RenderInstruction &) ;
-    void drawSymbol(RenderingContext &ctx, double px, double py, double angle, const mapsforge::RenderInstruction &) ;
-    void drawCaption(RenderingContext &ctx, double px, double py, double angle, const std::string &label, const mapsforge::RenderInstruction &) ;
+    void drawSymbol(RenderingContext &ctx, double px, double py, double angle, const mapsforge::RenderInstruction &, int32_t) ;
+    void drawCaption(RenderingContext &ctx, double px, double py, double angle, const std::string &label, const mapsforge::RenderInstruction &, int32_t) ;
 
     void drawLine(RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const mapsforge::RenderInstruction &line);
     void drawSymbolsAlongLine(RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const mapsforge::RenderInstruction &line);
@@ -71,18 +73,14 @@ private:
                            uint cap, uint join);
     void applySimpleFill(cairo_t *cr, uint32_t fill_clr);
     cairo_surface_t *renderGraphic(cairo_t *cr, const std::string &src, double width, double height, cairo_rectangle_t &rect, double scale) ;
+    void getSymbolSize(const mapsforge::RenderInstruction &r, double &sw, double &sh);
 
     const double collision_extra = 10 ;
+
+    bool debug_ ;
+    std::string languages_ ;
+
 };
-
-class DebugRenderer {
-
-public:
-
-    DebugRenderer() {}
-
-    bool render(ImageBuffer &target, const TileKey &key) ;
-} ;
 
 
 #endif

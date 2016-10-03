@@ -2,6 +2,7 @@
 #define __COLLISION_CHECKER_H__
 
 #include <vector>
+#include <cstdint>
 
 struct Vector2 {
 
@@ -57,16 +58,17 @@ public:
 
     // check collision between given OBB and stored labels
 
-    bool addLabelBox(double cx, double cy, double angle, double width, double height) ;
-    bool addLabelBox(const std::vector<OBB> &boxes) ;
+    bool addLabelBox(double cx, double cy, double angle, double width, double height, int32_t id = -1) ;
+    bool addLabelBox(const std::vector<OBB> &boxes, int32_t id = -1) ;
 
 private:
 
     struct Label {
-        std::vector<OBB> boxes ;
+        std::vector<OBB> boxes_ ;
+        int32_t uid_ ;
     };
 
-    std::vector<Label> labels ;
+    std::vector<Label> labels_ ;
 
 };
 

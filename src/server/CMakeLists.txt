@@ -69,8 +69,6 @@ SET ( TILE_SERVER_SOURCES
 	${SRC_ROOT}/server/raster_tile_source.hpp
 	${SRC_ROOT}/server/raster_request_handler.cpp
 	${SRC_ROOT}/server/raster_request_handler.hpp
-	${SRC_ROOT}/server/debug_tile_request_handler.cpp
-	${SRC_ROOT}/server/debug_tile_request_handler.hpp
 	${SRC_ROOT}/server/png_writer.cpp
 	${SRC_ROOT}/server/png_writer.hpp
 

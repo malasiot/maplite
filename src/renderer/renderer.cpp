@@ -24,14 +24,15 @@ extern void sample_linear_geometry(
                     float gap,
                     float initial_gap,
                     float box_len,
+                    bool fix_angle,
                     std::vector<Coord> &samples,
                     std::vector<double> &angles) ;
 
 void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<vector<Coord>> &res) ;
 
 
-Renderer::Renderer(const mapsforge::RenderTheme &theme):
-    cache_(new ResourceCache), theme_(theme)
+Renderer::Renderer(const mapsforge::RenderTheme &theme, const std::string &lang, bool debug):
+    cache_(new ResourceCache), theme_(theme), debug_(debug), languages_(lang)
 {
 
 }
@@ -83,8 +84,8 @@ public:
 
 };
 
-void Renderer::filterWays(const string &layer, uint8_t zoom, const std::vector<Way> &ways,
-                          std::vector<std::pair<uint, RenderInstructionPtr> > &instructions)
+void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_extents, cairo_matrix_t &cmm, const std::vector<Way> &ways,
+                          std::vector<std::pair<uint, RenderInstructionPtr> > &winstructions, std::vector<POIInstruction> &poi_instructions, int32_t &count)
 {
 
     for( uint32_t idx = 0 ; idx < ways.size() ; ++idx  ) {
@@ -92,31 +93,122 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const std::vector<W
         vector<RenderInstructionPtr> ris ;
 
         if ( theme_.match(layer, way.tags_, zoom, way.is_closed_, true, ris)) {
+
+            int32_t symbol_id = -1 ;
+            vector<POIInstruction> instructions ;
+
+            vector<vector<Coord>> coords ;
+            latlon_to_tms(way.coords_, coords) ;
+
             for( const auto &ri: ris ) {
-                instructions.push_back(make_pair(idx, ri)) ;
+
+                if ( ri->type() == RenderInstruction::Area ) {
+                    winstructions.push_back(make_pair(idx, ri)) ;
+                }
+                else if ( ri->type() == RenderInstruction::Line ) {
+                    winstructions.push_back(make_pair(idx, ri)) ;
+                }
+                else if ( ri->type() == RenderInstruction::Symbol ) {
+                    vector<vector<Coord>> coords ;
+                    latlon_to_tms(way.coords_, coords) ;
+
+                    double mx, my ;
+                    get_poi_from_area(way, coords[0], mx, my) ;
+
+                    symbol_id = count ;
+
+                    if ( query_extents.contains(mx, my) )
+                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
+                }
+                else if ( ri->type() == RenderInstruction::Caption )
+                {
+                    double mx, my ;
+                    get_poi_from_area(way, coords[0], mx, my) ;
+                    if ( query_extents.contains(mx, my) )
+                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
+                }
+                else if ( ri->type() == RenderInstruction::LineSymbol ) {
+                    RenderInstruction &line = *ri.get() ;
+                    vector<Coord> pts ;
+                    vector<double> angles ;
+
+                    double gap = ( line.repeat_ ) ? line.repeat_gap_ : 0.0 ;
+                    double initial_gap = ( line.repeat_ ) ? line.repeat_start_ : 0.0 ;
+
+                    double sw, sh ;
+                    getSymbolSize(line, sw, sh) ;
+
+                    sample_linear_geometry(coords, cmm, gap, initial_gap, sw,  false, pts, angles) ;
+
+                    for( uint i=0 ; i<pts.size() ; i++ ) {
+                        const Coord &c = pts[i] ;
+                        if ( query_extents.contains(c.x_, c.y_) )
+                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, string(), count++) ;
+                    }
+                }
+                else if ( ri->type() == RenderInstruction::PathText ) {
+                    RenderInstruction &line = *ri.get() ;
+                    vector<Coord> pts ;
+                    vector<double> angles ;
+
+                    double gap = ( line.repeat_ ) ? line.repeat_gap_ : 0.0 ;
+                    double initial_gap = ( line.repeat_ ) ? line.repeat_start_ : 0.0 ;
+                    string label = way.tags_.get(line.key_) ;
+
+                    sample_linear_geometry(coords, cmm, gap, initial_gap, line.font_size_ * label.length(), true, pts, angles) ;
+
+
+                    for( uint i=0 ; i<pts.size() ; i++ ) {
+                        const Coord &c = pts[i] ;
+                        if ( query_extents.contains(c.x_, c.y_) )
+                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, label, count++) ;
+                    }
+                }
             }
+
+            for( auto &ins: instructions ) {
+                RenderInstructionPtr ri = ins.ri_ ;
+                if ( ri->type_ == RenderInstruction::Caption && ri->symbol_ ) ins.poi_idx_ = symbol_id ;
+            }
+
+            std::copy( instructions.begin(), instructions.end(), std::back_inserter(poi_instructions)) ;
+
         }
     }
 
-    std::sort(instructions.begin(), instructions.end(), WayInstructionSorter(ways, instructions)) ;
+    std::sort(winstructions.begin(), winstructions.end(), WayInstructionSorter(ways, winstructions)) ;
 
 }
 
 void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, const std::vector<mapsforge::POI> &pois,
-                          std::vector<POIInstruction> &instructions)
+                          std::vector<POIInstruction> &instructions, int32_t &count)
 {
     for( uint32_t idx = 0 ; idx < pois.size() ; ++idx  ) {
         const POI &poi = pois[idx] ;
         vector<RenderInstructionPtr> ris ;
 
         if ( theme_.match(layer, poi.tags_, zoom, false, false, ris)) {
+
+            int32_t symbol_id = -1 ;
+            std::vector<POIInstruction> instr ;
+
             for( const auto &ri: ris ) {
                 double mx, my ;
                 tms::latlonToMeters(poi.lat_, poi.lon_, mx, my) ;
 
+                if ( ri->type_ == RenderInstruction::Symbol )
+                    symbol_id = count ;
+
                 if ( box.contains(mx, my))
-                    instructions.emplace_back(mx, my, 0, ri, poi.tags_.get(ri->key_), idx) ;
+                    instr.emplace_back(mx, my, 0, ri, poi.tags_.get(ri->key_), count++) ;
             }
+
+            for( auto &ins: instr ) {
+                RenderInstructionPtr ri = ins.ri_ ;
+                if ( ri->type_ == RenderInstruction::Caption && ri->symbol_ ) ins.poi_idx_ = symbol_id ;
+            }
+
+            std::copy( instr.begin(), instr.end(), std::back_inserter(instructions)) ;
         }
     }
 
@@ -195,9 +287,12 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const TileKey
     // sort ways based on layer attribute
 
     vector<pair<uint32_t, RenderInstructionPtr>> way_instructions ;
+
     vector<POIInstruction> poi_instructions ;
 
-    filterWays(layer, zoom, tile.ways_, way_instructions ) ;
+    int32_t count = 0 ;
+    filterWays(layer, zoom, query_extents, cmm, tile.ways_, way_instructions, poi_instructions, count) ;
+    filterPOIs(layer, zoom, query_extents, tile.pois_, poi_instructions, count ) ;
 
     for( auto &ip: way_instructions ) {
 
@@ -213,49 +308,8 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const TileKey
         else if ( ri->type() == RenderInstruction::Line ) {
             drawLine(ctx, coords, *ri.get()) ;
         }
-        else if ( ri->type() == RenderInstruction::Symbol || ri->type() == RenderInstruction::Caption ) {
-            double mx, my ;
-            get_poi_from_area(way, coords[0], mx, my) ;
-            if ( query_extents.contains(mx, my) )
-                poi_instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_)) ;
-        }
-        else if ( ri->type() == RenderInstruction::LineSymbol ) {
-            RenderInstruction &line = *ri.get() ;
-            vector<Coord> pts ;
-            vector<double> angles ;
-
-            double gap = ( line.repeat_ ) ? line.repeat_gap_ : 0.0 ;
-            double initial_gap = ( line.repeat_ ) ? line.repeat_start_ : 0.0 ;
-
-            sample_linear_geometry(coords, ctx.cmm_, gap, initial_gap, line.symbol_width_,  pts, angles) ;
-
-            for( uint i=0 ; i<pts.size() ; i++ ) {
-                const Coord &c = pts[i] ;
-                if ( query_extents.contains(c.x_, c.y_) )
-                    poi_instructions.emplace_back(c.x_, c.y_, angles[i], ri) ;
-            }
-        }
-        else if ( ri->type() == RenderInstruction::PathText ) {
-            RenderInstruction &line = *ri.get() ;
-            vector<Coord> pts ;
-            vector<double> angles ;
-
-            double gap = ( line.repeat_ ) ? line.repeat_gap_ : 0.0 ;
-            double initial_gap = ( line.repeat_ ) ? line.repeat_start_ : 0.0 ;
-            string label = way.tags_.get(line.key_) ;
-
-            sample_linear_geometry(coords, ctx.cmm_, gap, initial_gap, line.font_size_ * label.length(), pts, angles) ;
-
-
-            for( uint i=0 ; i<pts.size() ; i++ ) {
-                const Coord &c = pts[i] ;
-                if ( query_extents.contains(c.x_, c.y_) )
-                    poi_instructions.emplace_back(c.x_, c.y_, angles[i], ri, label) ;
-            }
-        }
     }
 
-    filterPOIs(layer, zoom, query_extents, tile.pois_, poi_instructions ) ;
 
     for( auto &ip: poi_instructions  ) {
 
@@ -269,18 +323,45 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const TileKey
             drawCircle(ctx, mx, my, *ri.get()) ;
             break ;
         case RenderInstruction::Symbol:
-            drawSymbol(ctx, mx, my, 0.0, *ri.get()) ;
+            drawSymbol(ctx, mx, my, 0.0, *ri.get(), ip.poi_idx_) ;
             break ;
         case RenderInstruction::LineSymbol:
-            drawSymbol(ctx, mx, my, angle, *ri.get()) ;
+            drawSymbol(ctx, mx, my, angle, *ri.get(), ip.poi_idx_) ;
             break ;
         case RenderInstruction::Caption:
-            drawCaption(ctx, mx, my, 0.0, label, *ri.get() ) ;
+            drawCaption(ctx, mx, my, 0.0, label, *ri.get(), ip.poi_idx_ ) ;
             break ;
         case RenderInstruction::PathText:
-            drawCaption(ctx, mx, my, angle, label, *ri.get() ) ;
+            drawCaption(ctx, mx, my, angle, label, *ri.get(), ip.poi_idx_ ) ;
             break ;
         }
+    }
+
+    if ( debug_ ) {
+
+        stringstream str ;
+
+        str << key.x() << '/' << key.y() << '/' << (int)key.z()  ;
+
+        cairo_rectangle(cr, 0, 0, 255, 255) ;
+        cairo_set_source_rgba(cr, 0, 0, 0, 0.2) ;
+        cairo_fill(cr) ;
+
+        string label = str.str() ;
+
+        cairo_select_font_face(cr, "Arial",
+              CAIRO_FONT_SLANT_NORMAL,
+              CAIRO_FONT_WEIGHT_BOLD);
+
+        cairo_set_font_size(cr, 12);
+
+        cairo_text_extents_t extents ;
+        cairo_text_extents(cr, label.c_str(), &extents);
+
+        cairo_move_to(cr, 128 - extents.width/2, 128);
+
+        cairo_set_source_rgba(cr, 1, 0, 0, 1);
+        cairo_show_text(cr, label.c_str());
     }
 
 
@@ -342,18 +423,12 @@ void Renderer::drawCircle(Renderer::RenderingContext &ctx, double px, double py,
 
 
 
-void Renderer::drawSymbol(Renderer::RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &symbol)
+void Renderer::drawSymbol(Renderer::RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &symbol, int32_t poi_idx)
 {
     cairo_t *cr = ctx.cr_ ;
 
-    float sw = 20, sh = 20 ;
-    if ( symbol.symbol_scaling_ == RenderInstruction::CustomSize ) {
-        sw = symbol.symbol_width_ ; sh = symbol.symbol_height_ ;
-    }
-    else if ( symbol.symbol_scaling_ == RenderInstruction::Percent ) {
-        sw *= symbol.symbol_percent_ ;
-        sh *= symbol.symbol_percent_ ;
-    }
+    double sw, sh ;
+    getSymbolSize(symbol, sw, sh) ;
 
     cairo_rectangle_t extents ;
     cairo_surface_t *surface = renderGraphic(cr, symbol.src_, sw, sh, extents, 1.0) ;
@@ -367,7 +442,8 @@ void Renderer::drawSymbol(Renderer::RenderingContext &ctx, double px, double py,
 
     cairo_matrix_transform_point(&ctx.cmm_, &px, &py) ;
 
-    if ( ctx.colc_.addLabelBox(px, py, angle, extents.width + collision_extra, extents.height + collision_extra)  )
+    if ( symbol.display_ == RenderInstruction::Allways ||
+         symbol.display_ == RenderInstruction::IfSpace && ctx.colc_.addLabelBox(px, py, angle, extents.width + collision_extra, extents.height + collision_extra, poi_idx)  )
     {
         cairo_save(cr) ;
 
@@ -440,7 +516,7 @@ void Renderer::drawLine(Renderer::RenderingContext &ctx, const std::vector<std::
 
         if ( line.scale_ == RenderInstruction::All ) {
             for( auto &v: stroke_dash_array )
-                v += ctx.scale_ ;
+                v *= ctx.scale_ ;
         }
 
         applySimpleStroke(cr, stroke_width, line.stroke_, stroke_dash_array, line.stroke_line_cap_, line.stroke_line_join_) ;
@@ -455,14 +531,8 @@ void Renderer::drawLine(Renderer::RenderingContext &ctx, const std::vector<std::
         cairo_path_from_geometry(cr, coords, false) ;
         cairo_restore(cr) ;
 
-        float sw = 20, sh = 20 ;
-        if ( line.symbol_scaling_ == RenderInstruction::CustomSize ) {
-            sw = line.symbol_width_ ; sh = line.symbol_height_ ;
-        }
-        else if ( line.symbol_scaling_ == RenderInstruction::CustomSize ) {
-            sw *= line.symbol_percent_ ;
-            sh *= line.symbol_percent_ ;
-        }
+        double sw, sh ;
+        getSymbolSize(line, sw, sh) ;
 
         cairo_rectangle_t extents ;
         cairo_surface_t *surface = renderGraphic(cr, line.src_, sw, sh, extents, 1.0 );
@@ -562,7 +632,7 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
 
         cairo_destroy(ctx) ;
 
- //       cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
+   //    cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
 
         return rs ;
 
@@ -572,6 +642,18 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
 
 }
 
+void Renderer::getSymbolSize(const RenderInstruction &r, double &sw, double &sh) {
+
+    sw = 20 ; sh = 20 ;
+    if ( r.symbol_scaling_ == RenderInstruction::CustomSize ) {
+        sw = r.symbol_width_ ; sh = r.symbol_height_ ;
+    }
+    else if ( r.symbol_scaling_ == RenderInstruction::Percent ) {
+        sw *= r.symbol_percent_ ;
+        sh *= r.symbol_percent_ ;
+    }
+
+}
 
 void Renderer::drawArea(Renderer::RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &area) {
 
@@ -594,14 +676,9 @@ void Renderer::drawArea(Renderer::RenderingContext &ctx, const std::vector<std::
         applySimpleStroke(cr, stroke_width, area.stroke_, vector<float>(), RenderInstruction::RoundCap, RenderInstruction::RoundJoin) ;
         cairo_stroke(cr) ;
     } else {
-        float sw = 20, sh = 20 ;
-        if ( area.symbol_scaling_ == RenderInstruction::CustomSize ) {
-            sw = area.symbol_width_ ; sh = area.symbol_height_ ;
-        }
-        else if ( area.symbol_scaling_ == RenderInstruction::Percent ) {
-            sw *= area.symbol_percent_ ;
-            sh *= area.symbol_percent_ ;
-        }
+        double sw, sh ;
+        getSymbolSize(area, sw, sh) ;
+
         cairo_rectangle_t extents ;
         cairo_surface_t *surface = renderGraphic(cr, area.src_, sw, sh, extents, 1.0);
         if ( !surface ) return ;
@@ -621,37 +698,3 @@ void Renderer::drawArea(Renderer::RenderingContext &ctx, const std::vector<std::
 }
 
 
-bool DebugRenderer::render(ImageBuffer &target, const TileKey &key)
-{
-    cairo_t *cr = cairo_create(target.surface_) ;
-
-    stringstream str ;
-
-    str << key.x() << '/' << key.y() << '/' << (int)key.z()  ;
-
-    string label = str.str() ;
-
-    cairo_rectangle(cr, 0, 0, 255, 255) ;
-    cairo_set_source_rgba(cr, 0, 0, 0, 0.2);
-
-    cairo_fill(cr) ;
-
-    cairo_select_font_face(cr, "Arial",
-          CAIRO_FONT_SLANT_NORMAL,
-          CAIRO_FONT_WEIGHT_BOLD);
-
-    cairo_set_font_size(cr, 12);
-
-    cairo_text_extents_t extents ;
-    cairo_text_extents(cr, label.c_str(), &extents);
-
-    cairo_move_to(cr, 128 - extents.width/2, 128);
-
-    cairo_set_source_rgba(cr, 1, 0, 0, 1);
-    cairo_show_text(cr, label.c_str());
-
-    cairo_destroy(cr) ;
-
-    return true ;
-
-}

@@ -2,10 +2,7 @@
 #include "request.hpp"
 #include "raster_request_handler.hpp"
 #include "mapsforge_tile_request_handler.hpp"
-#include "debug_tile_request_handler.hpp"
-#include "gl_tile_request_handler.hpp"
 #include "pugixml.hpp"
-#include "shader_config.hpp"
 
 #include <boost/range/iterator_range.hpp>
 #include <boost/algorithm/string.hpp>
@@ -69,6 +66,7 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &root_folders)
             string src = p.attribute("src").as_string() ;
             string type = p.attribute("type").as_string() ;
             string theme = p.attribute("theme").as_string() ;
+            bool debug_flag = p.attribute("debug").as_bool(false) ;
 
             if ( key.empty() ) {
                 LOG_WARN_STREAM("XML [" << cfg_file << "] error: key attribute missing from tiles element" ) ;
@@ -102,15 +100,10 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &root_folders)
             if ( type == "raster" )
                 tile_request_handlers_[key] = make_shared<RasterRequestHandler>(key, src) ;
             else if ( type == "mapsforge" )
-                tile_request_handlers_[key] = make_shared<MapsforgeTileRequestHandler>(key, src, theme) ;
-            else if ( type == "debug" )
-                tile_request_handlers_[key] = make_shared<DebugTileRequestHandler>(key) ;
+                tile_request_handlers_[key] = make_shared<MapsforgeTileRequestHandler>(key, src, theme, debug_flag) ;
         }
 
   }
-
-//   if ( enable_gl && gl_ )
- //   gl_thread_.reset(new std::thread(&GLRenderingLoop::run, gl_, gl_programs)) ;
 
 }
 

@@ -12,7 +12,7 @@
 using namespace std ;
 using namespace mapsforge ;
 
-static cairo_font_face_t *create_font_face(ResourceCache &cache, const std::string &family_name, uint &font_style)
+static cairo_font_face_t *create_font_face(ResourceCache &cache, const string &lang, const std::string &family_name, uint &font_style)
 {
     cairo_font_face_t *face = 0 ;
 
@@ -31,6 +31,8 @@ static cairo_font_face_t *create_font_face(ResourceCache &cache, const std::stri
     FcPattern* pat = FcPatternCreate() ;
 
     FcPatternAddString(pat, FC_FAMILY, (const FcChar8*)(family_name.c_str()));
+
+    FcPatternAddString(pat, FC_LANG, (const FcChar8*)(lang.c_str()));
 
     if ( font_style == RenderInstruction::Italic ||
          font_style == RenderInstruction::BoldItalic )
@@ -62,9 +64,9 @@ static cairo_font_face_t *create_font_face(ResourceCache &cache, const std::stri
     return face ;
 }
 
-cairo_scaled_font_t *cairo_setup_font(ResourceCache &cache, const string &family_name, uint font_style, float font_size)
+cairo_scaled_font_t *cairo_setup_font(ResourceCache &cache, const std::string &languages, const string &family_name, uint font_style, float font_size)
 {
-    cairo_font_face_t *face = create_font_face(cache, family_name, font_style) ;
+    cairo_font_face_t *face = create_font_face(cache, languages, family_name, font_style) ;
 
     // create scaled font
 
@@ -103,7 +105,7 @@ bool shape_text(const std::string &text, cairo_scaled_font_t *sf, cairo_glyph_t 
 
     hb_buffer_set_direction(buffer, HB_DIRECTION_LTR) ;
     hb_buffer_set_script(buffer, HB_SCRIPT_COMMON);
-    //    hb_buffer_set_language(buffer, hb_language_from_string("el", -1)) ;
+//    hb_buffer_set_language(buffer, hb_language_from_string("el", -1)) ;
     hb_buffer_add_utf8(buffer, text.c_str(), len, 0, len);
 
     FT_Face face = cairo_ft_scaled_font_lock_face(sf) ;
@@ -144,76 +146,10 @@ bool shape_text(const std::string &text, cairo_scaled_font_t *sf, cairo_glyph_t 
 
 
 extern double clip_percent (double percent) ;
-/*
-static void collect_label_positions(const gaiaGeomCollPtr &geom, const cairo_matrix_t &cmm, vector<double> &positions )
-{
-    for( gaiaPointPtr p = geom->FirstPoint ; p != NULL ; p = p->Next )
-    {
-        double px = p->X, py = p->Y ;
-        positions.push_back(px) ;
-        positions.push_back(py) ;
-    }
-
-    sampleLinearGeometry(positions, geom, cmm) ;
-
-}
-
-*/
-/*
-void Renderer::paintText(ci *ctx, const Feature &f, const sld::TextSymbolizer &smb)
-{
-    cairo_t *cr = ctx->cr ;
-
-    // We do not do complex halo fill
-    // Halo is simulated by stroking text with line width equal to radius
-
-    if ( smb.halo )
-    {
-        double haloRadius ;
-        if ( smb.halo->radius.eval(f).toNumber(haloRadius) )
-        {
-            unsigned int haloColor = 0;
-            double haloOpacity = 1.0 ;
-
-            if ( smb.halo->fill )
-            {
-                smb.halo->fill->fill.eval(f).toColor(haloColor) ;
-                smb.halo->fill->fillOpacity.eval(f).toNumber(haloOpacity) ;
-            }
-
-            double r, g, b;
-
-            r = ((haloColor >> 16) & 0xff) / 255.0;
-            g = ((haloColor >> 8) & 0xff) / 255.0;
-            b = ((haloColor >> 0) & 0xff) / 255.0;
-
-            haloOpacity = clip_percent(haloOpacity) ;
-
-            if ( haloOpacity == 1.0 ) cairo_set_source_rgb(cr, r, g, b) ;
-            else cairo_set_source_rgba(cr, r, g, b, haloOpacity) ;
-
-            cairo_set_line_width(cr, haloRadius) ;
-
-            cairo_stroke_preserve(cr) ;
-        }
-    }
-
-    if ( smb.fill ) {
-        applyFill(cr, f, *smb.fill, 1.0, ctx->scale) ;
-        cairo_fill(cr) ;
-    }
-    else
-    {
-        cairo_set_source_rgb(cr, 0, 0, 0) ;
-        cairo_fill(cr) ;
-    }
-}
-
-*/
 
 // render text for point geometries
 
-void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double angle, const std::string &label, const RenderInstruction &caption)
+void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double angle, const std::string &label, const RenderInstruction &caption, int32_t poi_idx)
 {
     cairo_t *cr = ctx.cr_ ;
 
@@ -222,17 +158,17 @@ void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double a
     string family_name ;
 
     if ( caption.font_family_ == RenderInstruction::Default )
-        family_name = "arial" ;
+        family_name = "serif" ;
     else if (caption.font_family_ == RenderInstruction::Monospace )
-        family_name = "arial" ;
+        family_name = "monospace" ;
     else if (caption.font_family_ == RenderInstruction::SansSerif )
-        family_name = "arial" ;
+        family_name = "sans-serif" ;
     else if (caption.font_family_ == RenderInstruction::Serif )
-        family_name = "arial" ;
+        family_name = "serif" ;
 
     // query font face based on provided arguments
 
-    cairo_scaled_font_t *scaled_font = cairo_setup_font(*cache_.get(), family_name, caption.font_style_, caption.font_size_) ;
+    cairo_scaled_font_t *scaled_font = cairo_setup_font(*cache_.get(), languages_, family_name, caption.font_style_, caption.font_size_) ;
 
     if ( !scaled_font ) return ;
 
@@ -274,20 +210,15 @@ void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double a
     if ( caption.type_ == RenderInstruction::Caption && caption.symbol_ ) {
         RenderInstruction &symbol = *caption.symbol_ ;
 
-        float sw = 20, sh = 20 ;
-        if ( symbol.symbol_scaling_ == RenderInstruction::CustomSize ) {
-            sw = symbol.symbol_width_ ; sh = symbol.symbol_height_ ;
-        }
-        else if ( symbol.symbol_scaling_ == RenderInstruction::Percent ) {
-            sw *= symbol.symbol_percent_ ;
-            sh *= symbol.symbol_percent_ ;
-        }
+        double sw, sh ;
+        getSymbolSize(symbol, sw, sh);
 
         double offset_x = sw/2.0 + width/2.0 ;
         double offset_y = sh/2.0 + height/2.0 ;
 
         if ( caption.position_ == RenderInstruction::Above ) disp_y -= offset_y ;
-        else if ( caption.position_ == RenderInstruction::Below ) disp_y += offset_y ;
+        else if ( caption.position_ == RenderInstruction::Below )
+            disp_y += offset_y ;
         else if ( caption.position_ == RenderInstruction::AboveLeft ) {
             disp_y -= offset_y ;
             disp_x -= offset_x ;
@@ -315,7 +246,8 @@ void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double a
     }
 
 
-    if ( ctx.colc_.addLabelBox(px + disp_x, py + disp_y, rotation, width + collision_extra, height + collision_extra)  )
+    if ( caption.display_ == RenderInstruction::Allways ||
+         caption.display_ == RenderInstruction::IfSpace && ctx.colc_.addLabelBox(px + disp_x, py + disp_y, rotation, width + collision_extra, height + collision_extra, poi_idx)  )
     {
         cairo_save(cr) ;
 

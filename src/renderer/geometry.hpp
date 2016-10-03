@@ -10,6 +10,7 @@ struct LatLon {
 
 
 struct Coord {
+    Coord(): x_(0), y_(0) {}
     Coord(double x, double y): x_(x), y_(y) {}
     double x_, y_ ;
 };

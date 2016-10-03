@@ -30,7 +30,7 @@ struct ParametricLineRing
 
     double length() const { return par_.back() ; }
 
-    bool sample(double p, vector<Coord> &samples, vector<double> &angles) ;
+    bool sample(double p, Coord &sample, double &angle ) ;
 
     vector<double> par_, angle_ ;
     const vector<Coord> &coords_ ;
@@ -70,7 +70,7 @@ ParametricLineRing::ParametricLineRing(const vector<Coord> &coords, const cairo_
 
 }
 
-bool ParametricLineRing::sample(double pp, vector<Coord> &samples, vector<double> &angles)
+bool ParametricLineRing::sample(double pp, Coord &sample, double &angle)
 {
     auto pos = std::equal_range(par_.begin(), par_.end(), pp) ;
 
@@ -90,23 +90,19 @@ bool ParametricLineRing::sample(double pp, vector<Coord> &samples, vector<double
     double h = (pp - ptl)/(tl - ptl) ;
     double x = ( 1 - h ) * x0 + h * x1 ;
     double y = ( 1 - h ) * y0 + h * y1 ;
-    double angle = angle_[pi] ;
+    angle = angle_[pi] ;
 
-    samples.emplace_back(x, y) ;
-
-    if ( angle < -M_PI/2 || angle > M_PI/2 )
-        angles.push_back(angle + M_PI) ;
-    else
-        angles.push_back(angle) ;
-
+    sample = {x, y} ;
 
     return true ;
 
 }
 
 static void sample_polygon(const vector<Coord> &coords, const cairo_matrix_t &cmm, float gap, float initial_gap, float box_len,
-                           vector<Coord> &samples, vector<double> &angles)
+                           vector<Coord> &samples, vector<double> &angles, bool fix_angle)
 {
+    static const double angle_threshold = M_PI/60 ;
+
     ParametricLineRing parp(coords, cmm) ;
 
     double length = parp.length() ;
@@ -122,9 +118,25 @@ static void sample_polygon(const vector<Coord> &coords, const cairo_matrix_t &cm
 
     for( double cp = initial_gap ; cp <= length ; cp += gap )
     {
-        if ( cp - box_len/2 < sample_near_boundaries_offset || cp + box_len/2 > length - sample_near_boundaries_offset ) continue ;
+        double cp_p = cp - box_len/2 ;
+        double cp_n = cp + box_len/2 ;
+        if ( cp_p < sample_near_boundaries_offset || cp_n > length - sample_near_boundaries_offset ) continue ;
 
-        parp.sample(cp, samples, angles) ;
+        Coord sample, sample_p, sample_n ;
+        double angle, angle_p, angle_n ;
+
+        parp.sample(cp, sample, angle) ;
+        parp.sample(cp_p, sample_p, angle_p) ;
+        parp.sample(cp_n, sample_n, angle_n) ;
+
+        if ( fabs(angle_p - angle) > angle_threshold ) continue ;
+        if ( fabs(angle_n - angle) > angle_threshold ) continue ;
+
+        if ( fix_angle && ( angle < -M_PI/2 || angle > M_PI/2 ) )
+            angle = angle + M_PI ;
+
+        samples.push_back(sample) ;
+        angles.push_back(angle) ;
     }
 }
 
@@ -134,6 +146,7 @@ void sample_linear_geometry(
                     float gap,
                     float initial_gap,
                     float box_len,
+                    bool fix_angle,
                     std::vector<Coord> &samples,
                     std::vector<double> &angles
 )
@@ -143,7 +156,7 @@ void sample_linear_geometry(
         const vector<Coord> &ring = geom[i] ;
 
         for( uint j=0 ; j<ring.size() ; j++ ) {
-            sample_polygon(ring, cmm, gap, initial_gap, box_len, samples, angles) ;
+            sample_polygon(ring, cmm, gap, initial_gap, box_len, samples, angles, fix_angle) ;
         }
     }
 

@@ -40,14 +40,14 @@ int main(int argc, char *argv[])
 
     reader.open(mapFile) ;
 
-    TileKey key(4580, 5106, 13, false) ;
+    TileKey key(146540, 163383, 18, false) ;
 
     VectorTile tile = reader.readTile(key);
 
     mapsforge::RenderTheme theme ;
-    theme.read("/home/malasiot/Downloads/elevate4/Elevate.xml") ;
+    theme.read("/home/malasiot/source/mftools/build/data/maps/greece/themes/elevate4/Elevate.xml") ;
 
-    Renderer r(theme) ;
+    Renderer r(theme, "el", true) ;
 
     ImageBuffer buf(256, 256) ;
 

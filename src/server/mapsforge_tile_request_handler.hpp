@@ -14,7 +14,7 @@
 class MapsforgeTileRequestHandler: public TileRequestHandler {
 public:
 
-    MapsforgeTileRequestHandler(const std::string &map_id, const std::string &map_file_name, const std::string &theme_file_name) ;
+    MapsforgeTileRequestHandler(const std::string &map_id, const std::string &map_file_name, const std::string &theme_file_name, bool debug) ;
     void handle_request(const http::Request &request, http::Response &resp) ;
 
 private:

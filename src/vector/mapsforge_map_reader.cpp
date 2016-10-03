@@ -239,8 +239,11 @@ struct TileData {
     }
 };
 
-VectorTile MapFile::readTile(const TileKey &key)
+VectorTile MapFile::readTile(const TileKey &key, int offset)
 {
+
+    BBox query_box ;
+    tms::tileBounds(key.x(), key.y(), key.z(), query_box.minx_, query_box.miny_, query_box.maxx_, query_box.maxy_) ;
     // crop zoom level to map zoom interval
 
     TileKey gt = key.toGoogle() ;
@@ -267,43 +270,65 @@ VectorTile MapFile::readTile(const TileKey &key)
     uint32_t cols = si.max_tx_ - si.min_tx_ + 1 ;
     uint64_t tile_count = rows * cols ;
 
-    int32_t base_tile_min_x, base_tile_min_y;
-    int32_t base_tile_max_x, base_tile_max_y;
 
     bool use_bitmask = false;
 
-    if ( gt.z() < si.base_zoom_ ) {
-        // calculate the XY numbers of the upper left and lower right sub-tiles
-        const int zoom_diff = (int8_t)si.base_zoom_ - (int8_t)gt.z() ;
-        base_tile_min_x = gt.x() << zoom_diff ;
-        base_tile_min_y = gt.y() << zoom_diff ;
-        base_tile_max_x = base_tile_min_x + ( 1 << zoom_diff ) - 1 ;
-        base_tile_max_y = base_tile_min_y + ( 1 << zoom_diff ) - 1 ;
-    } else if ( gt.z() > si.base_zoom_ ) {
-        // calculate the XY numbers of the parent base tile
-        const int zoom_diff = (int8_t)gt.z() - (int8_t)si.base_zoom_  ;
-        base_tile_min_x = gt.x() >> zoom_diff ;
-        base_tile_min_y = gt.y() >> zoom_diff ;
-        base_tile_max_x = base_tile_min_x ;
-        base_tile_max_y = base_tile_min_y  ;
+    int32_t base_tile_min_x = si.max_tx_, base_tile_min_y = si.max_ty_ ;
+    int32_t base_tile_max_x = si.min_tx_, base_tile_max_y = si.min_ty_ ;
 
-        use_bitmask = true;
-    } else {
-        base_tile_min_x = gt.x() ;
-        base_tile_min_y = gt.y() ;
-        base_tile_max_x = base_tile_min_x ;
-        base_tile_max_y = base_tile_min_y  ;
+    // we visit all tiles around the query tile and calculate which blocks should be loaded
+
+    for( int32_t tx = gt.x() - offset ; tx <= gt.x() + offset; tx++ ) {
+        for( int32_t ty = gt.y() - offset ; ty <= gt.y() + offset; ty++ ) {
+
+            int32_t block_min_x, block_min_y;
+            int32_t block_max_x, block_max_y;
+
+            if ( gt.z() < si.base_zoom_ ) {
+                // calculate the XY numbers of the upper left and lower right sub-tiles
+                const int zoom_diff = (int8_t)si.base_zoom_ - (int8_t)gt.z() ;
+                block_min_x = tx << zoom_diff ;
+                block_min_y = ty << zoom_diff ;
+                block_max_x = block_min_x + ( 1 << zoom_diff ) - 1 ;
+                block_max_y = block_min_y + ( 1 << zoom_diff ) - 1 ;
+            } else if ( gt.z() > si.base_zoom_ ) {
+                // calculate the XY numbers of the parent base tile
+                const int zoom_diff = (int8_t)gt.z() - (int8_t)si.base_zoom_  ;
+                block_min_x = tx >> zoom_diff ;
+                block_min_y = ty >> zoom_diff ;
+                block_max_x = block_min_x ;
+                block_max_y = block_min_y  ;
+
+                use_bitmask = true;
+            } else {
+                block_min_x = tx ;
+                block_min_y = ty ;
+                block_max_x = block_min_x ;
+                block_max_y = block_min_y  ;
+            }
+
+            base_tile_min_x = std::min(base_tile_min_x, block_min_x) ;
+            base_tile_max_x = std::max(base_tile_max_x, block_max_x) ;
+            base_tile_min_y = std::min(base_tile_min_y, block_min_y) ;
+            base_tile_max_y = std::max(base_tile_max_y, block_max_y) ;
+        }
     }
 
     VectorTile tile ;
 
-    // load required base tile from file or cache
+    // load required base tiles from file or cache
 
     for( int bty = base_tile_min_y ; bty<= base_tile_max_y ; bty++ )
         for( int btx = base_tile_min_x ; btx<= base_tile_max_x ; btx++ )
         {
             if ( bty < si.min_ty_ || bty > si.max_ty_ ||
                  btx < si.min_tx_ || btx > si.max_tx_ ) continue ;
+
+            BBox bbox ;
+            TileKey bt(btx, bty, si.base_zoom_, true) ;
+            tms::tileBounds(bt.x(), bt.y(), bt.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_) ;
+
+            bool ignore_ways = !bbox.intersects(query_box);
 
             int row = bty - si.min_ty_ ;
             int col = btx - si.min_tx_ ;
@@ -334,12 +359,14 @@ VectorTile MapFile::readTile(const TileKey &key)
 
                 // copy all ways and pois at zoom level equal or lower the requested zoom level
 
+
                 for(int z=zoom ; z>=si.min_zoom_ ; z-- ) {
                     int idx = z - (int)si.min_zoom_ ;
 
                     std::copy(data->pois_per_level_[idx].begin(), data->pois_per_level_[idx].end(),
                               std::back_inserter(tile.pois_)) ;
-                    std::copy(data->ways_per_level_[idx].begin(), data->ways_per_level_[idx].end(),
+                    if ( !ignore_ways )
+                        std::copy(data->ways_per_level_[idx].begin(), data->ways_per_level_[idx].end(),
                               std::back_inserter(tile.ways_)) ;
 
                 }
@@ -347,9 +374,9 @@ VectorTile MapFile::readTile(const TileKey &key)
             }
         }
 
-    exportTileDataOSM(tile, "/tmp/oo.osm");
+  //  exportTileDataOSM(tile, "/tmp/oo.osm");
 
-     return tile ;
+    return tile ;
 }
 
 void MapFile::readHeader()
@@ -794,6 +821,22 @@ void MapFile::readWayNodesSingleDelta(std::vector<LatLon> &coord_list, double tx
     }
 }
 
+static string escape_xml_string(const std::string &src) {
+    std::string buffer;
+    buffer.reserve(src.size());
+    for(size_t pos = 0; pos != src.size(); ++pos) {
+        switch(src[pos]) {
+        case '&':  buffer.append("&amp;");       break;
+        case '\"': buffer.append("&quot;");      break;
+        case '\'': buffer.append("&apos;");      break;
+        case '<':  buffer.append("&lt;");        break;
+        case '>':  buffer.append("&gt;");        break;
+        default:   buffer.append(&src[pos], 1); break;
+        }
+    }
+    return buffer ;
+}
+
 void MapFile::exportTileDataOSM(const VectorTile &data, const string &filename)
 {
     ofstream strm(filename.c_str()) ;
@@ -804,7 +847,7 @@ void MapFile::exportTileDataOSM(const VectorTile &data, const string &filename)
     int64_t count = -10000000 ;
 
     for(int i=0 ; i<data.pois_.size() ; i++ ) {
-     const POI &poi = data.pois_[i] ;
+        const POI &poi = data.pois_[i] ;
 
         strm << "<node id='" << count++ << "' visible='true' lat='" << setprecision(12) << poi.lat_ <<
                 "' lon='" << setprecision(12) << poi.lon_  ;
@@ -817,7 +860,7 @@ void MapFile::exportTileDataOSM(const VectorTile &data, const string &filename)
             DictionaryIterator it(poi.tags_) ;
 
             while ( it ) {
-                strm << "<tag k='" << it.key() << "' v='" << it.value() << "' />\n" ;
+                strm << "<tag k='" << it.key() << "' v='" << escape_xml_string(it.value()) << "' />\n" ;
                 ++it ;
             }
 
@@ -862,7 +905,7 @@ void MapFile::exportTileDataOSM(const VectorTile &data, const string &filename)
             DictionaryIterator it(way.tags_) ;
 
             while ( it ) {
-                strm << "<tag k='" << it.key() << "' v='" << it.value() << "' />\n" ;
+                strm << "<tag k='" << it.key() << "' v='" << escape_xml_string(it.value()) << "' />\n" ;
                 ++it ;
             }
 

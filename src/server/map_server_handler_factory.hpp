@@ -5,7 +5,6 @@
 #include "request_handler.hpp"
 #include "mapsforge_tile_request_handler.hpp"
 #include "asset_request_handler.hpp"
-#include "debug_tile_request_handler.hpp"
 
 #include <map>
 
