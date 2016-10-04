@@ -12,14 +12,14 @@ using namespace std ;
 namespace fs = boost::filesystem ;
 using namespace http ;
 
-std::shared_ptr<mapsforge::TileIndex> MapsforgeTileRequestHandler::tile_index_ ;
+std::shared_ptr<TileIndex> MapsforgeTileRequestHandler::tile_index_ ;
 
 MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const string &map_file, const string &theme_file, bool debug):
     TileRequestHandler(id, map_file)
 {
-    if ( !tile_index_) tile_index_.reset(new mapsforge::TileIndex(1000000)) ;
+    if ( !tile_index_) tile_index_.reset(new TileIndex(1000000)) ;
 
-    map_file_.reset(new mapsforge::MapFile(tile_index_)) ;
+    map_file_.reset(new MapFile(tile_index_)) ;
 
     try {
         map_file_->open(map_file) ;
@@ -78,11 +78,11 @@ void MapsforgeTileRequestHandler::handle_request(const Request &request, Respons
 
     TileKey key(tx, ty, zoom, true) ;
 
-    mapsforge::VectorTile tile = map_file_->readTile(key);
+    VectorTile tile = map_file_->readTile(key);
 
     ImageBuffer buf(256, 256) ;
 
-    renderer_->render(buf, tile, key, layer, 128) ;
+    renderer_->render(key, buf, tile, layer, 128) ;
 
     string content ;
     buf.saveToPNGBuffer(content);

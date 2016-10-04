@@ -31,29 +31,31 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/mftools/src/osm/parser/osm_parser.hpp
+ ** \file /home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp
  ** Define the OSM::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_OSM_PARSER_HPP_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_OSM_PARSER_HPP_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_OSM_PARSER_HPP_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_OSM_PARSER_HPP_INCLUDED
 // //                    "%code requires" blocks.
-#line 18 "/home/malasiot/source/mftools/src/osm/osm.y" // lalr1.cc:372
+#line 18 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
 
 	namespace OSM {
 		namespace Filter {
 			class Parser ;
 			class ExpressionNode ;
 			class Command ;
+			class SimpleCommand ;
+			class RuleCommand ;
 			class LayerDefinition ;
 			class Rule ;
 		}
 	}
 
 
-#line 57 "/home/malasiot/source/mftools/src/osm/parser/osm_parser.hpp" // lalr1.cc:372
+#line 59 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
 
 
 # include <vector>
@@ -127,9 +129,9 @@
 # define YYDEBUG 1
 #endif
 
-#line 6 "/home/malasiot/source/mftools/src/osm/osm.y" // lalr1.cc:372
+#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
 namespace OSM {
-#line 133 "/home/malasiot/source/mftools/src/osm/parser/osm_parser.hpp" // lalr1.cc:372
+#line 135 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
 
 
 
@@ -304,20 +306,16 @@ namespace OSM {
       // attribute
       char dummy2[sizeof(OSM::Filter::ExpressionNode *)];
 
-      // layer_list
-      // layer
-      char dummy3[sizeof(OSM::Filter::LayerDefinition *)];
-
       // rule_list
       // rule
-      char dummy4[sizeof(OSM::Filter::Rule *)];
+      char dummy3[sizeof(OSM::Filter::Rule *)];
 
       // "number"
-      char dummy5[sizeof(double)];
+      char dummy4[sizeof(double)];
 
       // "identifier"
       // "string literal"
-      char dummy6[sizeof(std::string)];
+      char dummy5[sizeof(std::string)];
 };
 
     /// Symbol semantic values.
@@ -365,19 +363,21 @@ namespace OSM {
         TOK_DOT = 279,
         TOK_LEFT_BRACE = 280,
         TOK_RIGHT_BRACE = 281,
-        TOK_COLON = 282,
-        TOK_ADD_CMD = 283,
-        TOK_SET_CMD = 284,
-        TOK_DELETE_CMD = 285,
-        TOK_STORE_CMD = 286,
-        TOK_CONTINUE_CMD = 287,
-        TOK_ASSIGN = 288,
-        TOK_IN = 289,
-        TOK_LAYER = 290,
-        TOK_IDENTIFIER = 291,
-        TOK_NUMBER = 292,
-        TOK_STRING = 293,
-        TOK_UMINUS = 294
+        TOK_LEFT_BRACKET = 282,
+        TOK_RIGHT_BRACKET = 283,
+        TOK_COLON = 284,
+        TOK_ADD_CMD = 285,
+        TOK_SET_CMD = 286,
+        TOK_DELETE_CMD = 287,
+        TOK_STORE_CMD = 288,
+        TOK_CONTINUE_CMD = 289,
+        TOK_ASSIGN = 290,
+        TOK_IN = 291,
+        TOK_LAYER = 292,
+        TOK_IDENTIFIER = 293,
+        TOK_NUMBER = 294,
+        TOK_STRING = 295,
+        TOK_UMINUS = 296
       };
     };
 
@@ -415,8 +415,6 @@ namespace OSM {
   basic_symbol (typename Base::kind_type t, const OSM::Filter::Command * v, const location_type& l);
 
   basic_symbol (typename Base::kind_type t, const OSM::Filter::ExpressionNode * v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::LayerDefinition * v, const location_type& l);
 
   basic_symbol (typename Base::kind_type t, const OSM::Filter::Rule * v, const location_type& l);
 
@@ -581,6 +579,14 @@ namespace OSM {
     static inline
     symbol_type
     make_RIGHT_BRACE (const location_type& l);
+
+    static inline
+    symbol_type
+    make_LEFT_BRACKET (const location_type& l);
+
+    static inline
+    symbol_type
+    make_RIGHT_BRACKET (const location_type& l);
 
     static inline
     symbol_type
@@ -834,13 +840,13 @@ namespace OSM {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 131,     ///< Last index in yytable_.
-      yynnts_ = 29,  ///< Number of nonterminal symbols.
+      yylast_ = 129,     ///< Last index in yytable_.
+      yynnts_ = 27,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
-      yyfinal_ = 5, ///< Termination state number.
+      yyfinal_ = 40, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 40  ///< Number of tokens.
+      yyntokens_ = 42  ///< Number of tokens.
     };
 
 
@@ -887,9 +893,9 @@ namespace OSM {
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35,    36,    37,    38,    39
+      35,    36,    37,    38,    39,    40,    41
     };
-    const unsigned int user_token_number_max_ = 294;
+    const unsigned int user_token_number_max_ = 296;
     const token_number_type undef_token_ = 2;
 
     if (static_cast<int>(t) <= yyeof_)
@@ -952,22 +958,17 @@ namespace OSM {
         value.copy< OSM::Filter::ExpressionNode * > (other.value);
         break;
 
-      case 41: // layer_list
-      case 42: // layer
-        value.copy< OSM::Filter::LayerDefinition * > (other.value);
-        break;
-
       case 43: // rule_list
       case 44: // rule
         value.copy< OSM::Filter::Rule * > (other.value);
         break;
 
-      case 37: // "number"
+      case 39: // "number"
         value.copy< double > (other.value);
         break;
 
-      case 36: // "identifier"
-      case 38: // "string literal"
+      case 38: // "identifier"
+      case 40: // "string literal"
         value.copy< std::string > (other.value);
         break;
 
@@ -1018,22 +1019,17 @@ namespace OSM {
         value.copy< OSM::Filter::ExpressionNode * > (v);
         break;
 
-      case 41: // layer_list
-      case 42: // layer
-        value.copy< OSM::Filter::LayerDefinition * > (v);
-        break;
-
       case 43: // rule_list
       case 44: // rule
         value.copy< OSM::Filter::Rule * > (v);
         break;
 
-      case 37: // "number"
+      case 39: // "number"
         value.copy< double > (v);
         break;
 
-      case 36: // "identifier"
-      case 38: // "string literal"
+      case 38: // "identifier"
+      case 40: // "string literal"
         value.copy< std::string > (v);
         break;
 
@@ -1061,13 +1057,6 @@ namespace OSM {
 
   template <typename Base>
   BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::ExpressionNode * v, const location_type& l)
-    : Base (t)
-    , value (v)
-    , location (l)
-  {}
-
-  template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::LayerDefinition * v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
@@ -1140,22 +1129,17 @@ namespace OSM {
         value.template destroy< OSM::Filter::ExpressionNode * > ();
         break;
 
-      case 41: // layer_list
-      case 42: // layer
-        value.template destroy< OSM::Filter::LayerDefinition * > ();
-        break;
-
       case 43: // rule_list
       case 44: // rule
         value.template destroy< OSM::Filter::Rule * > ();
         break;
 
-      case 37: // "number"
+      case 39: // "number"
         value.template destroy< double > ();
         break;
 
-      case 36: // "identifier"
-      case 38: // "string literal"
+      case 38: // "identifier"
+      case 40: // "string literal"
         value.template destroy< std::string > ();
         break;
 
@@ -1203,22 +1187,17 @@ namespace OSM {
         value.move< OSM::Filter::ExpressionNode * > (s.value);
         break;
 
-      case 41: // layer_list
-      case 42: // layer
-        value.move< OSM::Filter::LayerDefinition * > (s.value);
-        break;
-
       case 43: // rule_list
       case 44: // rule
         value.move< OSM::Filter::Rule * > (s.value);
         break;
 
-      case 37: // "number"
+      case 39: // "number"
         value.move< double > (s.value);
         break;
 
-      case 36: // "identifier"
-      case 38: // "string literal"
+      case 38: // "identifier"
+      case 40: // "string literal"
         value.move< std::string > (s.value);
         break;
 
@@ -1273,7 +1252,8 @@ namespace OSM {
        0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
      265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
      275,   276,   277,   278,   279,   280,   281,   282,   283,   284,
-     285,   286,   287,   288,   289,   290,   291,   292,   293,   294
+     285,   286,   287,   288,   289,   290,   291,   292,   293,   294,
+     295,   296
     };
     return static_cast<token_type> (yytoken_number_[type]);
   }
@@ -1429,6 +1409,18 @@ namespace OSM {
   }
 
   BisonParser::symbol_type
+  BisonParser::make_LEFT_BRACKET (const location_type& l)
+  {
+    return symbol_type (token::TOK_LEFT_BRACKET, l);
+  }
+
+  BisonParser::symbol_type
+  BisonParser::make_RIGHT_BRACKET (const location_type& l)
+  {
+    return symbol_type (token::TOK_RIGHT_BRACKET, l);
+  }
+
+  BisonParser::symbol_type
   BisonParser::make_COLON (const location_type& l)
   {
     return symbol_type (token::TOK_COLON, l);
@@ -1507,11 +1499,11 @@ namespace OSM {
   }
 
 
-#line 6 "/home/malasiot/source/mftools/src/osm/osm.y" // lalr1.cc:372
+#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
 } // OSM
-#line 1513 "/home/malasiot/source/mftools/src/osm/parser/osm_parser.hpp" // lalr1.cc:372
+#line 1505 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
 
 
 
 
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_OSM_PARSER_HPP_INCLUDED
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_OSM_PARSER_HPP_INCLUDED

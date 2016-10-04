@@ -10,7 +10,6 @@
 #include <harfbuzz/hb-ft.h>
 
 using namespace std ;
-using namespace mapsforge ;
 
 static cairo_font_face_t *create_font_face(ResourceCache &cache, const string &lang, const std::string &family_name, uint &font_style)
 {
@@ -147,139 +146,7 @@ bool shape_text(const std::string &text, cairo_scaled_font_t *sf, cairo_glyph_t 
 
 extern double clip_percent (double percent) ;
 
-// render text for point geometries
 
-void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double angle, const std::string &label, const RenderInstruction &caption, int32_t poi_idx)
-{
-    cairo_t *cr = ctx.cr_ ;
-
-    if ( label.empty() ) return ;
-
-    string family_name ;
-
-    if ( caption.font_family_ == RenderInstruction::Default )
-        family_name = "serif" ;
-    else if (caption.font_family_ == RenderInstruction::Monospace )
-        family_name = "monospace" ;
-    else if (caption.font_family_ == RenderInstruction::SansSerif )
-        family_name = "sans-serif" ;
-    else if (caption.font_family_ == RenderInstruction::Serif )
-        family_name = "serif" ;
-
-    // query font face based on provided arguments
-
-    cairo_scaled_font_t *scaled_font = cairo_setup_font(*cache_.get(), languages_, family_name, caption.font_style_, caption.font_size_) ;
-
-    if ( !scaled_font ) return ;
-
-    cairo_set_scaled_font(cr, scaled_font) ;
-
-    // do text shaping based on created font
-
-    cairo_glyph_t *glyphs ;
-    int num_glyphs =0 ;
-
-    shape_text(label, scaled_font, glyphs, num_glyphs) ;
-
-    // get placement attributes
-
-    double anchor_x = 0.5 ;
-    double anchor_y = 0.50 ;
-    double disp_x = 0 ;
-    double disp_y = caption.dy_;
-    double rotation = angle ;
-
-    // compute text placement
-
-    cairo_text_extents_t extents ;
-
-    cairo_glyph_extents(cr, glyphs, num_glyphs, &extents);
-
-    double width = extents.width ;
-    double height = extents.height ;
-
-    double ofx =  width * anchor_x ;
-    double ofy =  height * anchor_y ;
-
-    cairo_save(cr) ;
-
-    double px = mx, py = my ;
-
-    cairo_matrix_transform_point(&ctx.cmm_, &px, &py) ;
-
-    if ( caption.type_ == RenderInstruction::Caption && caption.symbol_ ) {
-        RenderInstruction &symbol = *caption.symbol_ ;
-
-        double sw, sh ;
-        getSymbolSize(symbol, sw, sh);
-
-        double offset_x = sw/2.0 + width/2.0 ;
-        double offset_y = sh/2.0 + height/2.0 ;
-
-        if ( caption.position_ == RenderInstruction::Above ) disp_y -= offset_y ;
-        else if ( caption.position_ == RenderInstruction::Below )
-            disp_y += offset_y ;
-        else if ( caption.position_ == RenderInstruction::AboveLeft ) {
-            disp_y -= offset_y ;
-            disp_x -= offset_x ;
-        }
-        else if ( caption.position_ == RenderInstruction::AboveRight ) {
-            disp_y -= offset_y ;
-            disp_x += offset_x ;
-        }
-        else if ( caption.position_ == RenderInstruction::BelowLeft ) {
-            disp_y += offset_y ;
-            disp_x -= offset_x ;
-        }
-        else if ( caption.position_ == RenderInstruction::BelowRight ) {
-            disp_y += offset_y ;
-            disp_x += offset_x ;
-        }
-        else if ( caption.position_ == RenderInstruction::Left ) {
-            disp_x -= offset_x ;
-        }
-        else if ( caption.position_ == RenderInstruction::Right ) {
-            disp_x += offset_x ;
-        }
-        else if ( caption.position_ == RenderInstruction::Center ) ;
-
-    }
-
-
-    if ( caption.display_ == RenderInstruction::Allways ||
-         caption.display_ == RenderInstruction::IfSpace && ctx.colc_.addLabelBox(px + disp_x, py + disp_y, rotation, width + collision_extra, height + collision_extra, poi_idx)  )
-    {
-        cairo_save(cr) ;
-
-        cairo_translate(cr, disp_x, disp_y) ;
-        cairo_translate(cr, px, py) ;
-        cairo_rotate(cr, rotation) ;
-        cairo_translate(cr, -ofx, ofy ) ;
-
-        cairo_move_to(cr, 0, 0) ;
-
-        cairo_glyph_path(cr, glyphs, num_glyphs);
-
-        applySimpleStroke(cr, caption.stroke_width_, caption.stroke_, std::vector<float>(), RenderInstruction::Butt, RenderInstruction::Bevel) ;
-        cairo_stroke_preserve(cr) ;
-
-        applySimpleFill(cr, caption.fill_) ;
-        cairo_fill(cr) ;
-/*
-        cairo_rectangle(cr, 0, 0, width, height) ;
-        cairo_set_source_rgb(cr, 1, 0, 0) ;
-        cairo_stroke(cr) ;
-*/
-        cairo_restore(cr) ;
-    }
-
-
-
-    cairo_scaled_font_destroy(scaled_font) ;
-    cairo_glyph_free(glyphs) ;
-
-    cairo_restore(cr);
-}
 
 #if 0
 extern bool isClockwise(gaiaGeomColl *p1, gaiaGeomColl *p2) ;

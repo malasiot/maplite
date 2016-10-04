@@ -60,6 +60,8 @@ void comment() ;
 "{"		{ return OSM::BisonParser::make_LEFT_BRACE(*yylloc) ; }
 "}"		{ return OSM::BisonParser::make_RIGHT_BRACE(*yylloc) ; }
 ";"		{ return OSM::BisonParser::make_COLON(*yylloc) ; }
+"]"		{ return OSM::BisonParser::make_RIGHT_BRACKET(*yylloc) ; }
+"["	    { return OSM::BisonParser::make_LEFT_BRACKET(*yylloc) ; }
 
 add([[:space:]]+(tag))? { return OSM::BisonParser::make_ADD_CMD(*yylloc) ; }
 set([[:space:]]+(tag))? { return OSM::BisonParser::make_SET_CMD(*yylloc) ; }

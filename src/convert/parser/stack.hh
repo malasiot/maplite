@@ -31,18 +31,18 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/mftools/src/osm/parser/stack.hh
+ ** \file /home/malasiot/source/mftools/src/convert/parser/stack.hh
  ** Define the OSM::stack class.
  */
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_STACK_HH_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_STACK_HH_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_STACK_HH_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_STACK_HH_INCLUDED
 
 # include <vector>
 
-#line 6 "/home/malasiot/source/mftools/src/osm/osm.y" // stack.hh:133
+#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // stack.hh:133
 namespace OSM {
-#line 46 "/home/malasiot/source/mftools/src/osm/parser/stack.hh" // stack.hh:133
+#line 46 "/home/malasiot/source/mftools/src/convert/parser/stack.hh" // stack.hh:133
   template <class T, class S = std::vector<T> >
   class stack
   {
@@ -151,8 +151,8 @@ namespace OSM {
     unsigned int range_;
   };
 
-#line 6 "/home/malasiot/source/mftools/src/osm/osm.y" // stack.hh:133
+#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // stack.hh:133
 } // OSM
-#line 157 "/home/malasiot/source/mftools/src/osm/parser/stack.hh" // stack.hh:133
+#line 157 "/home/malasiot/source/mftools/src/convert/parser/stack.hh" // stack.hh:133
 
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_STACK_HH_INCLUDED
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_STACK_HH_INCLUDED

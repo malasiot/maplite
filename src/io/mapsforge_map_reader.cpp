@@ -56,9 +56,6 @@ static void byte_swap_16(uint16_t &nValue)
 }
 
 
-namespace mapsforge {
-
-
 class ReadException: public runtime_error {
 public:
     ReadException(const string &file, const string &reason):
@@ -926,4 +923,4 @@ void MapFile::exportTileDataOSM(const VectorTile &data, const string &filename)
     strm << "</osm>" ;
 }
 
-}
+

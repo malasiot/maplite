@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
             osmFiles.push_back(argv[i]) ;
     }
 
-    if ( importConfigFile.empty() ||  mapConfigFile.empty() || osmFiles.empty() )
+    if ( importConfigFile.empty() ||   osmFiles.empty() )
         printUsageAndExit() ;
 
     boost::filesystem::path tmp_dir = boost::filesystem::temp_directory_path() ;
@@ -62,17 +62,9 @@ int main(int argc, char *argv[])
         return 0 ;
     }
 
-    MapConfig mcfg ;
-    if ( !mcfg.parse(mapConfigFile) ) {
-        cerr << "Error parsing map configuration file: " << mapConfigFile << endl ;
-        return 0 ;
-    }
 
-    for( OSM::Filter::LayerDefinition *layer = icfg.layers_ ; layer ; layer = layer->next_)  {
-        if ( ! gfile.createLayerTable(layer->name_, layer->type_, layer->srid_ ) ) {
-            cerr << "Failed to create layer " << layer->name_ << ", skipping" ;
-           continue ;
-        }
+    for( OSM::Filter::Rule *rule = icfg.rules_ ; rule ; rule = rule->next_)  {
+        cout << "ok" << endl ;
     }
 
     if ( !gfile.processOsmFiles(osmFiles, icfg) ) {
@@ -80,16 +72,6 @@ int main(int argc, char *argv[])
         return 0 ;
     }
 
-    MBTileWriter twriter(tileSet) ;
-
-
-    if ( boost::filesystem::is_directory(tileSet) )
-        twriter.writeTilesFolder(gfile, mcfg) ;
-    else
-        twriter.writeTilesDB(gfile, mcfg) ;
-
-
-//    boost::filesystem::remove(mapFile) ;
 
     return 1 ;
 

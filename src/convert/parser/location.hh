@@ -31,18 +31,18 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/mftools/src/osm/parser/location.hh
+ ** \file /home/malasiot/source/mftools/src/convert/parser/location.hh
  ** Define the OSM::location class.
  */
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_LOCATION_HH_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_LOCATION_HH_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED
 
 # include "position.hh"
 
-#line 6 "/home/malasiot/source/mftools/src/osm/osm.y" // location.cc:291
+#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // location.cc:291
 namespace OSM {
-#line 46 "/home/malasiot/source/mftools/src/osm/parser/location.hh" // location.cc:291
+#line 46 "/home/malasiot/source/mftools/src/convert/parser/location.hh" // location.cc:291
   /// Abstract a location.
   class location
   {
@@ -181,7 +181,7 @@ namespace OSM {
     return ostr;
   }
 
-#line 6 "/home/malasiot/source/mftools/src/osm/osm.y" // location.cc:291
+#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // location.cc:291
 } // OSM
-#line 187 "/home/malasiot/source/mftools/src/osm/parser/location.hh" // location.cc:291
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_LOCATION_HH_INCLUDED
+#line 187 "/home/malasiot/source/mftools/src/convert/parser/location.hh" // location.cc:291
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED

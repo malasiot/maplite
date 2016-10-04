@@ -10,24 +10,28 @@ static bool processSetTagActions(const OSM::Filter::Rule *r, OSM::Filter::Contex
 
    while ( action )
    {
-       if ( action->cmd_ ==  OSM::Filter::Command::Add )
+       if ( action->type() ==  OSM::Filter::Command::Add )
        {
-           node->tags_.add(action->tag_, action->expression_->eval(ctx).toString()) ;
+           OSM::Filter::SimpleCommand *ac = dynamic_cast<OSM::Filter::SimpleCommand *>(action) ;
+           node->tags_.add(ac->tag_, ac->expression_->eval(ctx).toString()) ;
        }
-       else if ( action->cmd_ == OSM::Filter::Command::Set )
+       else if ( action->type() == OSM::Filter::Command::Set )
        {
-           if ( node->tags_.contains(action->tag_) )
-               node->tags_[action->tag_] = action->expression_->eval(ctx).toString() ;
+           OSM::Filter::SimpleCommand *ac = dynamic_cast<OSM::Filter::SimpleCommand *>(action) ;
+
+           if ( node->tags_.contains(ac->tag_) )
+               node->tags_[ac->tag_] = ac->expression_->eval(ctx).toString() ;
            else
-               node->tags_.add(action->tag_, action->expression_->eval(ctx).toString()) ;
+               node->tags_.add(ac->tag_, ac->expression_->eval(ctx).toString()) ;
        }
-       else if ( action->cmd_ == OSM::Filter::Command::Continue )
+       else if ( action->type() == OSM::Filter::Command::Continue )
        {
            cont = true ;
        }
-       else if ( action->cmd_ == OSM::Filter::Command::Delete )
+       else if ( action->type() == OSM::Filter::Command::Delete )
        {
-           node->tags_.remove(action->tag_) ;
+           OSM::Filter::SimpleCommand *ac = dynamic_cast<OSM::Filter::SimpleCommand *>(action) ;
+           node->tags_.remove(ac->tag_) ;
        }
 
        action = action->next_ ;
@@ -46,16 +50,17 @@ static bool processStoreActions(const OSM::Filter::Rule *r, OSM::Filter::Context
 
    while ( action )
    {
-       if ( action->cmd_ == OSM::Filter::Command::Continue )
+       if ( action->type() == OSM::Filter::Command::Continue )
        {
            cont = true ;
        }
-       else if ( action->cmd_ == OSM::Filter::Command::Store )
+       else if ( action->type() == OSM::Filter::Command::Store )
        {
+           OSM::Filter::SimpleCommand *ac = dynamic_cast<OSM::Filter::SimpleCommand *>(action) ;
            Action act ;
 
-           act.key_ = action->tag_ ;
-           act.val_ = action->expression_->eval(ctx) ;
+           act.key_ = ac->tag_ ;
+           act.val_ = ac->expression_->eval(ctx) ;
 
            actions.push_back(act) ;
        }
@@ -336,11 +341,10 @@ bool MapFile::addOSMLayerPolygons(const OSM::Document &doc, const OSM::Filter::L
    return true ;
 }
 
-
 bool MapFile::processOsmFiles(const vector<string> &osmFiles, const ImportConfig &cfg)
 {
     // read files from memory and write to spatialite database
-
+#if 0
     for(int i=0 ; i<osmFiles.size() ; i++ ) {
 
         OSM::Document doc ;
@@ -538,7 +542,7 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const ImportConfig
 
         }
     }
-
+#endif
     return true ;
 
 }

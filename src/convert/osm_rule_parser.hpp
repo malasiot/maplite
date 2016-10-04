@@ -35,7 +35,7 @@ public:
 
     FlexScanner scanner_;
     BisonParser parser_;
-    LayerDefinition *layers_ = nullptr ;
+    Rule *rules_ = nullptr ;
 
     std::string error_string_ ;
     OSM::BisonParser::location_type loc_ ;
@@ -80,7 +80,7 @@ public:
 class Rule {
 public:
 
-    Rule(ExpressionNode *exp, Command *cmd): node_(exp), actions_(cmd) {}
+    Rule(ExpressionNode *exp, Command *cmds): node_(exp), actions_(cmds) {}
     ~Rule() ;
 
     ExpressionNode *node_ = nullptr ;
@@ -135,17 +135,46 @@ class ExpressionNode {
 
 };
 
-
 class Command {
 public:
-    enum Type { Set, Add, Store, Continue, Delete } ;
+    enum Type { Set, Add, Store, Continue, Delete, Conditional } ;
 
-    Command(Type cmd, std::string ident = std::string(), ExpressionNode *val = 0): cmd_(cmd), tag_(ident), expression_(val), next_(0) {}
+    Command(): next_(nullptr) {}
+
+    virtual Type type() const = 0 ;
+    virtual ~Command() {}
+
+    Command *next_ ;
+};
+
+class SimpleCommand: public Command {
+public:
+
+    SimpleCommand(Type cmd, std::string ident = std::string(), ExpressionNode *val = 0): cmd_(cmd), tag_(ident), expression_(val) {}
+
+    Type type() const { return cmd_ ; }
 
     ExpressionNode *expression_ ;
     std::string tag_ ;
     Type cmd_ ;
-    Command *next_ ;
+
+};
+
+class RuleCommand: public Command {
+public:
+
+    Type type() const { return Conditional ; }
+
+    RuleCommand(Rule *rule = 0): rule_(rule) {}
+
+    Rule *rule_ ;
+};
+
+class ActionBlock {
+public:
+    ActionBlock(): rules_(nullptr), commands_(nullptr) {}
+    Rule *rules_ ;
+    Command *commands_ ;
 };
 
 class LiteralExpressionNode: public ExpressionNode {

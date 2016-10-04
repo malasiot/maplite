@@ -21,6 +21,8 @@
 			class Parser ;
 			class ExpressionNode ;
 			class Command ;
+			class SimpleCommand ;
+			class RuleCommand ;
 			class LayerDefinition ;
 			class Rule ;
 		}
@@ -61,6 +63,8 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 %token DOT "."
 %token LEFT_BRACE "{"
 %token RIGHT_BRACE "}"
+%token LEFT_BRACKET "["
+%token RIGHT_BRACKET "]"
 %token COLON ";"
 %token ADD_CMD "add tag"
 %token SET_CMD "set tag"
@@ -94,21 +98,15 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 %left STAR DIV
 %nonassoc UMINUS EXISTS
 
-%start layer_list
+%start rule_list
 
 %%
 
-layer_list: layer { driver.layers_ = $$ = $1 ; }
-			| layer layer_list { driver.layers_ = $$ = $1 ; $$->next_ = $2 ; }
+rule_list: rule { driver.rules_ = $$ = $1 ; }
+		  | rule rule_list { driver.rules_ = $$ = $1 ; $$->next_ = $2 ; }
 ;
 
-layer: LAYER IDENTIFIER IDENTIFIER rule_list { $$ = new OSM::Filter::LayerDefinition{$2, $3} ; $$->rules_ = $4 ; }
-
-rule_list: rule { $$ = $1 ; }
-		  | rule rule_list { $$ = $1 ; $$->next_ = $2 ; }
-;
-
-rule: boolean_value_expression action_block { $$ = new OSM::Filter::Rule{$1, $2} ; }
+rule: LEFT_BRACKET boolean_value_expression RIGHT_BRACKET action_block { $$ = new OSM::Filter::Rule{$2, $4} ; }
 	  | action_block { $$ = new OSM::Filter::Rule{nullptr, $1} ; }
 ;
 
@@ -117,18 +115,20 @@ action_block:
 	LEFT_BRACE command_list RIGHT_BRACE { $$ = $2 ; }
 	;
 
+
 command_list:
 	command { $$ = $1 ;  }
-	| command COLON { $$ = $1 ; }
-	| command COLON command_list { $$ = $1 ; $1->next_ = $3 ;}
+	| command command_list { $$ = $1 ; $1->next_ = $2 ;}
 	;
 
 command:
-		ADD_CMD IDENTIFIER ASSIGN expression { $$ = new OSM::Filter::Command( OSM::Filter::Command::Add, $2, $4) ; }
-	|	SET_CMD IDENTIFIER ASSIGN expression { $$ = new OSM::Filter::Command( OSM::Filter::Command::Set, $2, $4) ;}
-	|   DELETE_CMD IDENTIFIER { $$ = new OSM::Filter::Command( OSM::Filter::Command::Delete, $2) ; }
-	|   STORE_CMD IDENTIFIER expression { $$ = new OSM::Filter::Command( OSM::Filter::Command::Store, $2, $3) ; }
-	|   CONTINUE_CMD { $$ = new OSM::Filter::Command( OSM::Filter::Command::Continue) ;}
+		ADD_CMD IDENTIFIER ASSIGN expression COLON { $$ = new OSM::Filter::SimpleCommand( OSM::Filter::Command::Add, $2, $4) ; }
+	|	SET_CMD IDENTIFIER ASSIGN expression COLON { $$ = new OSM::Filter::SimpleCommand( OSM::Filter::Command::Set, $2, $4) ;}
+	|   DELETE_CMD IDENTIFIER COLON { $$ = new OSM::Filter::SimpleCommand( OSM::Filter::Command::Delete, $2) ; }
+	|   STORE_CMD IDENTIFIER expression COLON { $$ = new OSM::Filter::SimpleCommand( OSM::Filter::Command::Store, $2, $3) ; }
+	|   CONTINUE_CMD COLON { $$ = new OSM::Filter::SimpleCommand( OSM::Filter::SimpleCommand::Continue) ;}
+	|   rule { $$ = new OSM::Filter::RuleCommand( $1) ;}
+
 	;
 
 complex_expression:
@@ -259,6 +259,7 @@ attribute:
 
 
 %%
+#define YYDEBUG 1
 #include <osm_rule_scanner.hpp>
 
 // We have to implement the error function
@@ -274,4 +275,4 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 	return  driver.scanner_.lex(&loc);
 }
 
-static int yydebug_=1 ;
+

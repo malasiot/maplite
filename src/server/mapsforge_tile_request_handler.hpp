@@ -19,10 +19,10 @@ public:
 
 private:
 
-    static std::shared_ptr<mapsforge::TileIndex> tile_index_ ;
-    std::shared_ptr<mapsforge::MapFile> map_file_ ;
+    static std::shared_ptr<TileIndex> tile_index_ ;
+    std::shared_ptr<MapFile> map_file_ ;
 
-    mapsforge::RenderTheme theme_ ;
+    RenderTheme theme_ ;
     std::shared_ptr<Renderer> renderer_ ;
 };
 

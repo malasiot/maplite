@@ -23,7 +23,7 @@ public:
 
     // render to target context centered on (x,y) scaled to (size) and with given dpi
 
-    void renderToTarget(cairo_t *target, float x, float y, float sw, float sh, float dpi) ;
+    void renderToTarget(cairo_t *target, double x, double y, double sw, double sh, double dpi) ;
 
 private:
 
@@ -33,7 +33,7 @@ private:
 
 private:
 
-    void render(cairo_t *cr, float w, float h, float dpi);
+    void render(cairo_t *cr, double w, double h, double dpi);
 };
 
 }

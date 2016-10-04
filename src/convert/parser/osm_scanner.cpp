@@ -1,6 +1,6 @@
-#line 2 "/home/malasiot/source/mftools/src/osm/parser/osm_scanner.cpp"
+#line 2 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
 
-#line 4 "/home/malasiot/source/mftools/src/osm/parser/osm_scanner.cpp"
+#line 4 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -417,8 +417,8 @@ int yyFlexLexer::yylex()
 	(yy_c_buf_p) = yy_cp;
 
 /* %% [4.0] data tables for the DFA and the user's section 1 definitions go here */
-#define YY_NUM_RULES 52
-#define YY_END_OF_BUFFER 53
+#define YY_NUM_RULES 54
+#define YY_END_OF_BUFFER 55
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -426,21 +426,22 @@ struct yy_trans_info
 	flex_int32_t yy_verify;
 	flex_int32_t yy_nxt;
 	};
-static yyconst flex_int16_t yy_accept[121] =
+static yyconst flex_int16_t yy_accept[123] =
     {   0,
-        0,    0,    0,    0,   53,   52,   46,   45,   18,   52,
-       52,   52,   20,   21,   24,   22,   26,   23,   27,   25,
-       38,   30,   12,    8,   13,   52,   37,   37,   37,   37,
-       37,   37,   37,   37,   19,   28,   52,   29,   16,   50,
-       48,   50,   46,   45,   11,   17,    0,   44,   44,    0,
-        0,   51,    3,   40,    0,   47,   39,   38,    0,   14,
-       10,    9,   15,    0,   37,    0,   37,   37,   37,   37,
-        6,   37,    4,   37,   37,    5,   49,    0,   43,   39,
-        0,    0,   41,    0,   36,   31,    2,   37,   37,    7,
-       32,   37,    0,   42,    0,    0,   37,   37,    0,   37,
+        0,    0,    0,    0,   55,   54,   48,   47,   18,   54,
+       54,   54,   20,   21,   24,   22,   26,   23,   27,   25,
+       40,   30,   12,    8,   13,   54,   39,   39,   39,   39,
+       39,   39,   39,   39,   32,   31,   19,   28,   54,   29,
+       16,   52,   50,   52,   48,   47,   11,   17,    0,   46,
+       46,    0,    0,   53,    3,   42,    0,   49,   41,   40,
+        0,   14,   10,    9,   15,    0,   39,    0,   39,   39,
+       39,   39,    6,   39,    4,   39,   39,    5,   51,    0,
+       45,   41,    0,    0,   43,    0,   38,   33,    2,   39,
+       39,    7,   34,   39,    0,   44,    0,    0,   39,   39,
 
-        0,    0,   37,   37,    0,   34,    1,    0,   37,   37,
-        0,   31,   37,   33,   32,   35,    0,    0,   33,    0
+        0,   39,    0,    0,   39,   39,    0,   36,    1,    0,
+       39,   39,    0,   33,   39,   35,   34,   37,    0,    0,
+       35,    0
     } ;
 
 static yyconst flex_int32_t yy_ec[256] =
@@ -454,11 +455,11 @@ static yyconst flex_int32_t yy_ec[256] =
        22,   23,    1,   24,   25,   26,   27,   28,   29,   26,
        30,   26,   31,   26,   26,   32,   26,   33,   34,   26,
        26,   35,   36,   37,   38,   26,   26,   26,   39,   26,
-        1,   40,    1,   41,   42,    1,   43,   26,   44,   45,
+       40,   41,   42,   43,   44,    1,   45,   26,   46,   47,
 
-       46,   26,   47,   26,   48,   26,   26,   49,   26,   50,
-       51,   26,   26,   52,   53,   54,   55,   26,   26,   26,
-       56,   26,   57,   58,   59,   60,    1,    1,    1,    1,
+       48,   26,   49,   26,   50,   26,   26,   51,   26,   52,
+       53,   26,   26,   54,   55,   56,   57,   26,   26,   26,
+       58,   26,   59,   60,   61,   62,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
@@ -475,96 +476,97 @@ static yyconst flex_int32_t yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static yyconst flex_int32_t yy_meta[61] =
+static yyconst flex_int32_t yy_meta[63] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    2,    3,    1,
         1,    1,    1,    1,    2,    2,    2,    2,    2,    2,
         2,    2,    2,    2,    2,    2,    2,    2,    2,    1,
-        1,    2,    2,    2,    2,    2,    2,    2,    2,    2,
-        2,    2,    2,    2,    2,    2,    1,    1,    1,    1
+        1,    1,    1,    2,    2,    2,    2,    2,    2,    2,
+        2,    2,    2,    2,    2,    2,    2,    2,    1,    1,
+        1,    1
     } ;
 
-static yyconst flex_int16_t yy_base[126] =
+static yyconst flex_int16_t yy_base[128] =
     {   0,
-        0,    0,   58,   59,  258,  291,  255,  253,   41,   58,
-      252,  246,  291,  291,  291,  291,  291,  291,   47,  241,
-       50,  291,   50,  230,  229,   37,   55,  231,   56,   58,
-       59,   61,   62,   65,  291,  291,  191,  291,  291,  291,
-      291,  231,  245,  243,  291,  291,   76,   97,  291,  242,
-      241,  291,  291,   81,  100,  291,   99,  104,  108,  291,
-      291,  291,  291,   99,  223,    0,  106,  110,  111,  116,
-      222,  112,  221,  117,  113,  291,  291,  219,  217,  123,
-      144,  216,  215,   52,    0,  170,  211,  121,  124,  205,
-      174,  144,  192,  150,  110,  178,  164,  148,  184,  165,
+        0,    0,   60,   61,  260,  298,  257,  255,   43,   60,
+      254,  248,  298,  298,  298,  298,  298,  298,   49,  243,
+       52,  298,   52,  232,  231,   39,   60,  233,   57,   58,
+       61,   64,   67,   66,  298,  298,  298,  298,  191,  298,
+      298,  298,  298,  233,  247,  244,  298,  298,   83,   90,
+      298,  243,  242,  298,  298,   86,  105,  298,   90,  110,
+      112,  298,  298,  298,  298,   84,  225,    0,  113,  114,
+      116,  118,  224,  117,  222,  125,  121,  298,  298,  222,
+      221,  127,  133,  218,  209,  108,    0,  161,  207,  133,
+      124,  140,  174,  148,  139,   98,  142,  182,  160,  168,
 
-      155,  166,  173,  179,  174,  141,  291,  167,  181,  201,
-      171,  291,  197,  225,  291,  127,  188,  192,  291,  291,
-      279,  282,  285,  287,   87
+      192,  163,  153,  172,  179,  180,  175,   92,  298,  173,
+      185,  211,  176,  298,  189,  230,  298,   65,  176,  186,
+      298,  298,  286,  289,  292,  294,   80
     } ;
 
-static yyconst flex_int16_t yy_def[126] =
+static yyconst flex_int16_t yy_def[128] =
     {   0,
-      120,    1,  121,  121,  120,  120,  120,  120,  120,  122,
-      123,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  124,  124,  124,  124,
-      124,  124,  124,  124,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  122,  122,  120,  122,
-      123,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  124,  125,  124,  124,  124,  124,
-      124,  124,  124,  124,  124,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  125,  124,  124,  124,  124,  124,
-      124,  124,  120,  120,  120,  120,  124,  124,  120,  124,
+      122,    1,  123,  123,  122,  122,  122,  122,  122,  124,
+      125,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  126,  126,  126,  126,
+      126,  126,  126,  126,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  124,  124,
+      122,  124,  125,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  126,  127,  126,  126,
+      126,  126,  126,  126,  126,  126,  126,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  127,  126,  126,  126,
+      126,  126,  126,  126,  122,  122,  122,  122,  126,  126,
 
-      120,  120,  124,  124,  120,  124,  120,  120,  124,  124,
-      120,  120,  124,  120,  120,  124,  120,  120,  120,    0,
-      120,  120,  120,  120,  120
+      122,  126,  122,  122,  126,  126,  122,  126,  122,  122,
+      126,  126,  122,  122,  126,  122,  122,  126,  122,  122,
+      122,    0,  122,  122,  122,  122,  122
     } ;
 
-static yyconst flex_int16_t yy_nxt[352] =
+static yyconst flex_int16_t yy_nxt[361] =
     {   0,
         6,    7,    8,    6,    9,   10,   11,   12,   10,   13,
        14,   15,   16,   17,   18,   19,   20,   21,    6,   22,
        23,   24,   25,   26,   27,   28,   29,   30,   28,   28,
-       31,   28,   32,   33,   28,   34,   28,   28,   28,    6,
-       35,    6,   27,   29,   30,   28,   28,   31,   28,   32,
-       33,   28,   34,   28,   28,   28,   36,   37,   38,   39,
-       41,   41,   45,   48,   54,   57,   49,   58,   64,   42,
-       42,   60,   61,   66,   66,   55,   66,   66,   59,   66,
-       66,   48,   67,   66,   49,   64,   70,   68,   85,   69,
-       95,   71,   55,   74,   72,   59,   73,   50,   54,   67,
+       31,   28,   32,   33,   28,   34,   28,   28,   28,   35,
+        6,   36,   37,    6,   27,   29,   30,   28,   28,   31,
+       28,   32,   33,   28,   34,   28,   28,   28,   38,   39,
+       40,   41,   43,   43,   47,   50,   56,   59,   51,   60,
+       66,   44,   44,   62,   63,   68,   68,   57,   68,   68,
+       61,   87,   68,  122,   68,   68,   72,   69,   50,   66,
+       71,   51,   70,   73,   76,   50,   57,   74,   51,   61,
 
-       46,   75,   48,   70,   68,   49,   69,   95,   71,   55,
-       74,   72,   78,   73,   78,   50,   80,   79,   75,   57,
-       82,   58,   82,   84,  120,   83,   55,   81,  120,  120,
-      120,  120,   59,   86,  120,  120,   50,   87,  101,  120,
-       80,   84,  120,   88,   81,  120,   92,   89,   90,   59,
-       86,   81,   98,   91,   87,  101,   93,   97,   93,  120,
-       88,   94,  120,   92,   89,   90,  120,   94,   81,   98,
-       91,   96,   96,   96,   97,   99,   99,   99,  100,   96,
-       96,   96,  120,  120,  104,   99,   99,   99,  120,  107,
-      108,  120,  120,  106,  103,  100,  112,  120,  111,  120,
+       52,   75,   77,   56,   48,   72,   69,   82,   86,   71,
+      122,   70,   73,   76,   57,   96,   74,   80,   83,   80,
+       75,   77,   81,   52,   84,   59,   84,   60,   86,   85,
+       52,  122,  122,   57,  122,  122,  122,   83,   61,  122,
+       88,   89,  122,  122,   82,   95,   97,   95,   90,   91,
+       96,  122,  100,   92,   94,   83,   96,   61,  122,   88,
+       89,   93,   98,   98,   98,   97,  122,   90,   91,   99,
+      103,  100,   92,   94,   83,  101,  101,  101,  122,  122,
+       93,  122,  102,   98,   98,   98,  122,  109,   99,  103,
+      105,  108,  122,  101,  101,  101,  110,  122,  122,  113,
 
-      115,  104,  114,  114,  114,  109,  107,  110,  108,   94,
-      106,  103,  118,  112,  102,  120,  111,  115,  113,  120,
-      105,  119,  109,  120,  110,  116,  114,  114,  114,  120,
-      118,  102,   83,   83,   79,  113,   79,  105,  119,  120,
-      120,  120,  116,   52,  120,   44,   43,   77,   76,   66,
-       63,   62,   56,   53,   52,   44,   43,  120,  120,  120,
-      120,  117,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  117,   40,
-       40,   40,   47,   47,   47,   51,   51,   51,   65,   65,
-        5,  120,  120,  120,  120,  120,  120,  120,  120,  120,
+      120,  102,  114,  122,  106,  117,  109,  122,  112,  105,
+      108,  111,  116,  116,  116,  121,  110,  118,  104,  113,
+      120,  114,  115,  106,  117,  122,   85,  112,  107,  122,
+      111,  116,  116,  116,  121,   85,  118,  104,   81,   81,
+      122,  115,  122,  122,   54,  122,   46,  107,   45,   79,
+       78,   68,   65,   64,   58,   55,   54,   46,   45,  122,
+      122,  122,  122,  122,  122,  122,  119,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  119,   42,   42,   42,   49,
+       49,   49,   53,   53,   53,   67,   67,    5,  122,  122,
 
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122
     } ;
 
-static yyconst flex_int16_t yy_chk[352] =
+static yyconst flex_int16_t yy_chk[361] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
@@ -572,49 +574,49 @@ static yyconst flex_int16_t yy_chk[352] =
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        3,    4,    9,   10,   19,   21,   10,   21,   26,    3,
-        4,   23,   23,   27,   29,   19,   30,   31,   21,   32,
-       33,   47,   27,   34,   47,   26,   30,   27,  125,   29,
-       84,   31,   19,   34,   32,   21,   33,   10,   54,   27,
+        1,    1,    3,    4,    9,   10,   19,   21,   10,   21,
+       26,    3,    4,   23,   23,   29,   30,   19,   27,   31,
+       21,  127,   32,  118,   34,   33,   30,   27,   49,   26,
+       29,   49,   27,   31,   34,   50,   19,   32,   50,   21,
 
-        9,   34,   48,   30,   27,   48,   29,   84,   31,   54,
-       34,   32,   55,   33,   55,   47,   57,   55,   34,   58,
-       59,   58,   59,   64,   67,   59,   54,   57,   68,   69,
-       72,   75,   58,   67,   70,   74,   48,   68,   95,   88,
-       80,   64,   89,   69,   57,  116,   75,   70,   72,   58,
-       67,   80,   89,   74,   68,   95,   81,   88,   81,  106,
-       69,   81,   92,   75,   70,   72,   98,   94,   80,   89,
-       74,   86,   86,   86,   88,   91,   91,   91,   92,   96,
-       96,   96,   97,  100,   98,   99,   99,   99,   86,  101,
-      102,  103,   91,  100,   97,   92,  108,  104,  105,  109,
+       10,   33,   34,   56,    9,   30,   27,   59,   66,   29,
+      108,   27,   31,   34,   56,   96,   32,   57,   59,   57,
+       33,   34,   57,   49,   61,   60,   61,   60,   66,   61,
+       50,   69,   70,   56,   71,   74,   72,   59,   60,   77,
+       69,   70,   91,   76,   82,   83,   86,   83,   71,   72,
+       83,   90,   91,   74,   77,   82,   95,   60,   92,   69,
+       70,   76,   88,   88,   88,   86,   94,   71,   72,   90,
+       97,   91,   74,   77,   82,   93,   93,   93,   99,   88,
+       76,  102,   94,   98,   98,   98,  100,  103,   90,   97,
+       99,  102,   93,  101,  101,  101,  104,  105,  106,  107,
 
-      111,   98,  110,  110,  110,  103,  101,  104,  102,   93,
-      100,   97,  117,  108,   96,  113,  105,  111,  109,  110,
-       99,  118,  103,   90,  104,  113,  114,  114,  114,   87,
-      117,   96,   83,   82,   79,  109,   78,   99,  118,   73,
-       71,   65,  113,   51,   50,   44,   43,   42,   37,   28,
-       25,   24,   20,   12,   11,    8,    7,    5,    0,    0,
-        0,  114,    0,    0,    0,    0,    0,    0,    0,    0,
-        0,    0,    0,    0,    0,    0,    0,    0,  114,  121,
-      121,  121,  122,  122,  122,  123,  123,  123,  124,  124,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
+      119,   94,  110,  111,  100,  113,  103,  115,  106,   99,
+      102,  105,  112,  112,  112,  120,  104,  115,   98,  107,
+      119,  110,  111,  100,  113,   89,   85,  106,  101,  112,
+      105,  116,  116,  116,  120,   84,  115,   98,   81,   80,
+       75,  111,   73,   67,   53,   52,   46,  101,   45,   44,
+       39,   28,   25,   24,   20,   12,   11,    8,    7,    5,
+        0,    0,    0,    0,    0,    0,  116,    0,    0,    0,
+        0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+        0,    0,    0,    0,    0,  116,  123,  123,  123,  124,
+      124,  124,  125,  125,  125,  126,  126,  122,  122,  122,
 
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120,  120,  120,  120,  120,  120,  120,  120,  120,  120,
-      120
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122,
+      122,  122,  122,  122,  122,  122,  122,  122,  122,  122
     } ;
 
-static yyconst flex_int16_t yy_rule_linenum[52] =
+static yyconst flex_int16_t yy_rule_linenum[54] =
     {   0,
        29,   31,   32,   33,   34,   35,   36,   40,   41,   42,
        43,   44,   45,   46,   47,   48,   49,   50,   51,   52,
        53,   54,   55,   56,   57,   58,   59,   60,   61,   62,
-       64,   65,   66,   67,   68,   70,   71,   75,   76,   77,
-       78,   79,   80,   84,   88,   90,   94,   95,   96,   97,
-       99
+       63,   64,   66,   67,   68,   69,   70,   72,   73,   77,
+       78,   79,   80,   81,   82,   86,   90,   92,   96,   97,
+       98,   99,  101
     } ;
 
 /* The intent behind this definition is that it'll catch
@@ -624,8 +626,8 @@ static yyconst flex_int16_t yy_rule_linenum[52] =
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "/home/malasiot/source/mftools/src/osm/osm.l"
-#line 2 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 1 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 2 "/home/malasiot/source/mftools/src/convert/osm.l"
 #include <osm_rule_scanner.hpp>
 #include <osm_rule_parser.hpp>
 
@@ -634,9 +636,9 @@ static yyconst flex_int16_t yy_rule_linenum[52] =
 
 void comment() ;
 
-#line 21 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 21 "/home/malasiot/source/mftools/src/convert/osm.l"
 # define YY_USER_ACTION  yylloc->columns (yyleng);
-#line 640 "/home/malasiot/source/mftools/src/osm/parser/osm_scanner.cpp"
+#line 642 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
 
 #define INITIAL 0
 #define COMMENT 1
@@ -799,14 +801,14 @@ YY_DECL
 	register int yy_act;
     
 /* %% [7.0] user's declarations go here */
-#line 23 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 23 "/home/malasiot/source/mftools/src/convert/osm.l"
 
 
 
    yylloc->step();
 
 
-#line 810 "/home/malasiot/source/mftools/src/osm/parser/osm_scanner.cpp"
+#line 812 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
 
 	if ( !(yy_init) )
 		{
@@ -869,13 +871,13 @@ yy_match:
 			while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 				{
 				yy_current_state = (int) yy_def[yy_current_state];
-				if ( yy_current_state >= 121 )
+				if ( yy_current_state >= 123 )
 					yy_c = yy_meta[(unsigned int) yy_c];
 				}
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 			++yy_cp;
 			}
-		while ( yy_base[yy_current_state] != 291 );
+		while ( yy_base[yy_current_state] != 298 );
 
 yy_find_action:
 /* %% [10.0] code to find the action number goes here */
@@ -898,12 +900,12 @@ do_action:	/* This label is used only to access EOF actions. */
 			{
 			if ( yy_act == 0 )
 				std::cerr << "--scanner backing up\n";
-			else if ( yy_act < 52 )
+			else if ( yy_act < 54 )
 				std::cerr << "--accepting rule at line " << yy_rule_linenum[yy_act] <<
 				         "(\"" << yytext << "\")\n";
-			else if ( yy_act == 52 )
+			else if ( yy_act == 54 )
 				std::cerr << "--accepting default rule (\"" << yytext << "\")\n";
-			else if ( yy_act == 53 )
+			else if ( yy_act == 55 )
 				std::cerr << "--(end of buffer or a NUL)\n";
 			else
 				std::cerr << "--EOF (start condition " << YY_START << ")\n";
@@ -921,266 +923,276 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 29 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 29 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_LAYER(*yylloc); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 31 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 31 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_AND(*yylloc); }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 32 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 32 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_AND(*yylloc) ; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 33 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 33 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_OR(*yylloc); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 34 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 34 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_OR(*yylloc); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 35 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 35 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_IN(*yylloc); }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 36 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 36 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_NOT(*yylloc); }
 	YY_BREAK
 /* punctuation */
 case 8:
 YY_RULE_SETUP
-#line 40 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 40 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_ASSIGN(*yylloc) ; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 41 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 41 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 42 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 42 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_NOT_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 43 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 43 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_NOT_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 44 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 44 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_LESS_THAN(*yylloc) ; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 45 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 45 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_GREATER_THAN(*yylloc) ; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 46 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 46 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_LESS_THAN_OR_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 47 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 47 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_GREATER_THAN_OR_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 48 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 48 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_MATCHES(*yylloc) ; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 49 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 49 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_NOT_MATCHES(*yylloc) ; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 50 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 50 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_NOT(*yylloc) ; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 51 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 51 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_EXISTS(*yylloc) ; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 52 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 52 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_LPAR(*yylloc) ; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 53 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 53 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_RPAR(*yylloc) ; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 54 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 54 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_PLUS(*yylloc) ; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 55 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 55 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_MINUS(*yylloc) ; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 56 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 56 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_STAR(*yylloc) ; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 57 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 57 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_DIV(*yylloc) ; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 58 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 58 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_COMMA(*yylloc) ; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 59 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 59 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_DOT(*yylloc) ; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 60 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 60 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_LEFT_BRACE(*yylloc) ; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 61 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 61 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_RIGHT_BRACE(*yylloc) ; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 62 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 62 "/home/malasiot/source/mftools/src/convert/osm.l"
 { return OSM::BisonParser::make_COLON(*yylloc) ; }
 	YY_BREAK
 case 31:
-/* rule 31 can match eol */
 YY_RULE_SETUP
-#line 64 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ return OSM::BisonParser::make_ADD_CMD(*yylloc) ; }
+#line 63 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ return OSM::BisonParser::make_RIGHT_BRACKET(*yylloc) ; }
 	YY_BREAK
 case 32:
-/* rule 32 can match eol */
 YY_RULE_SETUP
-#line 65 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ return OSM::BisonParser::make_SET_CMD(*yylloc) ; }
+#line 64 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ return OSM::BisonParser::make_LEFT_BRACKET(*yylloc) ; }
 	YY_BREAK
 case 33:
 /* rule 33 can match eol */
 YY_RULE_SETUP
-#line 66 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ return OSM::BisonParser::make_DELETE_CMD(*yylloc) ; }
+#line 66 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ return OSM::BisonParser::make_ADD_CMD(*yylloc) ; }
 	YY_BREAK
 case 34:
+/* rule 34 can match eol */
 YY_RULE_SETUP
-#line 67 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ return OSM::BisonParser::make_STORE_CMD(*yylloc) ; }
+#line 67 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ return OSM::BisonParser::make_SET_CMD(*yylloc) ; }
 	YY_BREAK
 case 35:
+/* rule 35 can match eol */
 YY_RULE_SETUP
-#line 68 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ return OSM::BisonParser::make_CONTINUE_CMD(*yylloc) ; }
+#line 68 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ return OSM::BisonParser::make_DELETE_CMD(*yylloc) ; }
 	YY_BREAK
 case 36:
-#line 71 "/home/malasiot/source/mftools/src/osm/osm.l"
+YY_RULE_SETUP
+#line 69 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ return OSM::BisonParser::make_STORE_CMD(*yylloc) ; }
+	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 71 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 70 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ return OSM::BisonParser::make_CONTINUE_CMD(*yylloc) ; }
+	YY_BREAK
+case 38:
+#line 73 "/home/malasiot/source/mftools/src/convert/osm.l"
+case 39:
+YY_RULE_SETUP
+#line 73 "/home/malasiot/source/mftools/src/convert/osm.l"
 {
         return OSM::BisonParser::make_IDENTIFIER(yytext, *yylloc);
 }
 	YY_BREAK
-case 38:
-#line 76 "/home/malasiot/source/mftools/src/osm/osm.l"
-case 39:
-#line 77 "/home/malasiot/source/mftools/src/osm/osm.l"
 case 40:
-#line 78 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 78 "/home/malasiot/source/mftools/src/convert/osm.l"
 case 41:
-#line 79 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 79 "/home/malasiot/source/mftools/src/convert/osm.l"
 case 42:
-#line 80 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 80 "/home/malasiot/source/mftools/src/convert/osm.l"
 case 43:
+#line 81 "/home/malasiot/source/mftools/src/convert/osm.l"
+case 44:
+#line 82 "/home/malasiot/source/mftools/src/convert/osm.l"
+case 45:
 YY_RULE_SETUP
-#line 80 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 82 "/home/malasiot/source/mftools/src/convert/osm.l"
 {
     return OSM::BisonParser::make_NUMBER(atof(yytext), *yylloc) ;
 }
 	YY_BREAK
-case 44:
-/* rule 44 can match eol */
+case 46:
+/* rule 46 can match eol */
 YY_RULE_SETUP
-#line 84 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 86 "/home/malasiot/source/mftools/src/convert/osm.l"
 {
     return OSM::BisonParser::make_STRING(std::string(yytext+1, yyleng-2), *yylloc) ;
 }
 	YY_BREAK
-case 45:
-/* rule 45 can match eol */
+case 47:
+/* rule 47 can match eol */
 YY_RULE_SETUP
-#line 88 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 90 "/home/malasiot/source/mftools/src/convert/osm.l"
 yylloc->lines (yyleng); yylloc->step ();
 	YY_BREAK
-case 46:
+case 48:
 YY_RULE_SETUP
-#line 90 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 92 "/home/malasiot/source/mftools/src/convert/osm.l"
 yylloc->step ();
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(COMMENT):
-#line 92 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 94 "/home/malasiot/source/mftools/src/convert/osm.l"
 return OSM::BisonParser::make_END(*yylloc);
-	YY_BREAK
-case 47:
-YY_RULE_SETUP
-#line 94 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ BEGIN(COMMENT); }
-	YY_BREAK
-case 48:
-/* rule 48 can match eol */
-YY_RULE_SETUP
-#line 95 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ yylloc->lines (); yylloc->step ();}
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 96 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ BEGIN(INITIAL) ; }
+#line 96 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ BEGIN(COMMENT); }
 	YY_BREAK
 case 50:
+/* rule 50 can match eol */
 YY_RULE_SETUP
-#line 97 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ yylloc->step (); }
+#line 97 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ yylloc->lines (); yylloc->step ();}
 	YY_BREAK
 case 51:
-/* rule 51 can match eol */
 YY_RULE_SETUP
-#line 99 "/home/malasiot/source/mftools/src/osm/osm.l"
-{ yylloc->step();}
+#line 98 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ BEGIN(INITIAL) ; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 101 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 99 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ yylloc->step (); }
+	YY_BREAK
+case 53:
+/* rule 53 can match eol */
+YY_RULE_SETUP
+#line 101 "/home/malasiot/source/mftools/src/convert/osm.l"
+{ yylloc->step();}
+	YY_BREAK
+case 54:
+YY_RULE_SETUP
+#line 103 "/home/malasiot/source/mftools/src/convert/osm.l"
 ECHO;
 	YY_BREAK
-#line 1184 "/home/malasiot/source/mftools/src/osm/parser/osm_scanner.cpp"
+#line 1196 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1579,7 +1591,7 @@ int yyFlexLexer::yy_get_next_buffer()
 		while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 			{
 			yy_current_state = (int) yy_def[yy_current_state];
-			if ( yy_current_state >= 121 )
+			if ( yy_current_state >= 123 )
 				yy_c = yy_meta[(unsigned int) yy_c];
 			}
 		yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
@@ -1612,11 +1624,11 @@ int yyFlexLexer::yy_get_next_buffer()
 	while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 		{
 		yy_current_state = (int) yy_def[yy_current_state];
-		if ( yy_current_state >= 121 )
+		if ( yy_current_state >= 123 )
 			yy_c = yy_meta[(unsigned int) yy_c];
 		}
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
-	yy_is_jam = (yy_current_state == 120);
+	yy_is_jam = (yy_current_state == 122);
 
 	return yy_is_jam ? 0 : yy_current_state;
 }
@@ -2226,7 +2238,7 @@ void osmfree (void * ptr )
 
 /* %ok-for-header */
 
-#line 101 "/home/malasiot/source/mftools/src/osm/osm.l"
+#line 103 "/home/malasiot/source/mftools/src/convert/osm.l"
 
 
 

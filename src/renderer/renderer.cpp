@@ -13,8 +13,14 @@
 #include "svg/rendering.hpp"
 
 using namespace std ;
-using namespace mapsforge ;
 
+struct RenderingContext {
+    cairo_matrix_t cmm_ ;
+    double scale_ ;
+    cairo_t *cr_ ;
+    CollisionChecker colc_ ;
+    BBox extents_ ;
+};
 
 extern void latlon_to_tms(const std::vector<std::vector<LatLon>> &latlon,  std::vector<std::vector<Coord>> &coords) ;
 
@@ -31,8 +37,8 @@ extern void sample_linear_geometry(
 void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<vector<Coord>> &res) ;
 
 
-Renderer::Renderer(const mapsforge::RenderTheme &theme, const std::string &lang, bool debug):
-    cache_(new ResourceCache), theme_(theme), debug_(debug), languages_(lang)
+Renderer::Renderer(const RenderTheme &theme, const std::string &lang, bool debug):
+    theme_(theme), debug_(debug), text_engine_(cache_, lang)
 {
 
 }
@@ -60,18 +66,18 @@ void get_poi_from_area(const Way &way, const vector<Coord> &coords, double &mx, 
 
 class WayInstructionSorter {
 public:
-    WayInstructionSorter(const vector<Way> &ways, const vector<pair<uint, RenderInstructionPtr>> &inst): ways_(ways), instructions_(inst) {}
+    WayInstructionSorter(const vector<Way> &ways, const vector<Renderer::WayInstruction> &inst): ways_(ways), instructions_(inst) {}
 
-    bool operator() (const pair<uint, RenderInstructionPtr> &a, const pair<uint, RenderInstructionPtr> &b) {
+    bool operator() (const Renderer::WayInstruction &a, const Renderer::WayInstruction &b) {
 
-        if ( a.second->z_order_ == b.second->z_order_ )
-            return ( ways_[a.first].layer_ < ways_[b.first].layer_ ) ;
+        if ( a.z_order_ == b.z_order_ )
+            return ( ways_[a.way_idx_].layer_ < ways_[b.way_idx_].layer_ ) ;
         else
-            return  (a.second->z_order_ < b.second->z_order_) ;
+            return  (a.z_order_ < b.z_order_) ;
     }
 
     const vector<Way> &ways_ ;
-    const vector<pair<uint, RenderInstructionPtr>> &instructions_ ;
+    const vector<Renderer::WayInstruction> &instructions_ ;
 };
 
 class POIInstructionSorter {
@@ -85,7 +91,7 @@ public:
 };
 
 void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_extents, cairo_matrix_t &cmm, const std::vector<Way> &ways,
-                          std::vector<std::pair<uint, RenderInstructionPtr> > &winstructions, std::vector<POIInstruction> &poi_instructions, int32_t &count)
+                          std::vector<WayInstruction> &winstructions, std::vector<POIInstruction> &poi_instructions, int32_t &count)
 {
 
     for( uint32_t idx = 0 ; idx < ways.size() ; ++idx  ) {
@@ -103,14 +109,12 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
             for( const auto &ri: ris ) {
 
                 if ( ri->type() == RenderInstruction::Area ) {
-                    winstructions.push_back(make_pair(idx, ri)) ;
+                    winstructions.emplace_back(std::move(coords), ri, idx, ri->z_order_) ;
                 }
                 else if ( ri->type() == RenderInstruction::Line ) {
-                    winstructions.push_back(make_pair(idx, ri)) ;
+                    winstructions.emplace_back(std::move(coords), ri, idx, ri->z_order_) ;
                 }
                 else if ( ri->type() == RenderInstruction::Symbol ) {
-                    vector<vector<Coord>> coords ;
-                    latlon_to_tms(way.coords_, coords) ;
 
                     double mx, my ;
                     get_poi_from_area(way, coords[0], mx, my) ;
@@ -121,6 +125,13 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
                         instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
                 }
                 else if ( ri->type() == RenderInstruction::Caption )
+                {
+                    double mx, my ;
+                    get_poi_from_area(way, coords[0], mx, my) ;
+                    if ( query_extents.contains(mx, my) )
+                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
+                }
+                else if ( ri->type() == RenderInstruction::Circle )
                 {
                     double mx, my ;
                     get_poi_from_area(way, coords[0], mx, my) ;
@@ -180,7 +191,7 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
 
 }
 
-void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, const std::vector<mapsforge::POI> &pois,
+void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, const std::vector<POI> &pois,
                           std::vector<POIInstruction> &instructions, int32_t &count)
 {
     for( uint32_t idx = 0 ; idx < pois.size() ; ++idx  ) {
@@ -216,7 +227,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, co
     std::sort(instructions.begin(), instructions.end(), POIInstructionSorter()) ;
 }
 
-bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const TileKey &key, const string &layer, unsigned int query_buffer)
+bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile &tile, const string &layer, unsigned int query_buffer)
 {
     BBox box ;
     tms::tileLatLonBounds(key.x(), key.y(), key.z(), box.miny_, box.minx_, box.maxy_, box.maxx_) ;
@@ -286,7 +297,7 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const TileKey
 
     // sort ways based on layer attribute
 
-    vector<pair<uint32_t, RenderInstructionPtr>> way_instructions ;
+    vector<WayInstruction> way_instructions ;
 
     vector<POIInstruction> poi_instructions ;
 
@@ -296,11 +307,9 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const TileKey
 
     for( auto &ip: way_instructions ) {
 
-        const Way &way = tile.ways_[ip.first] ;
-        RenderInstructionPtr ri = ip.second ;
+        RenderInstructionPtr ri = ip.ri_ ;
 
-        vector<vector<Coord>> coords ;
-        latlon_to_tms(way.coords_, coords) ;
+        const vector<vector<Coord>> &coords = ip.coords_ ;
 
         if ( ri->type() == RenderInstruction::Area ) {
             drawArea(ctx, coords, *ri.get()) ;
@@ -309,7 +318,6 @@ bool Renderer::render(ImageBuffer &target, const VectorTile &tile, const TileKey
             drawLine(ctx, coords, *ri.get()) ;
         }
     }
-
 
     for( auto &ip: poi_instructions  ) {
 
@@ -416,14 +424,25 @@ void Renderer::applySimpleFill(cairo_t *cr, uint32_t fill_clr)
     else cairo_set_source_rgba(cr, r, g, b, a) ;
 }
 
-void Renderer::drawCircle(Renderer::RenderingContext &ctx, double px, double py, const RenderInstruction &)
+void Renderer::drawCircle(RenderingContext &ctx, double px, double py, const RenderInstruction &circle)
 {
+    cairo_t *cr = ctx.cr_ ;
 
+    double radius = circle.scale_radius_ ? circle.radius_ * ctx.scale_ : circle.radius_ ;
+
+    cairo_matrix_transform_point(&ctx.cmm_, &px, &py) ;
+
+    cairo_arc(cr, px, py, radius, 0, 2*M_PI) ;
+
+    applySimpleFill(cr, circle.fill_) ;
+    cairo_fill_preserve(cr) ;
+    applySimpleStroke(cr, circle.stroke_width_, circle.stroke_, vector<float>(), RenderInstruction::RoundCap, RenderInstruction::RoundJoin);
+    cairo_stroke(cr) ;
 }
 
 
 
-void Renderer::drawSymbol(Renderer::RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &symbol, int32_t poi_idx)
+void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &symbol, int32_t poi_idx)
 {
     cairo_t *cr = ctx.cr_ ;
 
@@ -487,7 +506,7 @@ void cairo_path_from_geometry(cairo_t *cr, const vector<vector<Coord>> &geom, bo
     }
 }
 
-void Renderer::drawLine(Renderer::RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &line) {
+void Renderer::drawLine(RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &line) {
 
     cairo_t *cr = ctx.cr_ ;
 
@@ -564,12 +583,12 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
         cairo_surface_t *is = 0 ;
 
         ResourcePtr cached_data ;
-        if ( cache_->find(src, cached_data) )
+        if ( cache_.find(src, cached_data) )
             is = dynamic_cast<CairoSurface *>(cached_data.get())->surface_ ;
         else {
             is = cairo_image_surface_create_from_png(src.c_str()) ;
             if ( cairo_surface_status(is) != CAIRO_STATUS_SUCCESS ) return nullptr ;
-            cache_->save(src, ResourcePtr(new CairoSurface(is))) ;
+            cache_.save(src, ResourcePtr(new CairoSurface(is))) ;
         }
 
         if ( is )
@@ -610,13 +629,13 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
 
         ResourcePtr cached_data ;
 
-        if ( cache_->find(src, cached_data) )
+        if ( cache_.find(src, cached_data) )
             doc = dynamic_cast<SVGDocumentResource *>(cached_data.get())->instance_ ;
         else {
             ifstream strm(src.c_str()) ;
             doc.reset(new svg::DocumentInstance) ;
             if ( !doc->load(strm) ) return nullptr ;
-            cache_->save(src, ResourcePtr(new SVGDocumentResource(doc))) ;
+            cache_.save(src, ResourcePtr(new SVGDocumentResource(doc))) ;
         }
 
         rect.x = 0 ;
@@ -632,7 +651,7 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
 
         cairo_destroy(ctx) ;
 
-   //    cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
+ //     cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
 
         return rs ;
 
@@ -655,7 +674,7 @@ void Renderer::getSymbolSize(const RenderInstruction &r, double &sw, double &sh)
 
 }
 
-void Renderer::drawArea(Renderer::RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &area) {
+void Renderer::drawArea(RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &area) {
 
     cairo_t *cr = ctx.cr_ ;
 
@@ -697,4 +716,136 @@ void Renderer::drawArea(Renderer::RenderingContext &ctx, const std::vector<std::
     cairo_restore(cr) ;
 }
 
+// render text for point geometries
 
+void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double angle, const std::string &label, const RenderInstruction &caption, int32_t poi_idx)
+{
+    cairo_t *cr = ctx.cr_ ;
+
+    if ( label.empty() ) return ;
+
+    string family_name ;
+
+    if ( caption.font_family_ == RenderInstruction::Default )
+        family_name = "serif" ;
+    else if (caption.font_family_ == RenderInstruction::Monospace )
+        family_name = "monospace" ;
+    else if (caption.font_family_ == RenderInstruction::SansSerif )
+        family_name = "sans-serif" ;
+    else if (caption.font_family_ == RenderInstruction::Serif )
+        family_name = "serif" ;
+
+    // query font face based on provided arguments
+
+    cairo_scaled_font_t *scaled_font = text_engine_.cairo_setup_font(family_name, caption.font_style_, caption.font_size_) ;
+
+    if ( !scaled_font ) return ;
+
+    cairo_set_scaled_font(cr, scaled_font) ;
+
+    // do text shaping based on created font
+
+    cairo_glyph_t *glyphs ;
+    int num_glyphs =0 ;
+
+    if ( ! text_engine_.shape_text(label, scaled_font, glyphs, num_glyphs) ) return ;
+
+    // get placement attributes
+
+    double anchor_x = 0.5 ;
+    double anchor_y = 0.50 ;
+    double disp_x = 0 ;
+    double disp_y = caption.dy_;
+    double rotation = angle ;
+
+    // compute text placement
+
+    cairo_text_extents_t extents ;
+
+    cairo_glyph_extents(cr, glyphs, num_glyphs, &extents);
+
+    double width = extents.width ;
+    double height = extents.height ;
+
+    double ofx =  width * anchor_x ;
+    double ofy =  height * anchor_y ;
+
+    cairo_save(cr) ;
+
+    double px = mx, py = my ;
+
+    cairo_matrix_transform_point(&ctx.cmm_, &px, &py) ;
+
+    if ( caption.type_ == RenderInstruction::Caption && caption.symbol_ ) {
+        RenderInstruction &symbol = *caption.symbol_ ;
+
+        double sw, sh ;
+        getSymbolSize(symbol, sw, sh);
+
+        double offset_x = sw/2.0 + width/2.0 ;
+        double offset_y = sh/2.0 + height/2.0 ;
+
+        if ( caption.position_ == RenderInstruction::Above ) disp_y -= offset_y ;
+        else if ( caption.position_ == RenderInstruction::Below )
+            disp_y += offset_y ;
+        else if ( caption.position_ == RenderInstruction::AboveLeft ) {
+            disp_y -= offset_y ;
+            disp_x -= offset_x ;
+        }
+        else if ( caption.position_ == RenderInstruction::AboveRight ) {
+            disp_y -= offset_y ;
+            disp_x += offset_x ;
+        }
+        else if ( caption.position_ == RenderInstruction::BelowLeft ) {
+            disp_y += offset_y ;
+            disp_x -= offset_x ;
+        }
+        else if ( caption.position_ == RenderInstruction::BelowRight ) {
+            disp_y += offset_y ;
+            disp_x += offset_x ;
+        }
+        else if ( caption.position_ == RenderInstruction::Left ) {
+            disp_x -= offset_x ;
+        }
+        else if ( caption.position_ == RenderInstruction::Right ) {
+            disp_x += offset_x ;
+        }
+        else if ( caption.position_ == RenderInstruction::Center ) ;
+
+    }
+
+
+    if ( caption.display_ == RenderInstruction::Allways ||
+         caption.display_ == RenderInstruction::IfSpace && ctx.colc_.addLabelBox(px + disp_x, py + disp_y, rotation, width + collision_extra, height + collision_extra, poi_idx)  )
+    {
+        cairo_save(cr) ;
+
+        cairo_translate(cr, disp_x, disp_y) ;
+        cairo_translate(cr, px, py) ;
+        cairo_rotate(cr, rotation) ;
+        cairo_translate(cr, -ofx, ofy ) ;
+
+        cairo_move_to(cr, 0, 0) ;
+
+        cairo_glyph_path(cr, glyphs, num_glyphs);
+
+        applySimpleStroke(cr, caption.stroke_width_, caption.stroke_, std::vector<float>(), RenderInstruction::Butt, RenderInstruction::Bevel) ;
+        cairo_stroke_preserve(cr) ;
+
+        applySimpleFill(cr, caption.fill_) ;
+        cairo_fill(cr) ;
+/*
+        cairo_rectangle(cr, 0, 0, width, height) ;
+        cairo_set_source_rgb(cr, 1, 0, 0) ;
+        cairo_stroke(cr) ;
+*/
+        cairo_restore(cr) ;
+    }
+
+
+
+    cairo_scaled_font_destroy(scaled_font) ;
+    cairo_glyph_free(glyphs) ;
+
+    cairo_restore(cr);
+}

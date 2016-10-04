@@ -13,9 +13,6 @@
 #include "tile_key.hpp"
 #include "geometry.hpp"
 
-namespace mapsforge {
-
-
 struct POI {
     double lat_, lon_ ;
     Dictionary tags_ ;
@@ -135,7 +132,6 @@ private:
 };
 
 
-}
 
 #endif
 

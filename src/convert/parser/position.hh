@@ -31,12 +31,12 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/mftools/src/osm/parser/position.hh
+ ** \file /home/malasiot/source/mftools/src/convert/parser/position.hh
  ** Define the OSM::position class.
  */
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_POSITION_HH_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_POSITION_HH_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED
 
 # include <algorithm> // std::max
 # include <iostream>
@@ -50,9 +50,9 @@
 #  endif
 # endif
 
-#line 6 "/home/malasiot/source/mftools/src/osm/osm.y" // location.cc:291
+#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // location.cc:291
 namespace OSM {
-#line 56 "/home/malasiot/source/mftools/src/osm/parser/position.hh" // location.cc:291
+#line 56 "/home/malasiot/source/mftools/src/convert/parser/position.hh" // location.cc:291
   /// Abstract a position.
   class position
   {
@@ -174,7 +174,7 @@ namespace OSM {
     return ostr << pos.line << '.' << pos.column;
   }
 
-#line 6 "/home/malasiot/source/mftools/src/osm/osm.y" // location.cc:291
+#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // location.cc:291
 } // OSM
-#line 180 "/home/malasiot/source/mftools/src/osm/parser/position.hh" // location.cc:291
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_OSM_PARSER_POSITION_HH_INCLUDED
+#line 180 "/home/malasiot/source/mftools/src/convert/parser/position.hh" // location.cc:291
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED

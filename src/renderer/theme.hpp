@@ -9,7 +9,6 @@
 #include "pugixml.hpp"
 #include "dictionary.hpp"
 
-namespace mapsforge {
 
 struct Rule ;
 typedef std::shared_ptr<Rule> RulePtr ;
@@ -150,6 +149,5 @@ private:
 
 };
 
-}
 
 #endif

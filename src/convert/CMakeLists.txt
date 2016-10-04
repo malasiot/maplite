@@ -1,16 +1,16 @@
 SET ( OSM2MFTILES_SOURCES
-	${SRC_ROOT}/vector/mf_tile_writer.cpp
-	${SRC_ROOT}/vector/vector_tile_writer.cpp
+	${SRC_ROOT}/io/mf_tile_writer.cpp
+	${SRC_ROOT}/io/vector_tile_writer.cpp
 
-	${SRC_ROOT}/osm/osm2mbtiles.cpp
+	${SRC_ROOT}/convert/osm2mbtiles.cpp
 
-	${SRC_ROOT}/osm/import_config.cpp
-	${SRC_ROOT}/osm/osm_rule_parser.cpp
-	${SRC_ROOT}/osm/osm_filter_functions.cpp
-	${SRC_ROOT}/osm/osm_processor.cpp
-	${SRC_ROOT}/osm/osm_polygon.cpp
-	${SRC_ROOT}/osm/osm_pbf_reader.cpp
-	${SRC_ROOT}/osm/osm_document.cpp
+	${SRC_ROOT}/convert/import_config.cpp
+	${SRC_ROOT}/convert/osm_rule_parser.cpp
+	${SRC_ROOT}/convert/osm_filter_functions.cpp
+	${SRC_ROOT}/convert/osm_processor.cpp
+	${SRC_ROOT}/convert/osm_polygon.cpp
+	${SRC_ROOT}/convert/osm_pbf_reader.cpp
+	${SRC_ROOT}/convert/osm_document.cpp
 
 	${SRC_ROOT}/map/map_file.cpp
 	${SRC_ROOT}/map/map_config.cpp
@@ -21,19 +21,19 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/util/zfstream.cpp
 	${SRC_ROOT}/util/base64.cpp
 
-	${SRC_ROOT}/vector/vector_tile_writer.hpp
-	${SRC_ROOT}/vector/mf_tile_writer.hpp
+	${SRC_ROOT}/io/vector_tile_writer.hpp
+	${SRC_ROOT}/io/mf_tile_writer.hpp
 
-	${SRC_ROOT}/osm/import_config.hpp
-	${SRC_ROOT}/osm/osm_filter_functions.hpp
-	${SRC_ROOT}/osm/osm_document.hpp
-	${SRC_ROOT}/osm/osm_rule_parser.hpp
+	${SRC_ROOT}/convert/import_config.hpp
+	${SRC_ROOT}/convert/osm_filter_functions.hpp
+	${SRC_ROOT}/convert/osm_document.hpp
+	${SRC_ROOT}/convert/osm_rule_parser.hpp
 
 	${SRC_ROOT}/map/map_config.hpp
 	${SRC_ROOT}/map/map_file.hpp
 
-	${SRC_ROOT}/renderer/tms.cpp
-	${SRC_ROOT}/renderer/tms.hpp
+	${SRC_ROOT}/util/tms.cpp
+	${SRC_ROOT}/util/tms.hpp
 
 	${SRC_ROOT}/util/dictionary.hpp
 	${SRC_ROOT}/util/xml_reader.hpp
@@ -49,8 +49,8 @@ SET_SOURCE_FILES_PROPERTIES(${OSM_PROTO_SOURCES} ${OSM_PROTO_HEADERS} PROPERTIES
 FIND_PACKAGE(BISON REQUIRED)
 FIND_PACKAGE(FLEX REQUIRED)
 
-FLEX_TARGET(OSM_FILTER_SCANNER ${SRC_ROOT}/osm/osm.l  ${SRC_ROOT}/osm/parser/osm_scanner.cpp)
-BISON_TARGET(OSM_FILTER_PARSER ${SRC_ROOT}/osm/osm.y  ${SRC_ROOT}/osm/parser/osm_parser.cpp)
+FLEX_TARGET(OSM_FILTER_SCANNER ${SRC_ROOT}/convert/osm.l  ${SRC_ROOT}/convert/parser/osm_scanner.cpp)
+BISON_TARGET(OSM_FILTER_PARSER ${SRC_ROOT}/convert/osm.y  ${SRC_ROOT}/convert/parser/osm_parser.cpp)
 
 ADD_FLEX_BISON_DEPENDENCY(OSM_FILTER_SCANNER OSM_FILTER_PARSER)
 

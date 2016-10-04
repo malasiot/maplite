@@ -19,7 +19,7 @@ struct NodeRuleMap {
 struct ImportConfig {
     ImportConfig(){}
 
-    OSM::Filter::LayerDefinition *layers_ ;
+    OSM::Filter::Rule *rules_ ;
 
     bool parse(const std::string &fileName) ;
 };

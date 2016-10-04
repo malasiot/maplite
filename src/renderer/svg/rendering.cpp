@@ -1360,7 +1360,7 @@ void GradientElement::resolveHRef(RenderingContext *ctx)
 
 }
 
-void DocumentInstance::render(cairo_t *cr, float w, float h, float dpi)
+void DocumentInstance::render(cairo_t *cr, double w, double h, double dpi)
 {
     assert(root_) ;
 
@@ -1378,7 +1378,7 @@ void DocumentInstance::render(cairo_t *cr, float w, float h, float dpi)
 
 }
 
-static void getDimensions(Document *doc, float dpi, float mw, float mh, float &sw, float &sh)
+static void getDimensions(Document *doc, double dpi, double mw, double mh, double &sw, double &sh)
 {
     assert(doc) ;
 
@@ -1386,21 +1386,21 @@ static void getDimensions(Document *doc, float dpi, float mw, float mh, float &s
 
     ctx.dpix = dpi ;
     ctx.dpiy = dpi ;
-    ctx.docWidthHint ;
-    ctx.docHeightHint ;
+    ctx.docWidthHint = mw ;
+    ctx.docHeightHint = mh ;
 
     if ( doc->width_.unknown() ) sw = mw ;
     else sw = doc->width_.toPixels(&ctx, Length::HorzDir) ;
 
-    if ( doc->height_.unknown() ) sh = mw ;
+    if ( doc->height_.unknown() ) sh = mh ;
     else sh = doc->height_.toPixels(&ctx, Length::VertDir) ;
 }
 
-void DocumentInstance::renderToTarget(cairo_t *target, float x, float y, float sw, float sh, float dpi)
+void DocumentInstance::renderToTarget(cairo_t *target, double x, double y, double sw, double sh, double dpi)
 {
     assert(root_) ;
 
-    float width, height ;
+    double width, height ;
 
     getDimensions(root_.get(), dpi, sw, sh, width, height) ;
 
@@ -1414,18 +1414,19 @@ void DocumentInstance::renderToTarget(cairo_t *target, float x, float y, float s
 
     cairo_surface_t *rsurf = cairo_recording_surface_create(CAIRO_CONTENT_COLOR_ALPHA, &r) ;
     cairo_t *cr = cairo_create(rsurf) ;
-    render(cr, sw, sh, dpi) ;
+    render(cr, width, height, dpi) ;
     cairo_destroy(cr) ;
 
-  //  cairo_surface_write_to_png(rsurf, "/tmp/cairo.png") ;
+//    cairo_surface_write_to_png(rsurf, "/tmp/cairo.png") ;
 
     // paste on the target context
 
     cairo_save(target) ;
 
-    cairo_translate(target, x, y) ;
-    cairo_scale(target, (sw+1)/width, (sh+1)/height) ; // scaling introduces artifacts
+    cairo_scale(target, sw/width, sh/height) ; // scaling introduces artifacts
     cairo_set_source_surface (target, rsurf, 0, 0);
+    cairo_pattern_set_extend (cairo_get_source(target), CAIRO_EXTEND_REFLECT);
+    cairo_set_operator (target, CAIRO_OPERATOR_SOURCE);
     cairo_paint (target);
     cairo_restore(target) ;
 

@@ -143,8 +143,6 @@ static string parse_url(const string &url, const string &root_dir) {
         return string() ;
 }
 
-namespace mapsforge {
-
 
 RenderTheme::RenderTheme() {}
 
@@ -555,4 +553,4 @@ bool Rule::match(const set<string> &categories, const Dictionary &tags, uint8_t 
     return !instructions_.empty() ;
 }
 
-}
+

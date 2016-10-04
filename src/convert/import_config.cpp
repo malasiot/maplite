@@ -45,7 +45,7 @@ bool ImportConfig::parse(const string &fileName)
         return false ;
     }
 
-    layers_ = parser.layers_ ;
+    rules_ = parser.rules_ ;
 
     return true ;
 }

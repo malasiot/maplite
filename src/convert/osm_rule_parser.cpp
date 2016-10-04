@@ -16,7 +16,7 @@ Parser::Parser(std::istream &strm) :
 {}
 
 bool Parser::parse() {
-    //    parser.set_debug_level(5);
+        parser_.set_debug_level(2);
 
     loc_.initialize() ;
     int res = parser_.parse();
@@ -29,11 +29,8 @@ void Parser::error(const OSM::BisonParser::location_type &loc,
 {
     std::stringstream strm ;
 
-    strm << m << " (at column: " ;
-    if ( loc.begin.column == loc.end.column || loc.begin.column == loc.end.column-1 ) strm << loc.begin.column ;
-    else strm << loc.begin.column <<  '-' << loc.end.column-1 ;
-    strm <<  ")" ;
 
+    strm << m << loc ;
     error_string_ = strm.str() ;
 }
 //////////////////////////////////////////////////////////////////
