@@ -21,7 +21,12 @@ namespace Filter {
 class ExpressionNode ;
 class Context ;
 class Command ;
-class LayerDefinition ;
+class Rule ;
+
+
+typedef std::shared_ptr<ExpressionNode> ExpressionNodePtr ;
+typedef std::shared_ptr<Rule> RulePtr ;
+typedef std::shared_ptr<Command> CommandPtr ;
 
 class Parser {
 
@@ -35,24 +40,47 @@ public:
 
     FlexScanner scanner_;
     BisonParser parser_;
-    Rule *rules_ = nullptr ;
+
+    std::deque<RulePtr> rules_ ;
 
     std::string error_string_ ;
     OSM::BisonParser::location_type loc_ ;
  } ;
 
 
+class LayerDefinition {
+public:
+    LayerDefinition(const std::string layer_name, const std::string &layer_type):
+    name_(layer_name), type_(layer_type) {}
+
+    std::string name_ ;
+    std::string type_ ;
+    std::string srid_ = "3857";
+
+    Rule *rules_ = nullptr;
+    LayerDefinition *next_ = nullptr;
+};
+
 class Context {
 
 public:
 
-    Context(const OSM::Feature *f = nullptr): feat_(f) {}
+    enum FeatureType { Way, Node, Relation } ;
 
-    const Feature *feat_ ;
+    Context() {}
+    Context(const OSM::Node &node): tags_(node.tags_), id_(node.id_), type_(Node) {}
+    Context(const OSM::Way &way): tags_(way.tags_), id_(way.id_), type_(Way) {}
+    Context(const OSM::Relation &rel): tags_(rel.tags_), id_(rel.id_), type_(Relation) {}
 
-    bool has_tag(const std::string &tag) const ;
-    std::string value(const std::string &key) const ;
-    std::string id() const ;
+    FeatureType type() const { return type_ ; }
+
+    bool has_tag(const std::string &tag) const { return tags_.contains(tag); }
+    std::string value(const std::string &key) const { return tags_.get(key); }
+    std::string id() const { return id_ ; }
+
+    Dictionary tags_ ;
+    std::string id_ ;
+    FeatureType type_ ;
 };
 
 
@@ -77,30 +105,32 @@ public:
     bool boolean_val_ ;
 };
 
+class CommandList {
+public:
+    std::deque<CommandPtr> commands_ ;
+};
+
 class Rule {
 public:
 
-    Rule(ExpressionNode *exp, Command *cmds): node_(exp), actions_(cmds) {}
-    ~Rule() ;
+    Rule(ExpressionNodePtr exp, const CommandListPtr &cmds): condition_(exp), commands_(cmds) {}
 
-    ExpressionNode *node_ = nullptr ;
-    Command *actions_ = nullptr ;
-    Rule *next_ = nullptr ;
+    ExpressionNodePtr condition_ ;
+    CommandListPtr commands_ ;
 };
 
-
-
-class LayerDefinition {
+class RuleList {
 public:
-    LayerDefinition(const std::string layer_name, const std::string &layer_type):
-    name_(layer_name), type_(layer_type) {}
+    std::deque<RulePtr> rules_ ;
+};
 
-    std::string name_ ;
-    std::string type_ ;
-    std::string srid_ = "3857";
+class ZoomRange {
+public:
 
-    Rule *rules_ = nullptr;
-    LayerDefinition *next_ = nullptr;
+    ZoomRange(uint8_t min_zoom, uint8_t max_zoom):
+    min_zoom_(min_zoom), max_zoom_(max_zoom){}
+
+    uint8_t min_zoom_, max_zoom_ ;
 };
 
 class ExpressionNode {
@@ -111,52 +141,84 @@ class ExpressionNode {
 
     virtual Literal eval(Context &ctx) { return false ; }
 
-    ExpressionNode(ExpressionNode *child) { appendChild(child) ; }
-    ExpressionNode(ExpressionNode *a1, ExpressionNode *a2) {
+    ExpressionNode(ExpressionNodePtr child) { appendChild(child) ; }
+    ExpressionNode(ExpressionNodePtr a1, ExpressionNodePtr a2) {
         appendChild(a1) ;
         appendChild(a2) ;
     }
-    ExpressionNode(ExpressionNode *a1, ExpressionNode *a2, ExpressionNode *a3) {
+    ExpressionNode(ExpressionNodePtr a1, ExpressionNodePtr a2, ExpressionNodePtr a3) {
         appendChild(a1) ;
         appendChild(a2) ;
         appendChild(a3) ;
     }
 
     virtual ~ExpressionNode() {
-        auto it = children_.begin() ;
-        for( ; it != children_.end() ; ++it ) delete (*it) ;
     }
 
-    void appendChild(ExpressionNode *node) { children_.push_back(node) ; }
-    void prependChild(ExpressionNode *node) { children_.push_front(node) ; }
+    void appendChild(ExpressionNodePtr node) { children_.push_back(node) ; }
+    void prependChild(ExpressionNodePtr node) { children_.push_front(node) ; }
 
-    std::deque<ExpressionNode *> children_ ;
-
-
+    std::deque<ExpressionNodePtr> children_ ;
 };
 
 class Command {
 public:
-    enum Type { Set, Add, Store, Continue, Delete, Conditional } ;
+    enum Type { Set, Add, Write, Continue, Delete, WriteAll, Exclude, Conditional } ;
 
-    Command(): next_(nullptr) {}
+    Command() {}
 
     virtual Type type() const = 0 ;
     virtual ~Command() {}
-
-    Command *next_ ;
 };
 
 class SimpleCommand: public Command {
 public:
 
-    SimpleCommand(Type cmd, std::string ident = std::string(), ExpressionNode *val = 0): cmd_(cmd), tag_(ident), expression_(val) {}
+    SimpleCommand(Type cmd, std::string ident = std::string(), ExpressionNodePtr val = ExpressionNodePtr()): cmd_(cmd), tag_(ident), val_(val) {}
 
     Type type() const { return cmd_ ; }
 
-    ExpressionNode *expression_ ;
+    ExpressionNodePtr val_ ;
     std::string tag_ ;
     Type cmd_ ;
+};
+
+
+class TagList {
+public:
+    std::vector<std::string> tags_ ;
+};
+
+class WriteCommand: public Command {
+public:
+
+    WriteCommand(const ZoomRange &zr, const TagList &tags): tags_(tags.tags_), zoom_range_(zr) {}
+
+    Type type() const { return Write ; }
+
+    ZoomRange zoom_range_ ;
+    std::vector<std::string> tags_ ;
+};
+
+class ExcludeCommand: public Command {
+public:
+
+    ExcludeCommand(const ZoomRange &zr, const TagList &tags): tags_(tags.tags_), zoom_range_(zr) {}
+
+    Type type() const { return Exclude ; }
+
+    ZoomRange zoom_range_ ;
+    std::vector<std::string> tags_ ;
+};
+
+class WriteAllCommand: public Command {
+public:
+
+    WriteAllCommand(const ZoomRange &zr): zoom_range_(zr) {}
+
+    Type type() const { return WriteAll ; }
+
+    ZoomRange zoom_range_ ;
 
 };
 
@@ -165,16 +227,15 @@ public:
 
     Type type() const { return Conditional ; }
 
-    RuleCommand(Rule *rule = 0): rule_(rule) {}
+    RuleCommand(RulePtr rule): rule_(rule) {}
 
-    Rule *rule_ ;
+    RulePtr rule_ ;
 };
 
 class ActionBlock {
 public:
-    ActionBlock(): rules_(nullptr), commands_(nullptr) {}
-    Rule *rules_ ;
-    Command *commands_ ;
+    ActionBlock() {}
+    CommandList commands_ ;
 };
 
 class LiteralExpressionNode: public ExpressionNode {
@@ -204,7 +265,7 @@ private:
 class Function: public ExpressionNode {
 public:
     Function(const std::string &name): name_(name) {}
-    Function(const std::string &name, ExpressionNode *args): name_(name), ExpressionNode(args) {}
+    Function(const std::string &name, ExpressionNodePtr args): name_(name), ExpressionNode(args) {}
 
     Literal eval(Context &ctx) ;
 
@@ -216,7 +277,7 @@ private:
 
 class BinaryOperator: public ExpressionNode {
 public:
-    BinaryOperator(int op_, ExpressionNode *op1, ExpressionNode *op2): op(op_), ExpressionNode(op1, op2) {}
+    BinaryOperator(int op_, ExpressionNodePtr op1, ExpressionNodePtr op2): op(op_), ExpressionNode(op1, op2) {}
 
     Literal eval(Context &ctx) ;
 
@@ -230,7 +291,7 @@ class BooleanOperator: public ExpressionNode {
 public:
     enum Type { And, Or, Not } ;
 
-    BooleanOperator(Type op_, ExpressionNode *op1, ExpressionNode *op2): op(op_), ExpressionNode(op1, op2) {}
+    BooleanOperator(Type op_, ExpressionNodePtr op1, ExpressionNodePtr op2): op(op_), ExpressionNode(op1, op2) {}
 
     Literal eval(Context &ctx) ;
 private:
@@ -242,7 +303,7 @@ class ComparisonPredicate: public ExpressionNode {
 public:
     enum Type { Equal, NotEqual, Less, Greater, LessOrEqual, GreaterOrEqual } ;
 
-    ComparisonPredicate(Type op, ExpressionNode *lhs, ExpressionNode *rhs): op_(op), ExpressionNode(lhs, rhs) {}
+    ComparisonPredicate(Type op, ExpressionNodePtr lhs, ExpressionNodePtr rhs): op_(op), ExpressionNode(lhs, rhs) {}
 
     Literal eval(Context &ctx) ;
 
@@ -253,7 +314,7 @@ private:
 class LikeTextPredicate: public ExpressionNode {
 public:
 
-    LikeTextPredicate(ExpressionNode *op, const std::string &pattern_, bool is_pos) ;
+    LikeTextPredicate(ExpressionNodePtr op, const std::string &pattern_, bool is_pos) ;
 
     Literal eval(Context &ctx) ;
 private:
@@ -265,7 +326,7 @@ private:
 class ListPredicate: public ExpressionNode {
 public:
 
-    ListPredicate(const std::string &identifier, ExpressionNode *op, bool is_pos) ;
+    ListPredicate(const std::string &identifier, ExpressionNodePtr op, bool is_pos) ;
 
 
     Literal eval(Context &ctx) ;

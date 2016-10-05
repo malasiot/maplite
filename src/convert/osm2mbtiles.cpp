@@ -56,16 +56,12 @@ int main(int argc, char *argv[])
         exit(1) ;
     }
 
-    ImportConfig icfg ;
+   FilterConfig icfg ;
     if ( !icfg.parse(importConfigFile) ) {
         cerr << "Error parsing OSM import configuration file: " << importConfigFile << endl ;
         return 0 ;
     }
 
-
-    for( OSM::Filter::Rule *rule = icfg.rules_ ; rule ; rule = rule->next_)  {
-        cout << "ok" << endl ;
-    }
 
     if ( !gfile.processOsmFiles(osmFiles, icfg) ) {
         cerr << "Error while creating temporary spatialite database" << endl ;

@@ -1,4 +1,4 @@
-#include "import_config.hpp"
+#include "filter_config.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
@@ -28,7 +28,7 @@ static void split_line(const string &src, vector<string> &tokens) {
         if ( !beg->empty() ) tokens.push_back(*beg) ;
 }
 
-bool ImportConfig::parse(const string &fileName)
+bool FilterConfig::parse(const string &fileName)
 {
     ifstream strm(fileName.c_str()) ;
     if ( !strm ) {

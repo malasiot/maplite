@@ -66,8 +66,13 @@ void comment() ;
 add([[:space:]]+(tag))? { return OSM::BisonParser::make_ADD_CMD(*yylloc) ; }
 set([[:space:]]+(tag))? { return OSM::BisonParser::make_SET_CMD(*yylloc) ; }
 delete[[:space:]]+(tag)? { return OSM::BisonParser::make_DELETE_CMD(*yylloc) ; }
-"store" { return OSM::BisonParser::make_STORE_CMD(*yylloc) ; }
+"write all" { return OSM::BisonParser::make_WRITE_ALL_CMD(*yylloc) ; }
+"write" { return OSM::BisonParser::make_WRITE_CMD(*yylloc) ; }
+"exclude" { return OSM::BisonParser::make_EXCLUDE_CMD(*yylloc) ; }
 "continue" { return OSM::BisonParser::make_CONTINUE_CMD(*yylloc) ; }
+
+
+z[1-9][0-9]?	{ return OSM::BisonParser::make_ZOOM_SPEC(atoi(yytext+1), *yylloc) ; }
 
 [a-zA-Z]:[a-zA-Z0-9_]+ |
 [a-zA-Z][a-zA-Z0-9_]* {

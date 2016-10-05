@@ -16,7 +16,7 @@ Parser::Parser(std::istream &strm) :
 {}
 
 bool Parser::parse() {
-        parser_.set_debug_level(2);
+  //      parser_.set_debug_level(2);
 
     loc_.initialize() ;
     int res = parser_.parse();
@@ -36,28 +36,6 @@ void Parser::error(const OSM::BisonParser::location_type &loc,
 //////////////////////////////////////////////////////////////////
 
 
-std::string Context::id() const {
-
-    assert(feat_) ;
-    return feat_->id_ ;
-}
-
-bool Context::has_tag(const string &key) const
-{
-    assert(feat_) ;
-
-    return feat_->tags_.contains(key) ;
-}
-
-string Context::value(const string &key) const
-{
-    assert(feat_) ;
-
-    return feat_->tags_.get(key) ;
-}
-
-
-///////////////////////////////////////////////////////////////////
 
 Literal::Literal(const std::string &val, bool auto_conv)
 {
@@ -252,7 +230,7 @@ static string globToRegex(const char *pat)
     return rx ;
 }
 
-LikeTextPredicate::LikeTextPredicate(ExpressionNode *op, const std::string &pattern, bool is_pos):
+LikeTextPredicate::LikeTextPredicate(ExpressionNodePtr op, const std::string &pattern, bool is_pos):
     ExpressionNode(op), is_pos_(is_pos)
 {
     if ( !pattern.empty() )
@@ -269,7 +247,7 @@ Literal LikeTextPredicate::eval(Context &ctx)
 
 }
 
-ListPredicate::ListPredicate(const string &id, ExpressionNode *op, bool is_pos):
+ListPredicate::ListPredicate(const string &id, ExpressionNodePtr op, bool is_pos):
     id_(id), ExpressionNode(op), is_pos_(is_pos)
 {
     Context ctx ;
@@ -298,19 +276,17 @@ Literal ListPredicate::eval(Context &ctx)
 
 Literal IsTypePredicate::eval(Context &ctx)
 {
-    assert(ctx.feat_) ;
-
     if ( keyword_ == "node")
     {
-        return ctx.feat_->type_ == Feature::NodeFeature ;
+        return ctx.type() == Context::Node ;
     }
     else if ( keyword_ == "way" )
     {
-        return ctx.feat_->type_ == Feature::WayFeature ;
+        return ctx.type() == Context::Way ;
     }
     else if ( keyword_ == "relation" )
     {
-        return ctx.feat_->type_ == Feature::RelationFeature ;
+        return ctx.type() == Context::Relation ;
     }
 
 }

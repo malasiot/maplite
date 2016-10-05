@@ -1,10 +1,8 @@
 SET ( OSM2MFTILES_SOURCES
-	${SRC_ROOT}/io/mf_tile_writer.cpp
-	${SRC_ROOT}/io/vector_tile_writer.cpp
 
 	${SRC_ROOT}/convert/osm2mbtiles.cpp
 
-	${SRC_ROOT}/convert/import_config.cpp
+	${SRC_ROOT}/convert/filter_config.cpp
 	${SRC_ROOT}/convert/osm_rule_parser.cpp
 	${SRC_ROOT}/convert/osm_filter_functions.cpp
 	${SRC_ROOT}/convert/osm_processor.cpp
@@ -24,7 +22,7 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/io/vector_tile_writer.hpp
 	${SRC_ROOT}/io/mf_tile_writer.hpp
 
-	${SRC_ROOT}/convert/import_config.hpp
+	${SRC_ROOT}/convert/filter_config.hpp
 	${SRC_ROOT}/convert/osm_filter_functions.hpp
 	${SRC_ROOT}/convert/osm_document.hpp
 	${SRC_ROOT}/convert/osm_rule_parser.hpp

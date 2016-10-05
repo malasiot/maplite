@@ -5,9 +5,7 @@
 #include "dictionary.hpp"
 #include "osm_document.hpp"
 
-#include "import_config.hpp"
-#include "map_config.hpp"
-#include "vector_tile_writer.hpp"
+#include "filter_config.hpp"
 
 #include <map>
 
@@ -32,18 +30,23 @@ public:
 
     bool hasLayer(const std::string &layerName) const;
 
-    bool createLayerTable(const string &layerName, const string &layerType,
-                          const string &layerSrid);
+    bool createGeometriesTable(const std::string &desc);
+    bool createTagsTable() ;
 
-    std::string insertFeatureSQL(const std::string &layerName,
-                                 const std::string &geomCmd = "?") ;
+    std::string insertFeatureSQL(const std::string &desc, const std::string &geomCmd = "?") ;
 
-    bool processOsmFiles(const vector<string> &files, const ImportConfig &cfg) ;
+    bool processOsmFiles(const vector<string> &files, const FilterConfig &cfg) ;
     bool processShpFile(const string &file_name, const string &table_name, int srid, const string &char_enc) ;
 
-    bool queryTile(const MapConfig &cfg, VectorTileWriter &tile) const ;
+//    bool queryTile(const MapConfig &cfg, VectorTileWriter &tile) const ;
 
 private:
+
+    bool match_rule(const OSM::Filter::RulePtr &rule, OSM::Filter::Context &ctx, TagWriteList &tw, bool &cont) ;
+
+    bool add_line_geometry(SQLite::Connection &con, OSM::Document &doc, const OSM::Way &way ) ;
+    bool add_poi_geometry(SQLite::Connection &con, const OSM::Node &poi ) ;
+    bool add_tags(SQLite::Connection &con, const TagWriteList &tags, const string &id) ;
 
     bool addOSMLayerPoints(OSM::Document &doc, const OSM::Filter::LayerDefinition *layer,
                            const vector<NodeRuleMap > &node_idxs) ;

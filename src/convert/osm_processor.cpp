@@ -1,10 +1,12 @@
 #include "map_file.hpp"
+#include <spatialite.h>
 
 using namespace std ;
 
 static bool processSetTagActions(const OSM::Filter::Rule *r, OSM::Filter::Context &ctx, OSM::Feature *node)
 {
-   OSM::Filter::Command *action = r->actions_ ;
+    /*
+   OSM::Filter::CommandPtr *action = r->actions_ ;
 
    bool cont = false ;
 
@@ -39,11 +41,13 @@ static bool processSetTagActions(const OSM::Filter::Rule *r, OSM::Filter::Contex
    }
 
    return cont ;
+   */
 
 }
 
-static bool processStoreActions(const OSM::Filter::Rule *r, OSM::Filter::Context &ctx, OSM::Feature *node, vector<Action> &actions)
+static bool processStoreActions(const OSM::Filter::Rule *r, OSM::Filter::Context &ctx, OSM::Feature *node, vector<TagWriteAction> &actions)
 {
+    /*
    OSM::Filter::Command *action = r->actions_ ;
 
    bool cont = false ;
@@ -70,32 +74,33 @@ static bool processStoreActions(const OSM::Filter::Rule *r, OSM::Filter::Context
    }
 
    return cont ;
-
+*/
 }
 
 extern string escape_tag(const string &) ;
 
-void bindActions(const vector<Action> &actions, SQLite::Command &cmd)
+void bindActions(const TagWriteList &actions, SQLite::Command &cmd)
 {
-   string kvl ;
+    string kvl ;
 
-   for( int i=0 ; i<actions.size() ; i++ )
-   {
-       const Action &act = actions[i] ;
+    for( int i=0 ; i<actions.actions_.size() ; i++ )
+    {
+        const TagWriteAction &act = actions.actions_[i] ;
 
-       string val = act.val_.toString() ;
-       string key = act.key_ ;
+        string val = act.val_ ;
+        string key = act.key_ ;
 
-       if ( !val.empty() ) kvl += escape_tag(key) + '@' + escape_tag(val) + ';' ;
-   }
+        if ( !val.empty() ) kvl += escape_tag(key) + '@' + escape_tag(val) + ';' ;
+    }
 
-   if ( kvl.empty() ) cmd.bind(2, SQLite::Nil) ;
-   else cmd.bind(2, kvl) ;
+    if ( kvl.empty() ) cmd.bind(2, SQLite::Nil) ;
+    else cmd.bind(2, kvl) ;
 }
 
 bool MapFile::addOSMLayerPoints(OSM::Document &doc, const OSM::Filter::LayerDefinition *layer,
-                      const vector<NodeRuleMap > &node_idxs)
+                                const vector<NodeRuleMap > &node_idxs)
 {
+    /*
    SQLite::Database &db = handle() ;
 
    SQLite::Session session(&db) ;
@@ -152,128 +157,111 @@ bool MapFile::addOSMLayerPoints(OSM::Document &doc, const OSM::Filter::LayerDefi
    }
 
    trans.commit() ;
-
-   return true ;
+*/
+    return true ;
 }
 
 
-bool MapFile::addOSMLayerLines(OSM::Document &doc, const OSM::Filter::LayerDefinition *layer,
-                     const vector<NodeRuleMap> &way_idxs,
-                     vector<OSM::Way> &chunk_list,
-                     const vector<NodeRuleMap > &rule_map
-                     )
+bool MapFile::add_line_geometry(SQLite::Connection &con, OSM::Document &doc, const OSM::Way &way)
 {
+    try {
+        unsigned char *blob;
+        int blob_size;
 
-   SQLite::Database &db = handle() ;
+        string geoCmd = "CompressGeometry(?)" ;
+        SQLite::Command cmd(con, insertFeatureSQL("lines", geoCmd)) ;
 
-   SQLite::Session session(&db) ;
-   SQLite::Connection &con = session.handle() ;
+        gaiaGeomCollPtr geo_line = gaiaAllocGeomColl();
+        geo_line->Srid = 4326;
 
-   unsigned char *blob;
-   int blob_size;
+        gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_line, way.nodes_.size());
 
-   if ( layer->type_ != "lines" ) return false ;
+        for(int j=0 ; j<way.nodes_.size() ; j++)
+        {
+            const OSM::Node &node = doc.nodes_[way.nodes_[j]] ;
 
-   SQLite::Transaction trans(con) ;
+            gaiaSetPoint (ls->Coords, j, node.lon_, node.lat_);
+        }
 
-   string geoCmd = "CompressGeometry(Transform(?," + layer->srid_ + "))" ;
-   SQLite::Command cmd(con, insertFeatureSQL(layer->name_, geoCmd)) ;
+        gaiaToSpatiaLiteBlobWkb (geo_line, &blob, &blob_size);
 
-   for(int i=0 ; i<way_idxs.size() ; i++ )
-   {
-       vector<Action> actions ;
+        cmd.bind(1, blob, blob_size) ;
+        cmd.bind(2, way.id_) ;
 
-       const NodeRuleMap &nr = way_idxs[i] ;
+        cmd.exec() ;
 
-       int node_idx = nr.node_idx_ ;
-       OSM::Way &way = doc.ways_[node_idx] ;
 
-       OSM::Filter::Context ctx(&way) ;
+        gaiaFreeGeomColl (geo_line);
+        free(blob) ;
 
-       for(int j=0 ; j<nr.matched_rules_.size() ; j++ ) {
-           const OSM::Filter::Rule *r = nr.matched_rules_[j] ;
-           if ( ! processStoreActions(r, ctx, &way, actions) ) break ;
-       }
+    }
+    catch ( SQLite::Exception &e ) {
+        cerr << e.what() << endl ;
+        return false ;
+    }
 
-       cmd.clear() ;
+    return true ;
+}
 
-       bindActions(actions, cmd) ;
+bool MapFile::add_poi_geometry(SQLite::Connection &con, const OSM::Node &poi)
+{
+    try {
+        unsigned char *blob;
+        int blob_size;
 
-       gaiaGeomCollPtr geo_line = gaiaAllocGeomColl();
-       geo_line->Srid = 4326;
+        SQLite::Command cmd(con, insertFeatureSQL("pois")) ;
 
-       gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_line, way.nodes_.size());
+        gaiaGeomCollPtr geo_pt = gaiaAllocGeomColl();
 
-       for(int j=0 ; j<way.nodes_.size() ; j++)
-       {
-           const OSM::Node &node = doc.nodes_[way.nodes_[j]] ;
+        geo_pt->Srid = 4326;
 
-           gaiaSetPoint (ls->Coords, j, node.lon_, node.lat_);
-       }
+        gaiaAddPointToGeomColl (geo_pt, poi.lon_, poi.lat_);
 
-       gaiaToSpatiaLiteBlobWkb (geo_line, &blob, &blob_size);
+        gaiaToSpatiaLiteBlobWkb (geo_pt, &blob, &blob_size);
 
-       gaiaFreeGeomColl (geo_line);
+        cmd.bind(1, blob, blob_size) ;
+        cmd.bind(2, poi.id_) ;
 
-       cmd.bind(1, blob, blob_size) ;
+        cmd.exec() ;
 
-       cmd.exec() ;
+        gaiaFreeGeomColl (geo_pt);
+        free(blob) ;
 
-       free(blob) ;
+    }
+    catch ( SQLite::Exception &e ) {
+        cerr << e.what() << endl ;
+        return false ;
+    }
 
-   }
+}
 
-   for( int i=0 ; i<rule_map.size() ; i++ )
-   {
-       vector<Action> actions ;
+bool MapFile::add_tags(SQLite::Connection &con, const TagWriteList &tags, const string &id)
+{
+    SQLite::Command cmd(con, "INSERT INTO kv (key, val, osm_id, zoom_min, zoom_max) VALUES (?, ?, ?, ?, ?)") ;
 
-       const NodeRuleMap &nr = rule_map[i] ;
+    try {
+        for( const TagWriteAction &kv: tags.actions_) {
 
-       OSM::Way &way = chunk_list[i] ;
+            cmd.bind(1, kv.key_) ;
+            cmd.bind(2, kv.val_) ;
+            cmd.bind(3, id) ;
+            cmd.bind(4, kv.zoom_min_) ;
+            cmd.bind(5, kv.zoom_max_) ;
 
-       OSM::Filter::Context ctx(&way) ;
+            cmd.exec() ;
+            cmd.clear() ;
+        }
+    }
+    catch ( SQLite::Exception &e ) {
+        cerr << e.what() << endl ;
+    }
 
-       for(int j=0 ; j<nr.matched_rules_.size() ; j++ ) {
-           const OSM::Filter::Rule *r = nr.matched_rules_[j] ;
-           if ( ! processStoreActions(r, ctx, &way, actions) ) break ;
-       }
-
-       cmd.clear() ;
-
-       bindActions(actions, cmd) ;
-
-       gaiaGeomCollPtr geo_line = gaiaAllocGeomColl();
-       geo_line->Srid = 4326;
-
-       gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_line, way.nodes_.size());
-
-       for(int j=0 ; j<way.nodes_.size() ; j++)
-       {
-           const OSM::Node &node = doc.nodes_[way.nodes_[j]] ;
-
-           gaiaSetPoint (ls->Coords, j, node.lon_, node.lat_);
-       }
-
-       gaiaToSpatiaLiteBlobWkb (geo_line, &blob, &blob_size);
-
-       gaiaFreeGeomColl (geo_line);
-
-       cmd.bind(1, blob, blob_size) ;
-
-       cmd.exec() ;
-
-       free(blob) ;
-
-   }
-
-   trans.commit() ;
-
-   return true ;
 }
 
 bool MapFile::addOSMLayerPolygons(const OSM::Document &doc, const OSM::Filter::LayerDefinition *layer,
-                        vector<OSM::Polygon> &polygons, const vector<NodeRuleMap > &poly_idxs)
+                                  vector<OSM::Polygon> &polygons, const vector<NodeRuleMap > &poly_idxs)
 {
+    /*
    SQLite::Database &db = handle() ;
 
    SQLite::Session session(&db) ;
@@ -337,14 +325,21 @@ bool MapFile::addOSMLayerPolygons(const OSM::Document &doc, const OSM::Filter::L
    }
 
    trans.commit() ;
-
-   return true ;
+*/
+    return true ;
 }
 
-bool MapFile::processOsmFiles(const vector<string> &osmFiles, const ImportConfig &cfg)
+using namespace OSM::Filter ;
+
+bool MapFile::processOsmFiles(const vector<string> &osmFiles, const FilterConfig &cfg)
 {
     // read files from memory and write to spatialite database
-#if 0
+
+    SQLite::Database &db = handle() ;
+
+    SQLite::Session session(&db) ;
+    SQLite::Connection &con = session.handle() ;
+
     for(int i=0 ; i<osmFiles.size() ; i++ ) {
 
         OSM::Document doc ;
@@ -357,37 +352,106 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const ImportConfig
             continue ;
         }
 
-        for( OSM::Filter::LayerDefinition *layer = cfg.layers_ ;
-             layer ; layer = layer->next_ )
+        std::vector<NodeRuleMap> passFilterNodes, passFilterWays, passFilterPoly, passFilterRel ;
+
+        SQLite::Transaction trans(con) ;
+
+        for(int k=0 ; k<doc.nodes_.size() ; k++ )
         {
+            auto node = doc.nodes_[k] ;
 
-            std::vector<NodeRuleMap> passFilterNodes, passFilterWays, passFilterPoly, passFilterRel ;
+            if ( node.tags_.empty() ) continue ;
 
-            if ( layer->type_ == "points" )
+            OSM::Filter::Context ctx(node) ;
+
+            NodeRuleMap nr ;
+
+            nr.node_idx_ = k ;
+
+            TagWriteList tags ;
+            bool cont = false;
+
+            for( const RulePtr &rule: cfg.rules_ )
             {
-                for(int k=0 ; k<doc.nodes_.size() ; k++ )
-                {
-                    auto node = doc.nodes_[k] ;
 
-                    OSM::Filter::Context ctx(&node) ;
-
-                    NodeRuleMap nr ;
-
-                    nr.node_idx_ = k ;
-
-                    for( OSM::Filter::Rule *r = layer->rules_ ; r ; r = r->next_ )
-                    {
-                        if ( r->node_ && !r->node_->eval(ctx).toBoolean() ) continue ;
-                        processSetTagActions(r, ctx, &node) ;
-                        nr.matched_rules_.push_back(r) ;
-                    }
-
-                    if ( !nr.matched_rules_.empty() ) passFilterNodes.push_back(nr) ;
-
+                if ( match_rule( rule, ctx, tags, cont) ) {
+                    if ( !cont ) break ;
                 }
-
-                addOSMLayerPoints(doc, layer, passFilterNodes) ;
             }
+
+            if ( tags.actions_.empty() ) continue ;
+
+            add_poi_geometry(con, node) ;
+            add_tags(con, tags, node.id_) ;
+        }
+
+
+
+        for(int k=0 ; k<doc.ways_.size() ; k++ )
+        {
+            auto way = doc.ways_[k] ;
+
+            if ( way.tags_.empty() ) continue ;
+
+            // deal with closed ways
+
+            if ( way.nodes_.front() == way.nodes_.back() )
+            {
+                if ( way.tags_.get("area") == "yes" ) continue ;
+                if ( !way.tags_.contains("highway") && !way.tags_.contains("barrier") && !way.tags_.contains("contour") ) continue ;
+            }
+
+            // match feature with filter rules
+
+            OSM::Filter::Context ctx(way) ;
+
+            TagWriteList tags ;
+            bool cont = false;
+
+            for( const RulePtr &rule: cfg.rules_ )
+            {
+                if ( match_rule( rule, ctx, tags, cont) ) {
+                    if ( !cont ) break ;
+                }
+            }
+
+            if ( tags.actions_.empty() ) continue ;
+
+            add_line_geometry(con, doc, way) ;
+            add_tags(con, tags, way.id_) ;
+        }
+
+        // relations of type route, merge ways into chunks
+
+        for(int k=0 ; k<doc.relations_.size() ; k++ )
+        {
+            auto relation = doc.relations_[k] ;
+
+            if ( relation.tags_.get("type") != "route" ) continue ;
+
+            OSM::Filter::Context ctx(relation) ;
+
+            TagWriteList tags ;
+            bool cont = false;
+
+            for( const RulePtr &rule: cfg.rules_ )
+            {
+                if ( match_rule( rule, ctx, tags, cont) ) {
+                    if ( !cont ) break ;
+                }
+            }
+
+            if ( tags.actions_.empty() ) continue ;
+
+            vector<OSM::Way> chunks ;
+            if ( !OSM::Document::makeWaysFromRelation(doc, relation, chunks) ) continue ;
+
+
+        }
+
+        trans.commit() ;
+
+        /*
             else if ( layer->type_ == "lines" )
             {
                 for(int k=0 ; k<doc.ways_.size() ; k++ )
@@ -541,8 +605,80 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const ImportConfig
 
 
         }
+        */
     }
-#endif
+
     return true ;
 
+}
+
+bool MapFile::match_rule(const RulePtr &rule, Context &ctx, TagWriteList &tw, bool &cont)
+{
+    cont = false ;
+
+    if ( !rule->condition_ || rule->condition_->eval(ctx).toBoolean() ) {
+
+        bool rcont = true ;
+
+        for ( const CommandPtr &cmd: rule->commands_->commands_ ) {
+            if ( cmd->type() == Command::Conditional && rcont ) {
+                RuleCommand *rc = dynamic_cast<RuleCommand *>(cmd.get());
+                bool c = false ;
+                if ( match_rule(rc->rule_, ctx, tw, c) ) {
+                    if ( !c ) rcont = false ;
+                }
+            }
+            else if ( cmd->type() == Command::Set ) {
+                SimpleCommand *rc = dynamic_cast<SimpleCommand *>(cmd.get());
+
+                if ( ctx.has_tag(rc->tag_ ) )
+                    ctx.tags_[rc->tag_] = rc->val_->eval(ctx).toString() ;
+                else
+                    ctx.tags_.add(rc->tag_, rc->val_->eval(ctx).toString()) ;
+            }
+            else if ( cmd->type() == Command::Add ) {
+                SimpleCommand *rc = dynamic_cast<SimpleCommand *>(cmd.get());
+                ctx.tags_.add(rc->tag_, rc->val_->eval(ctx).toString()) ;
+            }
+            else if ( cmd->type() == Command::Continue ) {
+                cont = true ;
+            }
+            else if ( cmd->type() == Command::Delete ) {
+                SimpleCommand *rc = dynamic_cast<SimpleCommand *>(cmd.get());
+                ctx.tags_.remove(rc->tag_) ;
+            }
+            else if ( cmd->type() == Command::WriteAll ) {
+                WriteAllCommand *rc = dynamic_cast<WriteAllCommand *>(cmd.get());
+                ZoomRange zr = rc->zoom_range_ ;
+                DictionaryIterator it(ctx.tags_) ;
+                while ( it ) {
+                    tw.actions_.emplace_back(it.key(), it.value(), zr.min_zoom_, zr.max_zoom_) ;
+                    ++it ;
+                }
+            }
+            else if ( cmd->type() == Command::Write ) {
+                WriteCommand *rc = dynamic_cast<WriteCommand *>(cmd.get());
+                ZoomRange zr = rc->zoom_range_ ;
+                for( const string &tag: rc->tags_ ) {
+                    if ( ctx.has_tag(tag) )
+                        tw.actions_.emplace_back(tag, ctx.value(tag), zr.min_zoom_, zr.max_zoom_) ;
+                }
+            }
+            else if ( cmd->type() == Command::Exclude ) {
+                ExcludeCommand *rc = dynamic_cast<ExcludeCommand *>(cmd.get());
+
+                set<string> exclude(rc->tags_.begin(), rc->tags_.end()) ;
+
+                ZoomRange zr = rc->zoom_range_ ;
+                DictionaryIterator it(ctx.tags_) ;
+                while ( it ) {
+                    if ( exclude.count(it.key()) == 0 )
+                        tw.actions_.emplace_back(it.key(), it.value(), zr.min_zoom_, zr.max_zoom_) ;
+                    ++it ;
+                }
+            }
+        }
+        return true ;
+    }
+    else return false ;
 }

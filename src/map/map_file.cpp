@@ -1,4 +1,5 @@
 #include "map_file.hpp"
+#include "geometry.hpp"
 
 #include <spatialite.h>
 #include <fstream>
@@ -59,13 +60,18 @@ bool MapFile::create(const std::string &name) {
         con.exec("SELECT InitSpatialMetadata(1);") ;
         con.exec("PRAGMA encoding=\"UTF-8\"") ;
 
-        return true ;
+        return ( createGeometriesTable("lines") &&
+                 createGeometriesTable("pois") &&
+                 createGeometriesTable("polygons") &&
+                 createTagsTable() ) ;
     }
-    catch ( SQLite::Exception & )
+    catch ( SQLite::Exception &e )
     {
-
+        cerr << e.what()<< endl ;
         return false ;
     }
+
+
 
 }
 
@@ -92,40 +98,59 @@ bool MapFile::hasLayer(const std::string &layerName) const
 
 }
 
-bool MapFile::createLayerTable(const std::string &layerName, const string &layerType, const string &layerSrid)
+bool MapFile::createGeometriesTable(const std::string &desc)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
 
     try {
-        bool has_layer = hasLayer(layerName) ;
-        if ( has_layer ) return false ;
-
         string sql ;
 
-        sql = "CREATE TABLE ";
-        sql +=  layerName + "(gid INTEGER PRIMARY KEY AUTOINCREMENT, tags TEXT)" ;
+        sql = "CREATE TABLE geom_" + desc;
+        sql += " (gid INTEGER PRIMARY KEY AUTOINCREMENT, osm_id TEXT)" ;
 
         SQLite::Command(con, sql).exec() ;
 
         // Add geometry column
 
-        sql = "SELECT AddGeometryColumn( '"  ;
-        sql += layerName ;
-        sql += "', '" + geom_column_name_ +"', " + layerSrid + "," ;
+        string geom_type ;
 
-        if ( layerType == "points" )
-            sql += "'POINT', 2);" ;
-        else if ( layerType == "lines" )
-            sql +="'LINESTRING', 2);" ;
-        else if ( layerType == "polygons" )
-            sql += "'POLYGON', 2);" ;
+        if ( desc == "lines" )
+            geom_type = "LINESTRING" ;
+        else if ( desc == "polygons")
+            geom_type = "POLYGON" ;
+        else if ( desc == "pois")
+            geom_type = "POINT" ;
+
+        sql = "SELECT AddGeometryColumn( 'geom_" + desc + "', 'geom', 4326, '" + geom_type + "', 2);" ;
 
         SQLite::Command(con, sql).exec() ;
 
         // create spatial index
 
-        con.exec("SELECT CreateSpatialIndex('%q', '%q');", layerName.c_str(), geom_column_name_.c_str()) ;
+        con.exec("SELECT CreateSpatialIndex('geom_" + desc + "', 'geom');") ;
+
+        return true ;
+    }
+    catch ( SQLite::Exception &e)
+    {
+        cerr << e.what() << endl ;
+        return false ;
+    }
+}
+
+bool MapFile::createTagsTable()
+{
+    SQLite::Session session(db_) ;
+    SQLite::Connection &con = session.handle() ;
+
+    try {
+        string sql ;
+
+        sql = "CREATE TABLE kv ";
+        sql += "(gid INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, val TEXT, osm_id TEXT, zoom_min INTEGER, zoom_max INTEGER)" ;
+
+        SQLite::Command(con, sql).exec() ;
 
         return true ;
     }
@@ -137,16 +162,12 @@ bool MapFile::createLayerTable(const std::string &layerName, const string &layer
 }
 
 
-string MapFile::insertFeatureSQL(const string &layerName, const string &geomCmd )
+string MapFile::insertFeatureSQL(const string &desc, const string &geomCmd )
 {
     string sql ;
 
-    sql = "INSERT INTO " ;
-    sql += layerName ;
-    sql += "(" + geom_column_name_ ;
-    sql += ",tags" ;
-
-    sql += ") VALUES (" + geomCmd + ",?)";
+    sql = "INSERT INTO geom_" + desc ;
+    sql += " (geom, osm_id) VALUES (?, ?)";
     return sql ;
 }
 
@@ -228,7 +249,7 @@ string MapFile::serializeTags(const Dictionary &tags)
     return res ;
 }
 
-
+/*
 bool MapFile::queryTile(const MapConfig &cfg, VectorTileWriter &tile) const
 {
     SQLite::Session session(db_) ;
@@ -299,5 +320,5 @@ bool MapFile::queryTile(const MapConfig &cfg, VectorTileWriter &tile) const
 
     return has_data ;
 }
-
+*/
 

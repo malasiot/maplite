@@ -200,7 +200,7 @@ Literal Function::eval(Context &ctx)
     if ( name_ == "format" )
     {
         if ( children_.empty() ) return Literal() ;
-        ExpressionNode *args = children_[0] ;
+        ExpressionNodePtr args = children_[0] ;
         if ( args->children_.size() < 2 ) return Literal() ;
         string frmt_str = args->children_[0]->eval(ctx).toString() ;
 
