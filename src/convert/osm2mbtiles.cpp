@@ -1,8 +1,7 @@
 #include <fstream>
 
-#include "map_config.hpp"
-#include "map_file.hpp"
-#include "mf_tile_writer.hpp"
+#include "osm_processor.hpp"
+
 
 #include <boost/filesystem.hpp>
 
@@ -16,16 +15,16 @@ void printUsageAndExit()
 
 int main(int argc, char *argv[])
 {
-    string mapFile, mapConfigFile, importConfigFile, tileSet ;
+    string spatialiteDbFile, filterConfigFile, mapConfigFile, tileSet ;
     vector<string> osmFiles ;
 
     for( int i=1 ; i<argc ; i++ )
     {
         string arg = argv[i] ;
 
-        if ( arg == "--import" ) {
+        if ( arg == "--filter" ) {
             if ( i++ == argc ) printUsageAndExit() ;
-            importConfigFile = argv[i] ;
+            filterConfigFile = argv[i] ;
         }
         else if ( arg == "--options" ) {
             if ( i++ == argc ) printUsageAndExit() ;
@@ -40,31 +39,31 @@ int main(int argc, char *argv[])
             osmFiles.push_back(argv[i]) ;
     }
 
-    if ( importConfigFile.empty() ||   osmFiles.empty() )
+    if (filterConfigFile.empty() || osmFiles.empty() )
         printUsageAndExit() ;
 
     boost::filesystem::path tmp_dir = boost::filesystem::temp_directory_path() ;
     boost::filesystem::path tmp_file = boost::filesystem::unique_path("%%%%%.sqlite");
 
-    mapFile = ( tmp_dir / tmp_file ).native() ;
+    spatialiteDbFile = ( tmp_dir / tmp_file ).native() ;
 
-    cout << mapFile << endl ;
-    MapFile gfile ;
+    cout << spatialiteDbFile << endl ;
 
-    if ( !gfile.create(mapFile) ) {
-        cerr << "can't open map file: " << mapFile << endl ;
+    OSMProcessor proc ;
+
+    if ( !proc.create(spatialiteDbFile) ) {
+        cerr << "can't create temporary spatialite database: " << spatialiteDbFile << endl ;
         exit(1) ;
     }
 
-   FilterConfig icfg ;
-    if ( !icfg.parse(importConfigFile) ) {
-        cerr << "Error parsing OSM import configuration file: " << importConfigFile << endl ;
+   FilterConfig fcfg ;
+    if ( !fcfg.parse(filterConfigFile) ) {
+        cerr << "Error parsing OSM tag filter configuration file: " << filterConfigFile << endl ;
         return 0 ;
     }
 
-
-    if ( !gfile.processOsmFiles(osmFiles, icfg) ) {
-        cerr << "Error while creating temporary spatialite database" << endl ;
+    if ( !proc.processOsmFiles(osmFiles, fcfg) ) {
+        cerr << "Error while populating temporary spatialite database" << endl ;
         return 0 ;
     }
 

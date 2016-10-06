@@ -1,185 +1,159 @@
-#include "map_file.hpp"
+#include "osm_processor.hpp"
+
 #include <spatialite.h>
+#include <boost/filesystem.hpp>
 
 using namespace std ;
 
-static bool processSetTagActions(const OSM::Filter::Rule *r, OSM::Filter::Context &ctx, OSM::Feature *node)
+class SpatialLiteSingleton
 {
-    /*
-   OSM::Filter::CommandPtr *action = r->actions_ ;
+    public:
 
-   bool cont = false ;
+    static SpatialLiteSingleton instance_;
 
-   while ( action )
-   {
-       if ( action->type() ==  OSM::Filter::Command::Add )
-       {
-           OSM::Filter::SimpleCommand *ac = dynamic_cast<OSM::Filter::SimpleCommand *>(action) ;
-           node->tags_.add(ac->tag_, ac->expression_->eval(ctx).toString()) ;
-       }
-       else if ( action->type() == OSM::Filter::Command::Set )
-       {
-           OSM::Filter::SimpleCommand *ac = dynamic_cast<OSM::Filter::SimpleCommand *>(action) ;
-
-           if ( node->tags_.contains(ac->tag_) )
-               node->tags_[ac->tag_] = ac->expression_->eval(ctx).toString() ;
-           else
-               node->tags_.add(ac->tag_, ac->expression_->eval(ctx).toString()) ;
-       }
-       else if ( action->type() == OSM::Filter::Command::Continue )
-       {
-           cont = true ;
-       }
-       else if ( action->type() == OSM::Filter::Command::Delete )
-       {
-           OSM::Filter::SimpleCommand *ac = dynamic_cast<OSM::Filter::SimpleCommand *>(action) ;
-           node->tags_.remove(ac->tag_) ;
-       }
-
-       action = action->next_ ;
-
-   }
-
-   return cont ;
-   */
-
-}
-
-static bool processStoreActions(const OSM::Filter::Rule *r, OSM::Filter::Context &ctx, OSM::Feature *node, vector<TagWriteAction> &actions)
-{
-    /*
-   OSM::Filter::Command *action = r->actions_ ;
-
-   bool cont = false ;
-
-   while ( action )
-   {
-       if ( action->type() == OSM::Filter::Command::Continue )
-       {
-           cont = true ;
-       }
-       else if ( action->type() == OSM::Filter::Command::Store )
-       {
-           OSM::Filter::SimpleCommand *ac = dynamic_cast<OSM::Filter::SimpleCommand *>(action) ;
-           Action act ;
-
-           act.key_ = ac->tag_ ;
-           act.val_ = ac->expression_->eval(ctx) ;
-
-           actions.push_back(act) ;
-       }
-
-       action = action->next_ ;
-
-   }
-
-   return cont ;
-*/
-}
-
-extern string escape_tag(const string &) ;
-
-void bindActions(const TagWriteList &actions, SQLite::Command &cmd)
-{
-    string kvl ;
-
-    for( int i=0 ; i<actions.actions_.size() ; i++ )
-    {
-        const TagWriteAction &act = actions.actions_[i] ;
-
-        string val = act.val_ ;
-        string key = act.key_ ;
-
-        if ( !val.empty() ) kvl += escape_tag(key) + '@' + escape_tag(val) + ';' ;
+    static SpatialLiteSingleton& instance() {
+            return instance_;
     }
 
-    if ( kvl.empty() ) cmd.bind(2, SQLite::Nil) ;
-    else cmd.bind(2, kvl) ;
-}
+private:
 
-bool MapFile::addOSMLayerPoints(OSM::Document &doc, const OSM::Filter::LayerDefinition *layer,
-                                const vector<NodeRuleMap > &node_idxs)
+    SpatialLiteSingleton () {
+        spatialite_init(false);
+    }
+
+    ~SpatialLiteSingleton () {
+        spatialite_cleanup();
+    }
+
+    SpatialLiteSingleton( SpatialLiteSingleton const & );
+
+    void operator = ( SpatialLiteSingleton const & );
+};
+
+SpatialLiteSingleton SpatialLiteSingleton::instance_ ;
+
+bool OSMProcessor::createGeometriesTable(const std::string &desc)
 {
-    /*
-   SQLite::Database &db = handle() ;
+    SQLite::Session session(db_.get()) ;
+    SQLite::Connection &con = session.handle() ;
 
-   SQLite::Session session(&db) ;
-   SQLite::Connection &con = session.handle() ;
+    try {
+        string sql ;
 
-   unsigned char *blob;
-   int blob_size;
+        sql = "CREATE TABLE geom_" + desc;
+        sql += " (gid INTEGER PRIMARY KEY AUTOINCREMENT, osm_id TEXT)" ;
 
-   if ( layer->type_ != "points" ) return false ;
+        SQLite::Command(con, sql).exec() ;
 
-   SQLite::Transaction trans(con) ;
+        // Add geometry column
 
-   string geoCmd = "Transform(?," + layer->srid_ + ")" ;
-   SQLite::Command cmd(con, insertFeatureSQL(layer->name_, geoCmd)) ;
+        string geom_type ;
 
-   for(int i=0 ; i<node_idxs.size() ; i++ )
-   {
-       vector<Action> actions ;
+        if ( desc == "lines" )
+            geom_type = "LINESTRING" ;
+        else if ( desc == "polygons")
+            geom_type = "POLYGON" ;
+        else if ( desc == "pois")
+            geom_type = "POINT" ;
+        else if ( desc == "relations" )
+            geom_type = "MULTILINESTRING" ;
 
-       const NodeRuleMap &nr = node_idxs[i] ;
+        sql = "SELECT AddGeometryColumn( 'geom_" + desc + "', 'geom', 4326, '" + geom_type + "', 2);" ;
 
-       int node_idx = nr.node_idx_ ;
-       OSM::Node &node = doc.nodes_[node_idx] ;
+        SQLite::Command(con, sql).exec() ;
 
-       OSM::Filter::Context ctx(&node) ;
+        // create spatial index
 
-       for(int j=0 ; j<nr.matched_rules_.size() ; j++ )
-       {
-           const OSM::Filter::Rule *r = nr.matched_rules_[j] ;
+        con.exec("SELECT CreateSpatialIndex('geom_" + desc + "', 'geom');") ;
 
-           if ( ! processStoreActions(r, ctx, &node, actions) ) break ;
-       }
+        return true ;
+    }
+    catch ( SQLite::Exception &e)
+    {
+        cerr << e.what() << endl ;
+        return false ;
+    }
+}
 
-       cmd.clear() ;
+bool OSMProcessor::createTagsTable()
+{
+    SQLite::Session session(db_.get()) ;
+    SQLite::Connection &con = session.handle() ;
 
-       bindActions(actions, cmd) ;
+    try {
+        string sql ;
 
-       gaiaGeomCollPtr geo_pt = gaiaAllocGeomColl();
+        sql = "CREATE TABLE kv ";
+        sql += "(gid INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, val TEXT, osm_id TEXT, zoom_min INTEGER, zoom_max INTEGER)" ;
 
-       geo_pt->Srid = 4326;
+        SQLite::Command(con, sql).exec() ;
 
-       gaiaAddPointToGeomColl (geo_pt, node.lon_, node.lat_);
-
-       gaiaToSpatiaLiteBlobWkb (geo_pt, &blob, &blob_size);
-
-       gaiaFreeGeomColl (geo_pt);
-
-       cmd.bind(1, blob, blob_size) ;
-
-       cmd.exec() ;
-       cmd.clear() ;
-       free(blob);
-
-   }
-
-   trans.commit() ;
-*/
-    return true ;
+        return true ;
+    }
+    catch ( SQLite::Exception &e)
+    {
+        cerr << e.what() << endl ;
+        return false ;
+    }
 }
 
 
-bool MapFile::add_line_geometry(SQLite::Connection &con, OSM::Document &doc, const OSM::Way &way)
+string OSMProcessor::insertFeatureSQL(const string &desc, const string &geomCmd )
+{
+    string sql ;
+
+    sql = "INSERT INTO geom_" + desc ;
+    sql += " (geom, osm_id) VALUES (?, ?)";
+    return sql ;
+}
+
+
+bool OSMProcessor::create(const std::string &name) {
+
+    if ( boost::filesystem::exists(name) )
+        boost::filesystem::remove(name);
+
+    db_.reset(new SQLite::Database(name)) ;
+
+    SQLite::Session session(db_.get()) ;
+    SQLite::Connection &con = session.handle() ;
+
+    try {
+        con.exec("PRAGMA synchronous=NORMAL") ;
+        con.exec("PRAGMA journal_mode=WAL") ;
+        con.exec("SELECT InitSpatialMetadata(1);") ;
+        con.exec("PRAGMA encoding=\"UTF-8\"") ;
+
+        return ( createGeometriesTable("lines") &&
+                 createGeometriesTable("pois") &&
+                 createGeometriesTable("polygons") &&
+                 createGeometriesTable("relations") &&
+                 createTagsTable() ) ;
+    }
+    catch ( SQLite::Exception &e )
+    {
+        cerr << e.what()<< endl ;
+        return false ;
+    }
+
+
+
+}
+
+bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const OSM::Way &way)
 {
     try {
         unsigned char *blob;
         int blob_size;
 
-        string geoCmd = "CompressGeometry(?)" ;
-        SQLite::Command cmd(con, insertFeatureSQL("lines", geoCmd)) ;
-
         gaiaGeomCollPtr geo_line = gaiaAllocGeomColl();
         geo_line->Srid = 4326;
+        geo_line->DeclaredType = GAIA_LINESTRING ;
 
         gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_line, way.nodes_.size());
 
-        for(int j=0 ; j<way.nodes_.size() ; j++)
-        {
+        for(int j=0 ; j<way.nodes_.size() ; j++)  {
             const OSM::Node &node = doc.nodes_[way.nodes_[j]] ;
-
             gaiaSetPoint (ls->Coords, j, node.lon_, node.lat_);
         }
 
@@ -190,9 +164,10 @@ bool MapFile::add_line_geometry(SQLite::Connection &con, OSM::Document &doc, con
 
         cmd.exec() ;
 
-
         gaiaFreeGeomColl (geo_line);
         free(blob) ;
+
+        cmd.clear() ;
 
     }
     catch ( SQLite::Exception &e ) {
@@ -203,16 +178,55 @@ bool MapFile::add_line_geometry(SQLite::Connection &con, OSM::Document &doc, con
     return true ;
 }
 
-bool MapFile::add_poi_geometry(SQLite::Connection &con, const OSM::Node &poi)
+bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const std::vector<OSM::Way> &ways, const string &id)
 {
     try {
         unsigned char *blob;
         int blob_size;
 
-        SQLite::Command cmd(con, insertFeatureSQL("pois")) ;
+        gaiaGeomCollPtr geo_mline = gaiaAllocGeomColl();
+        geo_mline->Srid = 4326;
+        geo_mline->DeclaredType = GAIA_MULTILINESTRING ;
+
+        for( auto &way: ways ) {
+
+            gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_mline, way.nodes_.size());
+
+            for(int j=0 ; j<way.nodes_.size() ; j++)  {
+                const OSM::Node &node = doc.nodes_[way.nodes_[j]] ;
+                gaiaSetPoint (ls->Coords, j, node.lon_, node.lat_);
+            }
+        }
+
+        gaiaToSpatiaLiteBlobWkb (geo_mline, &blob, &blob_size);
+
+        cmd.bind(1, blob, blob_size) ;
+        cmd.bind(2, id) ;
+
+        cmd.exec() ;
+
+        gaiaFreeGeomColl (geo_mline);
+        free(blob) ;
+
+        cmd.clear() ;
+
+    }
+    catch ( SQLite::Exception &e ) {
+        cerr << e.what() << endl ;
+        return false ;
+    }
+
+    return true ;
+}
+
+bool OSMProcessor::addPOIGeometry(SQLite::Command &cmd, const OSM::Node &poi)
+{
+    try {
+        unsigned char *blob;
+        int blob_size;
 
         gaiaGeomCollPtr geo_pt = gaiaAllocGeomColl();
-
+        geo_pt->DeclaredType = GAIA_POINT ;
         geo_pt->Srid = 4326;
 
         gaiaAddPointToGeomColl (geo_pt, poi.lon_, poi.lat_);
@@ -227,6 +241,8 @@ bool MapFile::add_poi_geometry(SQLite::Connection &con, const OSM::Node &poi)
         gaiaFreeGeomColl (geo_pt);
         free(blob) ;
 
+        cmd.clear() ;
+
     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
@@ -235,10 +251,65 @@ bool MapFile::add_poi_geometry(SQLite::Connection &con, const OSM::Node &poi)
 
 }
 
-bool MapFile::add_tags(SQLite::Connection &con, const TagWriteList &tags, const string &id)
+bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document &doc, const OSM::Polygon &poly, const string &id)
 {
-    SQLite::Command cmd(con, "INSERT INTO kv (key, val, osm_id, zoom_min, zoom_max) VALUES (?, ?, ?, ?, ?)") ;
+    try {
+        unsigned char *blob;
+        int blob_size;
 
+        gaiaGeomCollPtr geo_poly = gaiaAllocGeomColl();
+        geo_poly->Srid = 4326;
+        geo_poly->DeclaredType = GAIA_POLYGON ;
+
+        gaiaPolygonPtr g_poly = gaiaAddPolygonToGeomColl (geo_poly,
+                                     poly.rings_[0].nodes_.size(),
+                                     poly.rings_.size() - 1);
+
+        gaiaRingPtr er = g_poly->Exterior ;
+
+        for(int j=0 ; j<poly.rings_[0].nodes_.size() ; j++)  {
+            const OSM::Node &node = doc.nodes_[poly.rings_[0].nodes_[j]] ;
+            gaiaSetPoint (er->Coords, j, node.lon_, node.lat_);
+        }
+
+        for( int i=1 ; i<poly.rings_.size() ; i++ ) {
+
+            const OSM::Ring &ring = poly.rings_[i] ;
+            gaiaRingPtr ir = gaiaAddInteriorRing(g_poly, i-1, ring.nodes_.size()) ;
+
+            for(int j=0 ; j<ring.nodes_.size() ; j++)  {
+                const OSM::Node &node = doc.nodes_[ring.nodes_[j]] ;
+                gaiaSetPoint (ir->Coords, j, node.lon_, node.lat_);
+            }
+        }
+/*
+        gaiaOutBuffer wkt ;
+        gaiaOutBufferInitialize (&wkt);
+        gaiaOutWkt(&wkt, geo_poly) ;
+*/
+        gaiaToSpatiaLiteBlobWkb (geo_poly, &blob, &blob_size);
+
+        cmd.bind(1, blob, blob_size) ;
+        cmd.bind(2, id) ;
+
+        cmd.exec() ;
+
+        gaiaFreeGeomColl (geo_poly);
+        free(blob) ;
+
+        cmd.clear() ;
+
+    }
+    catch ( SQLite::Exception &e ) {
+        cerr << e.what() << endl ;
+        return false ;
+    }
+
+    return true ;
+}
+
+bool OSMProcessor::addTags(SQLite::Command &cmd, const TagWriteList &tags, const string &id)
+{
     try {
         for( const TagWriteAction &kv: tags.actions_) {
 
@@ -258,80 +329,9 @@ bool MapFile::add_tags(SQLite::Connection &con, const TagWriteList &tags, const 
 
 }
 
-bool MapFile::addOSMLayerPolygons(const OSM::Document &doc, const OSM::Filter::LayerDefinition *layer,
-                                  vector<OSM::Polygon> &polygons, const vector<NodeRuleMap > &poly_idxs)
-{
-    /*
-   SQLite::Database &db = handle() ;
-
-   SQLite::Session session(&db) ;
-   SQLite::Connection &con = session.handle() ;
-
-   unsigned char *blob;
-   int blob_size;
-
-   if ( layer->type_ != "polygons" ) return false ;
-
-   SQLite::Transaction trans(con) ;
-
-   string geoCmd = "CompressGeometry(Transform(ST_BuildArea(?)," + layer->srid_ + "))" ;
-   SQLite::Command cmd(con, insertFeatureSQL(layer->name_,  geoCmd)) ;
-
-   for( int i=0 ; i< poly_idxs.size() ; i++ )
-   {
-       vector<Action> actions ;
-
-       const NodeRuleMap &nr = poly_idxs[i] ;
-
-       int poly_idx = nr.node_idx_ ;
-       OSM::Polygon &poly = polygons[poly_idx] ;
-
-       OSM::Filter::Context ctx(&poly) ;
-
-       for(int j=0 ; j<nr.matched_rules_.size() ; j++ ) {
-           const OSM::Filter::Rule *r =nr.matched_rules_[j] ;
-           if ( ! processStoreActions(r, ctx, &poly, actions) ) break ;
-       }
-
-       cmd.clear() ;
-
-       bindActions(actions, cmd) ;
-
-       gaiaGeomCollPtr geo_poly = gaiaAllocGeomColl();
-       geo_poly->Srid = 4326;
-
-       for(int j=0 ; j<poly.rings_.size() ; j++)
-       {
-           auto ring = poly.rings_[j] ;
-           gaiaLinestringPtr gpoly = gaiaAddLinestringToGeomColl(geo_poly,ring.nodes_.size());
-
-           for(int k=0 ; k<ring.nodes_.size() ; k++)
-           {
-               auto node = doc.nodes_[ring.nodes_[k]] ;
-
-               gaiaSetPoint (gpoly->Coords, k, node.lon_, node.lat_);
-           }
-       }
-
-       gaiaToSpatiaLiteBlobWkb (geo_poly, &blob, &blob_size);
-
-       gaiaFreeGeomColl (geo_poly);
-
-       cmd.bind(1, blob, blob_size) ;
-
-       cmd.exec() ;
-
-       free(blob) ;
-   }
-
-   trans.commit() ;
-*/
-    return true ;
-}
-
 using namespace OSM::Filter ;
 
-bool MapFile::processOsmFiles(const vector<string> &osmFiles, const FilterConfig &cfg)
+bool OSMProcessor::processOsmFiles(const vector<string> &osmFiles, const FilterConfig &cfg)
 {
     // read files from memory and write to spatialite database
 
@@ -339,6 +339,8 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const FilterConfig
 
     SQLite::Session session(&db) ;
     SQLite::Connection &con = session.handle() ;
+
+    SQLite::Command cmd_tags(con, "INSERT INTO kv (key, val, osm_id, zoom_min, zoom_max) VALUES (?, ?, ?, ?, ?)") ;
 
     for(int i=0 ; i<osmFiles.size() ; i++ ) {
 
@@ -352,9 +354,11 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const FilterConfig
             continue ;
         }
 
-        std::vector<NodeRuleMap> passFilterNodes, passFilterWays, passFilterPoly, passFilterRel ;
+        // group all insertions into a transaction
 
         SQLite::Transaction trans(con) ;
+
+        // POIs
 
         for(int k=0 ; k<doc.nodes_.size() ; k++ )
         {
@@ -364,28 +368,24 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const FilterConfig
 
             OSM::Filter::Context ctx(node) ;
 
-            NodeRuleMap nr ;
-
-            nr.node_idx_ = k ;
-
             TagWriteList tags ;
             bool cont = false;
 
-            for( const RulePtr &rule: cfg.rules_ )
-            {
-
-                if ( match_rule( rule, ctx, tags, cont) ) {
+            for( const RulePtr &rule: cfg.rules_ ) {
+                if ( matchRule( rule, ctx, tags, cont) ) {
                     if ( !cont ) break ;
                 }
             }
 
             if ( tags.actions_.empty() ) continue ;
 
-            add_poi_geometry(con, node) ;
-            add_tags(con, tags, node.id_) ;
+            SQLite::Command cmd_poi(con, insertFeatureSQL("pois")) ;
+
+            addPOIGeometry(cmd_poi, node) ;
+            addTags(cmd_tags, tags, node.id_) ;
         }
 
-
+        // ways
 
         for(int k=0 ; k<doc.ways_.size() ; k++ )
         {
@@ -393,13 +393,6 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const FilterConfig
 
             if ( way.tags_.empty() ) continue ;
 
-            // deal with closed ways
-
-            if ( way.nodes_.front() == way.nodes_.back() )
-            {
-                if ( way.tags_.get("area") == "yes" ) continue ;
-                if ( !way.tags_.contains("highway") && !way.tags_.contains("barrier") && !way.tags_.contains("contour") ) continue ;
-            }
 
             // match feature with filter rules
 
@@ -408,17 +401,39 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const FilterConfig
             TagWriteList tags ;
             bool cont = false;
 
-            for( const RulePtr &rule: cfg.rules_ )
-            {
-                if ( match_rule( rule, ctx, tags, cont) ) {
+            for( const RulePtr &rule: cfg.rules_ ) {
+                if ( matchRule( rule, ctx, tags, cont) ) {
                     if ( !cont ) break ;
                 }
             }
 
             if ( tags.actions_.empty() ) continue ;
 
-            add_line_geometry(con, doc, way) ;
-            add_tags(con, tags, way.id_) ;
+            // deal with closed ways, potential polygon geometries (areas) are those indicated by area tag or those other than highway, barrier and contour
+
+            if ( way.nodes_.front() == way.nodes_.back() &&
+                ( way.tags_.get("area") == "yes" ) ||
+                 ( !way.tags_.contains("highway") &&
+                   !way.tags_.contains("barrier") &&
+                   !way.tags_.contains("contour") ) ) {
+
+                OSM::Polygon poly ;
+
+                OSM::Ring ring ;
+                ring.nodes_.insert(ring.nodes_.end(), way.nodes_.begin(), way.nodes_.end()) ;
+                poly.rings_.push_back(ring) ;
+
+                SQLite::Command cmd_poly(con, insertFeatureSQL("polygons", "CompressGeometry(?)")) ;
+
+                addPolygonGeometry(cmd_poly, doc, poly, way.id_) ;
+                addTags(cmd_tags, tags, way.id_) ;
+            }
+            else {
+               SQLite::Command cmd_line(con, insertFeatureSQL("lines", "CompressGeometry(?)")) ;
+
+                addLineGeometry(cmd_line, doc, way) ;
+                addTags(cmd_tags, tags, way.id_) ;
+            }
         }
 
         // relations of type route, merge ways into chunks
@@ -427,192 +442,50 @@ bool MapFile::processOsmFiles(const vector<string> &osmFiles, const FilterConfig
         {
             auto relation = doc.relations_[k] ;
 
-            if ( relation.tags_.get("type") != "route" ) continue ;
-
             OSM::Filter::Context ctx(relation) ;
 
             TagWriteList tags ;
             bool cont = false;
 
-            for( const RulePtr &rule: cfg.rules_ )
-            {
-                if ( match_rule( rule, ctx, tags, cont) ) {
+            for( const RulePtr &rule: cfg.rules_ ) {
+                if ( matchRule( rule, ctx, tags, cont) ) {
                     if ( !cont ) break ;
                 }
             }
 
             if ( tags.actions_.empty() ) continue ;
 
-            vector<OSM::Way> chunks ;
-            if ( !OSM::Document::makeWaysFromRelation(doc, relation, chunks) ) continue ;
+            string rel_type = relation.tags_.get("type") ;
 
+            if ( rel_type == "route" ) {
+                vector<OSM::Way> chunks ;
+                if ( !OSM::Document::makeWaysFromRelation(doc, relation, chunks) ) continue ;
 
+                SQLite::Command cmd_rel(con, insertFeatureSQL("relations", "CompressGeometry(ST_Multi(?))")) ;
+
+                addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_) ;
+                addTags(cmd_tags, tags, relation.id_) ;
+            }
+            else if ( rel_type == "multipolygon" || rel_type == "boundary" ) {
+                OSM::Polygon polygon ;
+                if ( !OSM::Document::makePolygonsFromRelation(doc, relation, polygon) ) continue ;
+
+                SQLite::Command cmd_rel(con, insertFeatureSQL("polygons", "CompressGeometry(?)")) ;
+
+                addPolygonGeometry(cmd_rel, doc, polygon, relation.id_) ;
+                addTags(cmd_tags, tags, relation.id_) ;
+            }
         }
 
         trans.commit() ;
-
-        /*
-            else if ( layer->type_ == "lines" )
-            {
-                for(int k=0 ; k<doc.ways_.size() ; k++ )
-                {
-                    auto way = doc.ways_[k] ;
-
-                    OSM::Filter::Context ctx(&way) ;
-
-                    NodeRuleMap nr ;
-
-                    nr.node_idx_ = k ;
-
-                    for( const OSM::Filter::Rule *r = layer->rules_ ; r ; r = r->next_ )
-                    {
-                        if ( r->node_ && !r->node_->eval(ctx).toBoolean() ) continue ;
-                        processSetTagActions(r, ctx, &way) ;
-                        nr.matched_rules_.push_back(r) ;
-                    }
-
-                    // deal with closed ways
-
-                    if ( way.nodes_.front() == way.nodes_.back() )
-                    {
-                        if ( way.tags_.get("area") == "yes" ) continue ;
-                        if ( !way.tags_.contains("highway") && !way.tags_.contains("barrier") && !way.tags_.contains("contour") ) continue ;
-                    }
-
-                    if ( !nr.matched_rules_.empty() ) passFilterWays.push_back(nr) ;
-                }
-
-                // relations of type route, merge ways into chunks
-
-                vector<OSM::Way> chunk_list ;
-
-                for(int k=0 ; k<doc.relations_.size() ; k++ )
-                {
-                    auto relation = doc.relations_[k] ;
-
-                    if ( relation.tags_.get("type") != "route" ) continue ;
-
-                    OSM::Filter::Context ctx(&relation) ;
-
-                    vector<const OSM::Filter::Rule *> matched ;
-
-                    for( const OSM::Filter::Rule *r = layer->rules_ ; r ; r = r->next_ )
-                    {
-                        if ( r->node_ && !r->node_->eval(ctx).toBoolean() ) continue ;
-                        processSetTagActions(r, ctx, &relation) ;
-                        matched.push_back(r) ;
-                    }
-
-                    if ( matched.empty() ) continue ;
-
-                    vector<OSM::Way> chunks ;
-                    if ( !OSM::Document::makeWaysFromRelation(doc, relation, chunks) ) continue ;
-
-                    for(int c=0 ; c<chunks.size() ; c++)
-                    {
-                        NodeRuleMap nr ;
-
-                        nr.node_idx_ = chunk_list.size() ;
-                        nr.matched_rules_ = matched ;
-
-                        chunk_list.push_back(chunks[i]) ;
-                        passFilterRel.push_back(nr) ;
-                    }
-
-                }
-
-                addOSMLayerLines(doc, layer, passFilterWays, chunk_list, passFilterRel) ;
-            }
-            else if ( layer->type_ == "polygons" )
-            {
-                vector<OSM::Polygon> polygons ;
-
-                // first look for multi-polygon relations
-
-                for(int k=0 ; k<doc.relations_.size() ; k++ )
-                {
-                    OSM::Relation &relation = doc.relations_[k] ;
-
-                    string rel_type = relation.tags_.get("type") ;
-                    if (  rel_type != "multipolygon" && rel_type != "boundary" ) continue ;
-
-                    OSM::Filter::Context ctx(&relation) ;
-
-                    vector<const OSM::Filter::Rule *> matched ;
-
-                    for( const OSM::Filter::Rule *r = layer->rules_ ; r ; r = r->next_ )
-                    {
-                        if ( r->node_ && !r->node_->eval(ctx).toBoolean() ) continue ;
-                        processSetTagActions(r, ctx, &relation) ;
-                        matched.push_back(r) ;
-                    }
-
-                    if ( matched.empty() ) continue ;
-
-                    OSM::Polygon polygon ;
-                    if ( !OSM::Document::makePolygonsFromRelation(doc, relation, polygon) ) continue ;
-
-                    NodeRuleMap nr ;
-
-                    nr.node_idx_ = polygons.size() ;
-                    nr.matched_rules_ = matched ;
-                    polygons.push_back(polygon) ;
-
-                    passFilterPoly.push_back(nr) ;
-
-                }
-
-                // check simple polygons
-
-                for(int k=0 ; k<doc.ways_.size() ; k++ )
-                {
-                    auto way = doc.ways_[k] ;
-
-                    if ( way.nodes_.front() != way.nodes_.back() ) continue ;
-                    if ( way.tags_.get("area") == "no" ) continue ;
-                    if ( way.tags_.contains("highway") ) continue ;
-                    if ( way.tags_.contains("barrier") ) continue ;
-
-                    OSM::Filter::Context ctx(&way) ;
-
-                    NodeRuleMap nr ;
-
-                    nr.node_idx_ = polygons.size()  ;
-
-                    for( const OSM::Filter::Rule *r = layer->rules_ ; r ; r = r->next_ )
-                    {
-                        if ( r->node_ && !r->node_->eval(ctx).toBoolean() ) continue ;
-                        processSetTagActions(r, ctx, &way) ;
-                        nr.matched_rules_.push_back(r) ;
-                    }
-
-                    if ( nr.matched_rules_.empty() ) continue ;
-
-                    OSM::Polygon poly ;
-
-                    OSM::Ring ring ;
-                    ring.nodes_.insert(ring.nodes_.end(), way.nodes_.begin(), way.nodes_.end()) ;
-                    poly.rings_.push_back(ring) ;
-                    poly.tags_ = way.tags_ ;
-                    polygons.push_back(poly) ;
-                    passFilterPoly.push_back(nr) ;
-
-                }
-
-                addOSMLayerPolygons(doc, layer, polygons, passFilterPoly) ;
-            }
-
-
-
-        }
-        */
     }
+
 
     return true ;
 
 }
 
-bool MapFile::match_rule(const RulePtr &rule, Context &ctx, TagWriteList &tw, bool &cont)
+bool OSMProcessor::matchRule(const RulePtr &rule, Context &ctx, TagWriteList &tw, bool &cont)
 {
     cont = false ;
 
@@ -624,7 +497,7 @@ bool MapFile::match_rule(const RulePtr &rule, Context &ctx, TagWriteList &tw, bo
             if ( cmd->type() == Command::Conditional && rcont ) {
                 RuleCommand *rc = dynamic_cast<RuleCommand *>(cmd.get());
                 bool c = false ;
-                if ( match_rule(rc->rule_, ctx, tw, c) ) {
+                if ( matchRule(rc->rule_, ctx, tw, c) ) {
                     if ( !c ) rcont = false ;
                 }
             }
@@ -659,9 +532,13 @@ bool MapFile::match_rule(const RulePtr &rule, Context &ctx, TagWriteList &tw, bo
             else if ( cmd->type() == Command::Write ) {
                 WriteCommand *rc = dynamic_cast<WriteCommand *>(cmd.get());
                 ZoomRange zr = rc->zoom_range_ ;
-                for( const string &tag: rc->tags_ ) {
-                    if ( ctx.has_tag(tag) )
-                        tw.actions_.emplace_back(tag, ctx.value(tag), zr.min_zoom_, zr.max_zoom_) ;
+                for( const TagDeclarationPtr &decl: rc->tags_.tags_ ) {
+                    if ( ctx.has_tag(decl->tag_) ) {
+                        if ( decl->val_ )
+                            tw.actions_.emplace_back(decl->tag_, decl->val_->eval(ctx).toString(), zr.min_zoom_, zr.max_zoom_) ;
+                        else
+                            tw.actions_.emplace_back(decl->tag_, ctx.value(decl->tag_), zr.min_zoom_, zr.max_zoom_) ;
+                    }
                 }
             }
             else if ( cmd->type() == Command::Exclude ) {

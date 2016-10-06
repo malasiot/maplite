@@ -62,11 +62,16 @@
 			typedef std::shared_ptr<ZoomRange> ZoomRangePtr ;
 			class TagList ;
 			typedef std::shared_ptr<TagList> TagListPtr ;
+			class TagDeclaration ;
+			typedef std::shared_ptr<TagDeclaration> TagDeclarationPtr ;
+			class TagDeclarationList ;
+			typedef std::shared_ptr<TagDeclarationList> TagDeclarationListPtr ;
+
 		}
 	}
 
 
-#line 70 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
+#line 75 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
 
 
 # include <vector>
@@ -142,7 +147,7 @@
 
 #line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
 namespace OSM {
-#line 146 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
+#line 151 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
 
 
 
@@ -325,21 +330,27 @@ namespace OSM {
       // rule
       char dummy5[sizeof(OSM::Filter::RulePtr)];
 
+      // tag_decl_list
+      char dummy6[sizeof(OSM::Filter::TagDeclarationListPtr)];
+
+      // tag_decl
+      char dummy7[sizeof(OSM::Filter::TagDeclarationPtr)];
+
       // tag_list
-      char dummy6[sizeof(OSM::Filter::TagListPtr)];
+      char dummy8[sizeof(OSM::Filter::TagListPtr)];
 
       // zoom_range
-      char dummy7[sizeof(OSM::Filter::ZoomRangePtr)];
+      char dummy9[sizeof(OSM::Filter::ZoomRangePtr)];
 
       // "number"
-      char dummy8[sizeof(double)];
+      char dummy10[sizeof(double)];
 
       // "identifier"
       // "string literal"
-      char dummy9[sizeof(std::string)];
+      char dummy11[sizeof(std::string)];
 
       // "zoom specifier"
-      char dummy10[sizeof(uint8_t)];
+      char dummy12[sizeof(uint8_t)];
 };
 
     /// Symbol semantic values.
@@ -448,6 +459,10 @@ namespace OSM {
   basic_symbol (typename Base::kind_type t, const OSM::Filter::RuleListPtr v, const location_type& l);
 
   basic_symbol (typename Base::kind_type t, const OSM::Filter::RulePtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const OSM::Filter::TagDeclarationListPtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const OSM::Filter::TagDeclarationPtr v, const location_type& l);
 
   basic_symbol (typename Base::kind_type t, const OSM::Filter::TagListPtr v, const location_type& l);
 
@@ -889,8 +904,8 @@ namespace OSM {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 157,     ///< Last index in yytable_.
-      yynnts_ = 29,  ///< Number of nonterminal symbols.
+      yylast_ = 171,     ///< Last index in yytable_.
+      yynnts_ = 31,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 42, ///< Termination state number.
       yyterror_ = 1,
@@ -982,31 +997,31 @@ namespace OSM {
         value.copy< OSM::Filter::CommandListPtr > (other.value);
         break;
 
-      case 52: // command
+      case 54: // command
         value.copy< OSM::Filter::CommandPtr > (other.value);
         break;
 
-      case 53: // boolean_value_expression
-      case 54: // boolean_term
-      case 55: // boolean_factor
-      case 56: // boolean_primary
-      case 57: // predicate
-      case 58: // comparison_predicate
-      case 59: // like_text_predicate
-      case 60: // exists_predicate
-      case 61: // list_predicate
-      case 62: // literal_list
-      case 63: // expression
-      case 64: // term
-      case 65: // factor
-      case 66: // function
-      case 67: // function_argument_list
-      case 68: // function_argument
-      case 69: // literal
-      case 70: // general_literal
-      case 71: // boolean_literal
-      case 72: // numeric_literal
-      case 73: // attribute
+      case 55: // boolean_value_expression
+      case 56: // boolean_term
+      case 57: // boolean_factor
+      case 58: // boolean_primary
+      case 59: // predicate
+      case 60: // comparison_predicate
+      case 61: // like_text_predicate
+      case 62: // exists_predicate
+      case 63: // list_predicate
+      case 64: // literal_list
+      case 65: // expression
+      case 66: // term
+      case 67: // factor
+      case 68: // function
+      case 69: // function_argument_list
+      case 70: // function_argument
+      case 71: // literal
+      case 72: // general_literal
+      case 73: // boolean_literal
+      case 74: // numeric_literal
+      case 75: // attribute
         value.copy< OSM::Filter::ExpressionNodePtr > (other.value);
         break;
 
@@ -1018,7 +1033,15 @@ namespace OSM {
         value.copy< OSM::Filter::RulePtr > (other.value);
         break;
 
-      case 51: // tag_list
+      case 53: // tag_decl_list
+        value.copy< OSM::Filter::TagDeclarationListPtr > (other.value);
+        break;
+
+      case 51: // tag_decl
+        value.copy< OSM::Filter::TagDeclarationPtr > (other.value);
+        break;
+
+      case 52: // tag_list
         value.copy< OSM::Filter::TagListPtr > (other.value);
         break;
 
@@ -1061,31 +1084,31 @@ namespace OSM {
         value.copy< OSM::Filter::CommandListPtr > (v);
         break;
 
-      case 52: // command
+      case 54: // command
         value.copy< OSM::Filter::CommandPtr > (v);
         break;
 
-      case 53: // boolean_value_expression
-      case 54: // boolean_term
-      case 55: // boolean_factor
-      case 56: // boolean_primary
-      case 57: // predicate
-      case 58: // comparison_predicate
-      case 59: // like_text_predicate
-      case 60: // exists_predicate
-      case 61: // list_predicate
-      case 62: // literal_list
-      case 63: // expression
-      case 64: // term
-      case 65: // factor
-      case 66: // function
-      case 67: // function_argument_list
-      case 68: // function_argument
-      case 69: // literal
-      case 70: // general_literal
-      case 71: // boolean_literal
-      case 72: // numeric_literal
-      case 73: // attribute
+      case 55: // boolean_value_expression
+      case 56: // boolean_term
+      case 57: // boolean_factor
+      case 58: // boolean_primary
+      case 59: // predicate
+      case 60: // comparison_predicate
+      case 61: // like_text_predicate
+      case 62: // exists_predicate
+      case 63: // list_predicate
+      case 64: // literal_list
+      case 65: // expression
+      case 66: // term
+      case 67: // factor
+      case 68: // function
+      case 69: // function_argument_list
+      case 70: // function_argument
+      case 71: // literal
+      case 72: // general_literal
+      case 73: // boolean_literal
+      case 74: // numeric_literal
+      case 75: // attribute
         value.copy< OSM::Filter::ExpressionNodePtr > (v);
         break;
 
@@ -1097,7 +1120,15 @@ namespace OSM {
         value.copy< OSM::Filter::RulePtr > (v);
         break;
 
-      case 51: // tag_list
+      case 53: // tag_decl_list
+        value.copy< OSM::Filter::TagDeclarationListPtr > (v);
+        break;
+
+      case 51: // tag_decl
+        value.copy< OSM::Filter::TagDeclarationPtr > (v);
+        break;
+
+      case 52: // tag_list
         value.copy< OSM::Filter::TagListPtr > (v);
         break;
 
@@ -1169,6 +1200,20 @@ namespace OSM {
   {}
 
   template <typename Base>
+  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::TagDeclarationListPtr v, const location_type& l)
+    : Base (t)
+    , value (v)
+    , location (l)
+  {}
+
+  template <typename Base>
+  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::TagDeclarationPtr v, const location_type& l)
+    : Base (t)
+    , value (v)
+    , location (l)
+  {}
+
+  template <typename Base>
   BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::TagListPtr v, const location_type& l)
     : Base (t)
     , value (v)
@@ -1224,31 +1269,31 @@ namespace OSM {
         value.template destroy< OSM::Filter::CommandListPtr > ();
         break;
 
-      case 52: // command
+      case 54: // command
         value.template destroy< OSM::Filter::CommandPtr > ();
         break;
 
-      case 53: // boolean_value_expression
-      case 54: // boolean_term
-      case 55: // boolean_factor
-      case 56: // boolean_primary
-      case 57: // predicate
-      case 58: // comparison_predicate
-      case 59: // like_text_predicate
-      case 60: // exists_predicate
-      case 61: // list_predicate
-      case 62: // literal_list
-      case 63: // expression
-      case 64: // term
-      case 65: // factor
-      case 66: // function
-      case 67: // function_argument_list
-      case 68: // function_argument
-      case 69: // literal
-      case 70: // general_literal
-      case 71: // boolean_literal
-      case 72: // numeric_literal
-      case 73: // attribute
+      case 55: // boolean_value_expression
+      case 56: // boolean_term
+      case 57: // boolean_factor
+      case 58: // boolean_primary
+      case 59: // predicate
+      case 60: // comparison_predicate
+      case 61: // like_text_predicate
+      case 62: // exists_predicate
+      case 63: // list_predicate
+      case 64: // literal_list
+      case 65: // expression
+      case 66: // term
+      case 67: // factor
+      case 68: // function
+      case 69: // function_argument_list
+      case 70: // function_argument
+      case 71: // literal
+      case 72: // general_literal
+      case 73: // boolean_literal
+      case 74: // numeric_literal
+      case 75: // attribute
         value.template destroy< OSM::Filter::ExpressionNodePtr > ();
         break;
 
@@ -1260,7 +1305,15 @@ namespace OSM {
         value.template destroy< OSM::Filter::RulePtr > ();
         break;
 
-      case 51: // tag_list
+      case 53: // tag_decl_list
+        value.template destroy< OSM::Filter::TagDeclarationListPtr > ();
+        break;
+
+      case 51: // tag_decl
+        value.template destroy< OSM::Filter::TagDeclarationPtr > ();
+        break;
+
+      case 52: // tag_list
         value.template destroy< OSM::Filter::TagListPtr > ();
         break;
 
@@ -1300,31 +1353,31 @@ namespace OSM {
         value.move< OSM::Filter::CommandListPtr > (s.value);
         break;
 
-      case 52: // command
+      case 54: // command
         value.move< OSM::Filter::CommandPtr > (s.value);
         break;
 
-      case 53: // boolean_value_expression
-      case 54: // boolean_term
-      case 55: // boolean_factor
-      case 56: // boolean_primary
-      case 57: // predicate
-      case 58: // comparison_predicate
-      case 59: // like_text_predicate
-      case 60: // exists_predicate
-      case 61: // list_predicate
-      case 62: // literal_list
-      case 63: // expression
-      case 64: // term
-      case 65: // factor
-      case 66: // function
-      case 67: // function_argument_list
-      case 68: // function_argument
-      case 69: // literal
-      case 70: // general_literal
-      case 71: // boolean_literal
-      case 72: // numeric_literal
-      case 73: // attribute
+      case 55: // boolean_value_expression
+      case 56: // boolean_term
+      case 57: // boolean_factor
+      case 58: // boolean_primary
+      case 59: // predicate
+      case 60: // comparison_predicate
+      case 61: // like_text_predicate
+      case 62: // exists_predicate
+      case 63: // list_predicate
+      case 64: // literal_list
+      case 65: // expression
+      case 66: // term
+      case 67: // factor
+      case 68: // function
+      case 69: // function_argument_list
+      case 70: // function_argument
+      case 71: // literal
+      case 72: // general_literal
+      case 73: // boolean_literal
+      case 74: // numeric_literal
+      case 75: // attribute
         value.move< OSM::Filter::ExpressionNodePtr > (s.value);
         break;
 
@@ -1336,7 +1389,15 @@ namespace OSM {
         value.move< OSM::Filter::RulePtr > (s.value);
         break;
 
-      case 51: // tag_list
+      case 53: // tag_decl_list
+        value.move< OSM::Filter::TagDeclarationListPtr > (s.value);
+        break;
+
+      case 51: // tag_decl
+        value.move< OSM::Filter::TagDeclarationPtr > (s.value);
+        break;
+
+      case 52: // tag_list
         value.move< OSM::Filter::TagListPtr > (s.value);
         break;
 
@@ -1675,7 +1736,7 @@ namespace OSM {
 
 #line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
 } // OSM
-#line 1679 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
+#line 1740 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
 
 
 

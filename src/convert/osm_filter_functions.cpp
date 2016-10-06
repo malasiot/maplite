@@ -209,6 +209,12 @@ Literal Function::eval(Context &ctx)
             vals.push_back(args->children_[i]->eval(ctx)) ;
         return Literal(format(frmt_str.c_str(), vals), false) ;
     }
+    else if ( name_ == "type" ) {
+        if ( ctx.type() == Context::Node ) return "node" ;
+        else if ( ctx.type() == Context::Way ) return "way" ;
+        else if ( ctx.type() == Context::Relation ) return "relation" ;
+    }
+
 }
 
 }

@@ -23,7 +23,6 @@ class Context ;
 class Command ;
 class Rule ;
 
-
 typedef std::shared_ptr<ExpressionNode> ExpressionNodePtr ;
 typedef std::shared_ptr<Rule> RulePtr ;
 typedef std::shared_ptr<Command> CommandPtr ;
@@ -189,15 +188,29 @@ public:
     std::vector<std::string> tags_ ;
 };
 
+class TagDeclaration {
+public:
+    TagDeclaration(const std::string &tag, const ExpressionNodePtr &val): tag_(tag), val_(val) {}
+
+    std::string tag_ ;
+    ExpressionNodePtr val_ ;
+};
+
+class TagDeclarationList {
+public:
+
+    std::deque<TagDeclarationPtr> tags_ ;
+};
+
 class WriteCommand: public Command {
 public:
 
-    WriteCommand(const ZoomRange &zr, const TagList &tags): tags_(tags.tags_), zoom_range_(zr) {}
+    WriteCommand(const ZoomRange &zr, const TagDeclarationList &tags): tags_(tags), zoom_range_(zr) {}
 
     Type type() const { return Write ; }
 
     ZoomRange zoom_range_ ;
-    std::vector<std::string> tags_ ;
+    TagDeclarationList tags_ ;
 };
 
 class ExcludeCommand: public Command {
@@ -304,6 +317,7 @@ public:
     enum Type { Equal, NotEqual, Less, Greater, LessOrEqual, GreaterOrEqual } ;
 
     ComparisonPredicate(Type op, ExpressionNodePtr lhs, ExpressionNodePtr rhs): op_(op), ExpressionNode(lhs, rhs) {}
+
 
     Literal eval(Context &ctx) ;
 

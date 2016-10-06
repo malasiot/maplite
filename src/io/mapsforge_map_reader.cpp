@@ -1,4 +1,4 @@
-#include "mapsforge_map_reader.hpp"
+#include "mapsforge_database.hpp"
 #include "tms.hpp"
 
 #include <fstream>

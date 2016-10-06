@@ -36,6 +36,11 @@
 			typedef std::shared_ptr<ZoomRange> ZoomRangePtr ;
 			class TagList ;
 			typedef std::shared_ptr<TagList> TagListPtr ;
+			class TagDeclaration ;
+			typedef std::shared_ptr<TagDeclaration> TagDeclarationPtr ;
+			class TagDeclarationList ;
+			typedef std::shared_ptr<TagDeclarationList> TagDeclarationListPtr ;
+
 		}
 	}
 
@@ -105,7 +110,8 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 %type <OSM::Filter::RuleListPtr> rule_list
 %type <OSM::Filter::ZoomRangePtr> zoom_range
 %type <OSM::Filter::TagListPtr> tag_list
-%type <OSM::Filter::LayerDefinition *> layer layer_list
+%type <OSM::Filter::TagDeclarationPtr> tag_decl
+%type <OSM::Filter::TagDeclarationListPtr> tag_decl_list
 
 /*%destructor { delete $$; } STRING IDENTIFIER*/
 
@@ -146,9 +152,18 @@ zoom_range:
 	| LEFT_BRACKET ZOOM_SPEC MINUS RIGHT_BRACKET { $$ = std::make_shared<OSM::Filter::ZoomRange>($2, 255); }
 	| LEFT_BRACKET MINUS ZOOM_SPEC RIGHT_BRACKET { $$ = std::make_shared<OSM::Filter::ZoomRange>(0, $3); }
 
+tag_decl:
+	IDENTIFIER { $$ = std::make_shared<OSM::Filter::TagDeclaration>($1, nullptr); }
+	| IDENTIFIER ASSIGN expression { $$ = std::make_shared<OSM::Filter::TagDeclaration>($1, $3); }
+
 tag_list:
 	  IDENTIFIER { $$ = std::make_shared<OSM::Filter::TagList>() ; $$->tags_.push_back($1) ; }
 	| tag_list COMMA IDENTIFIER { $$ = $1 ; $$->tags_.push_back($3) ; }
+
+tag_decl_list:
+	  tag_decl { $$ = std::make_shared<OSM::Filter::TagDeclarationList>() ; $$->tags_.push_back($1) ; }
+	| tag_decl_list COMMA tag_decl { $$ = $1 ; $$->tags_.push_back($3) ; }
+
 
 command:
 		ADD_CMD IDENTIFIER ASSIGN expression COLON { $$ = std::make_shared<OSM::Filter::SimpleCommand>(OSM::Filter::Command::Add, $2, $4) ; }
@@ -157,8 +172,8 @@ command:
 		/*The 'set' command is just like the 'add' command, except that it sets the tag, even if the tag already exists*/
 	|   DELETE_CMD IDENTIFIER COLON { $$ = std::make_shared<OSM::Filter::SimpleCommand>(OSM::Filter::Command::Delete, $2) ; }
 		/*Delete tag from node*/
-	|   WRITE_CMD zoom_range tag_list COLON { $$ = std::make_shared<OSM::Filter::WriteCommand>(*$2, *$3) ; }
-	|   WRITE_CMD tag_list COLON { $$ = std::make_shared<OSM::Filter::WriteCommand>( OSM::Filter::ZoomRange(0, 255), *$2) ; }
+	|   WRITE_CMD zoom_range tag_decl_list COLON { $$ = std::make_shared<OSM::Filter::WriteCommand>(*$2, *$3) ; }
+	|   WRITE_CMD tag_decl_list COLON { $$ = std::make_shared<OSM::Filter::WriteCommand>( OSM::Filter::ZoomRange(0, 255), *$2) ; }
 		/*write tag(s) to file for the given zoom range*/
 	|   WRITE_ALL_CMD zoom_range COLON { $$ = std::make_shared<OSM::Filter::WriteAllCommand>(*$2) ; }
 	|   WRITE_ALL_CMD COLON { $$ = std::make_shared<OSM::Filter::WriteAllCommand>( OSM::Filter::ZoomRange(0, 255)) ; }
@@ -207,7 +222,7 @@ predicate:
 
 
 comparison_predicate:
-	 expression EQUAL expression					{ $$ = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::Equal, $1, $3 ) ; }
+	expression EQUAL expression					{ $$ = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::Equal, $1, $3 ) ; }
 	| expression NOT_EQUAL expression				{ $$ = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::NotEqual, $1, $3 ) ; }
 	| expression LESS_THAN expression				{ $$ = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::Less, $1, $3 ) ; }
 	| expression GREATER_THAN expression			{ $$ = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::Greater, $1, $3 ) ; }

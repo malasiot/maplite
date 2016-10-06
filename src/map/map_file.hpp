@@ -44,9 +44,12 @@ private:
 
     bool match_rule(const OSM::Filter::RulePtr &rule, OSM::Filter::Context &ctx, TagWriteList &tw, bool &cont) ;
 
-    bool add_line_geometry(SQLite::Connection &con, OSM::Document &doc, const OSM::Way &way ) ;
-    bool add_poi_geometry(SQLite::Connection &con, const OSM::Node &poi ) ;
-    bool add_tags(SQLite::Connection &con, const TagWriteList &tags, const string &id) ;
+    bool addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const OSM::Way &way ) ;
+    bool addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const std::vector<OSM::Way> &ways, const std::string &id ) ;
+    bool addPOIGeometry(SQLite::Command &cmd, const OSM::Node &poi ) ;
+    bool addPolygonGeometry(SQLite::Command &cmd, const OSM::Document &doc, const OSM::Polygon &poly, const std::string &id) ;
+
+    bool addTags(SQLite::Command &cmd, const TagWriteList &tags, const string &id) ;
 
     bool addOSMLayerPoints(OSM::Document &doc, const OSM::Filter::LayerDefinition *layer,
                            const vector<NodeRuleMap > &node_idxs) ;

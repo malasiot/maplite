@@ -6,12 +6,14 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/convert/osm_rule_parser.cpp
 	${SRC_ROOT}/convert/osm_filter_functions.cpp
 	${SRC_ROOT}/convert/osm_processor.cpp
+	${SRC_ROOT}/convert/osm_processor.hpp
 	${SRC_ROOT}/convert/osm_polygon.cpp
 	${SRC_ROOT}/convert/osm_pbf_reader.cpp
 	${SRC_ROOT}/convert/osm_document.cpp
-
-	${SRC_ROOT}/map/map_file.cpp
-	${SRC_ROOT}/map/map_config.cpp
+	${SRC_ROOT}/convert/filter_config.hpp
+	${SRC_ROOT}/convert/osm_filter_functions.hpp
+	${SRC_ROOT}/convert/osm_document.hpp
+	${SRC_ROOT}/convert/osm_rule_parser.hpp
 
 	${SRC_ROOT}/util/dictionary.cpp
 	${SRC_ROOT}/util/xml_reader.cpp
@@ -19,16 +21,6 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/util/zfstream.cpp
 	${SRC_ROOT}/util/base64.cpp
 
-	${SRC_ROOT}/io/vector_tile_writer.hpp
-	${SRC_ROOT}/io/mf_tile_writer.hpp
-
-	${SRC_ROOT}/convert/filter_config.hpp
-	${SRC_ROOT}/convert/osm_filter_functions.hpp
-	${SRC_ROOT}/convert/osm_document.hpp
-	${SRC_ROOT}/convert/osm_rule_parser.hpp
-
-	${SRC_ROOT}/map/map_config.hpp
-	${SRC_ROOT}/map/map_file.hpp
 
 	${SRC_ROOT}/util/tms.cpp
 	${SRC_ROOT}/util/tms.hpp
