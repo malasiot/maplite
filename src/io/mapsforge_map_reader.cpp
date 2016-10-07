@@ -1,4 +1,5 @@
 #include "mapsforge_database.hpp"
+#include "serializer.hpp"
 #include "tms.hpp"
 
 #include <fstream>
@@ -10,203 +11,14 @@
 using namespace std ;
 
 
-enum
+void MapFile::open(const std::string &file_path, const std::shared_ptr<TileIndex> &index)
 {
-    O32_LITTLE_ENDIAN = 0x03020100ul,
-    O32_BIG_ENDIAN = 0x00010203ul,
-    O32_PDP_ENDIAN = 0x01000302ul
-};
 
-static const union { unsigned char bytes[4]; uint32_t value; } o32_host_order =
-{ { 0, 1, 2, 3 } };
+    strm_.open(file_path.c_str(), ios::in | ios::binary) ;
 
-static const bool platform_is_little_endian = ( o32_host_order.value == 0x03020100ul ) ;
+    if ( !strm_ ) throw std::runtime_error("error openning file") ;
 
-static void byte_swap_32(uint32_t &data)
-{
-    union u {uint32_t v; uint8_t c[4];};
-    u un, vn;
-    un.v = data ;
-    vn.c[0]=un.c[3];
-    vn.c[1]=un.c[2];
-    vn.c[2]=un.c[1];
-    vn.c[3]=un.c[0];
-    data = vn.v ;
-}
-
-static void byte_swap_64(uint64_t &data)
-{
-    union u {uint64_t v; uint8_t c[8];};
-    u un, vn;
-    un.v = data ;
-    vn.c[0]=un.c[7];
-    vn.c[1]=un.c[6];
-    vn.c[2]=un.c[5];
-    vn.c[3]=un.c[4];
-    vn.c[4]=un.c[3];
-    vn.c[5]=un.c[2];
-    vn.c[6]=un.c[1];
-    vn.c[7]=un.c[0];
-    data = vn.v ;
-}
-
-static void byte_swap_16(uint16_t &nValue)
-{
-    nValue = ((( nValue>> 8)) | (nValue << 8));
-}
-
-
-class ReadException: public runtime_error {
-public:
-    ReadException(const string &file, const string &reason):
-        runtime_error("Error reading map file " + file + ": " + reason) {}
-};
-
-class FileTruncatedException: public ReadException {
-public:
-    FileTruncatedException(const std::string &map_file): ReadException(map_file, "File truncated") {}
-};
-
-uint32_t MapFile::read_uint32()
-{
-    uint32_t val ;
-    if ( !strm_.read((char *)&val, 4) )
-        throw FileTruncatedException(map_file_path_) ;
-
-    if ( platform_is_little_endian )
-        byte_swap_32(val) ;
-
-    return val ;
-}
-
-int32_t MapFile::read_int32() {
-    return read_uint32() ;
-}
-
-
-uint64_t MapFile::read_uint64()
-{
-    uint64_t val ;
-
-    if ( !strm_.read((char *)&val, 8) )
-        throw FileTruncatedException(map_file_path_) ;
-
-    if ( platform_is_little_endian )
-        byte_swap_64(val) ;
-
-    return val ;
-}
-
-int64_t MapFile::read_int64() {
-    return read_uint64() ;
-}
-
-uint16_t MapFile::read_uint16()
-{
-    uint16_t val ;
-    if ( !strm_.read((char *)&val, 2) )
-        throw FileTruncatedException(map_file_path_) ;
-
-    if ( platform_is_little_endian )
-        byte_swap_16(val) ;
-
-    return val ;
-}
-
-int16_t MapFile::read_int16() {
-    return read_uint16() ;
-}
-
-uint8_t MapFile::read_uint8()
-{
-    uint8_t val ;
-    if ( !strm_.read((char *)&val, 1) )
-        throw FileTruncatedException(map_file_path_) ;
-
-    return val ;
-}
-
-int8_t MapFile::read_int8() {
-    return read_uint8() ;
-}
-
-uint64_t MapFile::read_var_uint64()
-{
-    uint64_t val = UINT64_C(0);
-    unsigned int shift = 0;
-    uint8_t byte ;
-
-    while ( 1 )
-    {
-        if ( !strm_.get((char &)byte) ) throw FileTruncatedException(map_file_path_) ;
-
-        val |= ( byte & 0x7F ) << shift ;
-        shift += 7 ;
-
-        if ( ( byte & 0x80 ) == 0 ) break ;
-
-        if ( shift > 63 )
-            throw ReadException(map_file_path_, "Variable length integer is too long") ;
-    }
-
-    return val ;
-}
-
-int64_t MapFile::read_var_int64()
-{
-    int64_t val = INT64_C(0);
-
-    unsigned int shift = 0;
-    uint8_t byte ;
-
-    while (1)
-    {
-        if ( !strm_.get((char &)byte) ) throw FileTruncatedException(map_file_path_) ;
-
-        if ( ( byte & 0x80) == 0 ) break ;
-
-        val |= ( byte & 0x7F ) << shift;
-
-        shift += 7 ;
-    }
-
-    if ( ( byte & 0x40 ) != 0 )
-        val = -(val | ((byte & 0x3f) << shift)) ;
-    else
-        val |= ( byte & 0x3f ) << shift ;
-
-
-    return val ;
-}
-
-
-int64_t MapFile::read_offset() {
-    char buffer[5] ;
-
-    if ( !strm_.read(buffer, 5) )
-        throw FileTruncatedException(map_file_path_) ;
-
-    int64_t v = (buffer[0] & 0xffL) << 32 | (buffer[1] & 0xffL) << 24 | (buffer[2] & 0xffL) << 16 | (buffer[3] & 0xffL) << 8 | (buffer[4] & 0xffL) ;
-
-    return v ;
-}
-
-std::string MapFile::read_utf8()
-{
-    string str ;
-    uint64_t len = read_var_uint64() ;
-    str.resize(len) ;
-    if ( !strm_.read(&str[0], len) )
-        throw FileTruncatedException(map_file_path_) ;
-
-    return str ;
-}
-
-void MapFile::open(const std::string &file_path)
-{
-    strm_.open(file_path.c_str(), ios::binary) ;
-
-    if ( !strm_ ) throw ReadException(file_path, "error openning file") ;
+    index_ = index ;
 
     readHeader() ;
     readTileIndex() ;
@@ -378,15 +190,19 @@ VectorTile MapFile::readTile(const TileKey &key, int offset)
 
 void MapFile::readHeader()
 {
+    MapFileISerializer s(strm_) ;
+
     // read the magic bytes
 
     char header[20] ;
-    if ( !strm_.read(header, 20) || strncmp(header, "mapsforge binary OSM", 20) != 0 )
-        throw ReadException(map_file_path_, "Invalid or corrupted header") ;
+    s.read_bytes((uint8_t *)header, 20) ;
+
+    if ( strncmp(header, "mapsforge binary OSM", 20) != 0 )
+        throw std::runtime_error( "Invalid or corrupted header") ;
 
     // read map info
 
-    uint32_t header_length = read_uint32() ;
+    uint32_t header_length = s.read_uint32() ;
 
     readMapInfo() ;
 
@@ -398,61 +214,67 @@ void MapFile::readHeader()
 
 void MapFile::readMapInfo()
 {
-    info_.version_ = read_uint32() ;
-    info_.file_size_ = read_uint64() ;
-    info_.date_ = read_uint64() ;
+    MapFileISerializer s(strm_) ;
+
+    info_.version_ = s.read_uint32() ;
+    info_.file_size_ = s.read_uint64() ;
+    info_.date_ = s.read_uint64() ;
 
     // bounding box
 
-    info_.min_lat_ = read_int32() / 1.0e6 ;
-    info_.min_lon_ = read_int32() / 1.0e6 ;
-    info_.max_lat_ = read_int32() / 1.0e6 ;
-    info_.max_lon_ = read_int32() / 1.0e6 ;
+    info_.min_lat_ = s.read_int32() / 1.0e6 ;
+    info_.min_lon_ = s.read_int32() / 1.0e6 ;
+    info_.max_lat_ = s.read_int32() / 1.0e6 ;
+    info_.max_lon_ = s.read_int32() / 1.0e6 ;
 
-    info_.tile_sz_ = read_int16() ;
+    info_.tile_sz_ = s.read_int16() ;
 
     if ( info_.tile_sz_ <= 0 )
-        throw ReadException(map_file_path_, str(boost::format("Invalid tile size (%d px)") % info_.tile_sz_)) ;
+        throw std::runtime_error(str(boost::format("Invalid tile size (%d px)") % info_.tile_sz_)) ;
 
-    info_.projection_ = read_utf8() ;
-    info_.flags_ = read_uint8() ;
+    info_.projection_ = s.read_utf8() ;
+    info_.flags_ = s.read_uint8() ;
 
     has_debug_info_ = info_.flags_ & 0x80 ;
 
     if ( info_.flags_ & 0x40 ) {
-        info_.start_lat_ = read_int32() / 1.0e6 ;
-        info_.start_lon_ = read_int32() / 1.0e6;
+        info_.start_lat_ = s.read_int32() / 1.0e6 ;
+        info_.start_lon_ = s.read_int32() / 1.0e6;
     }
 
     if ( info_.flags_ & 0x20 )
-        info_.start_zoom_level_ = read_uint8() ;
+        info_.start_zoom_level_ = s.read_uint8() ;
     else
         info_.start_zoom_level_ = 10 ;
 
     if ( info_.flags_ & 0x10 )
-        info_.lang_preference_ = read_utf8() ;
+        info_.lang_preference_ = s.read_utf8() ;
     else
         info_.lang_preference_ = "en" ;
 
     if ( info_.flags_ & 0x08 )
-        info_.comment_ = read_utf8() ;
+        info_.comment_ = s.read_utf8() ;
 
     if ( info_.flags_ & 0x04 )
-        info_.created_by_ = read_utf8() ;
+        info_.created_by_ = s.read_utf8() ;
 }
 
 void MapFile::readTagList(std::vector<string> &tags)
 {
-    uint16_t n_tags = read_uint16() ;
+    MapFileISerializer s(strm_) ;
+
+    uint16_t n_tags = s.read_uint16() ;
 
     for( uint i=0 ; i<n_tags ; i++ ) {
-        tags.push_back(read_utf8()) ;
+        tags.push_back(s.read_utf8()) ;
     }
 }
 
 void MapFile::readSubFileInfo()
 {
-    uint8_t num_zoom_intervals = read_uint8() ;
+    MapFileISerializer s(strm_) ;
+
+    uint8_t num_zoom_intervals = s.read_uint8() ;
 
     sub_files_.resize(num_zoom_intervals) ;
 
@@ -462,11 +284,11 @@ void MapFile::readSubFileInfo()
     for( uint i=0 ; i<num_zoom_intervals ; i++ ) {
         SubFileInfo &info = sub_files_[i] ;
 
-        info.base_zoom_ = read_uint8() ;
-        info.min_zoom_ = read_uint8() ;
-        info.max_zoom_ = read_uint8() ;
-        info.offset_ = read_uint64() ;
-        info.size_ = read_uint64() ;
+        info.base_zoom_ = s.read_uint8() ;
+        info.min_zoom_ = s.read_uint8() ;
+        info.max_zoom_ = s.read_uint8() ;
+        info.offset_ = s.read_uint64() ;
+        info.size_ = s.read_uint64() ;
 
         info_.min_zoom_level_ = std::min(info_.min_zoom_level_, info.min_zoom_) ;
         info_.max_zoom_level_ = std::max(info_.max_zoom_level_, info.max_zoom_) ;
@@ -484,6 +306,8 @@ void MapFile::readSubFileInfo()
 
 void MapFile::readTileIndex()
 {
+    MapFileISerializer s(strm_) ;
+
     for( uint i=0 ; i<sub_files_.size() ; i++ ) {
 
         SubFileInfo &info = sub_files_[i] ;
@@ -501,7 +325,7 @@ void MapFile::readTileIndex()
         uint64_t tile_count = rows * cols ;
 
         for( uint j=0 ; j<tile_count ; j++ ) {
-            int64_t offset = read_offset() ;
+            int64_t offset = s.read_offset() ;
             info.index_.push_back(offset) ;
         }
     }
@@ -541,6 +365,8 @@ void MapFile::readTiles()
 
 uint64_t MapFile::readTileData(const SubFileInfo &info, int64_t offset, std::shared_ptr<TileData> &data) {
 
+    MapFileISerializer s(strm_) ;
+
     strm_.seekg(info.offset_ + offset) ;
 
     if ( has_debug_info_ ) {
@@ -559,8 +385,8 @@ uint64_t MapFile::readTileData(const SubFileInfo &info, int64_t offset, std::sha
     uint64_t total_pois = 0, total_ways = 0 ;
 
     for ( uint i=0 ; i<nz ; i++ ) {
-        uint64_t n_pois = read_var_uint64() ;
-        uint64_t n_ways = read_var_uint64() ;
+        uint64_t n_pois = s.read_var_uint64() ;
+        uint64_t n_ways = s.read_var_uint64() ;
 
         total_pois += n_pois ;
         total_ways += n_ways ;
@@ -571,7 +397,7 @@ uint64_t MapFile::readTileData(const SubFileInfo &info, int64_t offset, std::sha
 
     // get the relative offset to the first stored way in the block
 
-    uint64_t first_way_offset = read_var_uint64() ;
+    uint64_t first_way_offset = s.read_var_uint64() ;
 
     // convert to absolute position
 
@@ -637,27 +463,29 @@ static void decode_key_value(const string &kv, string &key, string &val) {
 
 uint64_t MapFile::readPOI(POI &poi, float lat_orig, float lon_orig) {
 
+    MapFileISerializer s(strm_) ;
+
     uint64_t bytes = 0 ;
 
     if ( has_debug_info_ ) {
-        char signature[32] ;
-        strm_.read(signature, 32) ;
+        uint8_t signature[32] ;
+        s.read_bytes(signature, 32) ;
     }
 
-    double lat_diff = (double)read_var_int64()/1.0e6 ;
-    double lon_diff = (double)read_var_int64()/1.0e6 ;
+    double lat_diff = (double)s.read_var_int64()/1.0e6 ;
+    double lon_diff = (double)s.read_var_int64()/1.0e6 ;
     poi.lat_ = lat_orig + lat_diff ;
     poi.lon_ = lon_orig + lon_diff ;
 
     bytes += sizeof( double ) * 2 ;
 
-    uint8_t tflag = read_uint8() ;
+    uint8_t tflag = s.read_uint8() ;
 
     int8_t layer = int((tflag & 0xf0) >> 4) - 5 ;
     uint8_t ntags = tflag & 0x0f ;
 
     for( uint i=0 ; i<ntags ; i++ ) {
-        uint64_t tag_index = read_var_uint64() ;
+        uint64_t tag_index = s.read_var_uint64() ;
 
         string kv = poi_tags_[tag_index], tag, val ;
         decode_key_value(kv, tag, val);
@@ -665,16 +493,16 @@ uint64_t MapFile::readPOI(POI &poi, float lat_orig, float lon_orig) {
         poi.tags_.add(tag, val) ;
     }
 
-    uint8_t cflag = read_uint8() ;
+    uint8_t cflag = s.read_uint8() ;
 
     if ( cflag & 0x80 )
-        poi.tags_.add("name", read_utf8()) ;
+        poi.tags_.add("name", s.read_utf8()) ;
 
     if ( cflag & 0x40 )
-        poi.tags_.add("addr:housenumber", read_utf8()) ;
+        poi.tags_.add("addr:housenumber", s.read_utf8()) ;
 
     if ( cflag & 0x20 )
-        poi.tags_.add("ele", std::to_string(read_var_int64())) ;
+        poi.tags_.add("ele", std::to_string(s.read_var_int64())) ;
 
     if ( layer != 0 )
         poi.tags_.add("layer", std::to_string(layer)) ;
@@ -686,6 +514,8 @@ uint64_t MapFile::readPOI(POI &poi, float lat_orig, float lon_orig) {
 
 uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
 
+    MapFileISerializer s(strm_) ;
+
     uint64_t bytes = 0 ;
 
     if ( has_debug_info_ ) {
@@ -693,10 +523,10 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
         strm_.read(signature, 32) ;
     }
 
-    uint64_t data_sz = read_var_uint64() ;
-    uint16_t tile_bitmap = read_uint16() ;
+    uint64_t data_sz = s.read_var_uint64() ;
+    uint16_t tile_bitmap = s.read_uint16() ;
 
-    uint8_t tflag = read_uint8() ;
+    uint8_t tflag = s.read_uint8() ;
 
     int8_t layer = int((tflag & 0xf0) >> 4) - 5 ;
     uint8_t ntags = tflag & 0x0f ;
@@ -704,7 +534,7 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
     Dictionary tags ;
 
     for( uint i=0 ; i<ntags ; i++ ) {
-        uint64_t tag_index = read_var_uint64() ;
+        uint64_t tag_index = s.read_var_uint64() ;
 
         string kv = way_tags_[tag_index], tag, val ;
         decode_key_value(kv, tag, val);
@@ -712,20 +542,20 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
         tags.add(tag, val) ;
     }
 
-    uint8_t cflag = read_uint8() ;
+    uint8_t cflag = s.read_uint8() ;
 
     if ( cflag & 0x80 )
-        tags.add("name", read_utf8()) ;
+        tags.add("name", s.read_utf8()) ;
 
     if ( cflag & 0x40 )
-        tags.add("addr:housenumber", read_utf8()) ;
+        tags.add("addr:housenumber", s.read_utf8()) ;
 
     if ( cflag & 0x20 )
-        tags.add("ref", read_utf8()) ;
+        tags.add("ref", s.read_utf8()) ;
 
     if ( cflag & 0x10 ) {
-        double label_position_lat_diff = read_var_int64()/1.0e6 ;
-        double label_position_lon_diff = read_var_int64()/1.0e6 ;
+        double label_position_lat_diff = s.read_var_int64()/1.0e6 ;
+        double label_position_lon_diff = s.read_var_int64()/1.0e6 ;
         tags.add("label:lat", std::to_string(label_position_lat_diff + lat_orig) ) ;
         tags.add("label:lon", std::to_string(label_position_lon_diff + lon_orig) ) ;
     }
@@ -738,7 +568,7 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
     uint64_t n_data_blocks = 1 ;
 
     if ( cflag & 0x08 )
-        n_data_blocks = read_var_uint64() ;
+        n_data_blocks = s.read_var_uint64() ;
 
     ways.resize(n_data_blocks) ;
 
@@ -747,12 +577,12 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
         way.tags_ = tags ;
         way.layer_ = layer ;
 
-        uint64_t n_way_coord_blocks = read_var_uint64() ;
+        uint64_t n_way_coord_blocks = s.read_var_uint64() ;
 
         way.coords_.resize(n_way_coord_blocks) ;
 
         for(uint j=0 ; j<n_way_coord_blocks ; j++ ) {
-            uint64_t num_way_nodes = read_var_uint64() ;
+            uint64_t num_way_nodes = s.read_var_uint64() ;
 
             way.coords_[j].resize(num_way_nodes) ;
 
@@ -780,8 +610,10 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
 
 void MapFile::readWayNodesDoubleDelta(std::vector<LatLon> &coord_list, double tx0, double ty0)
 {
-    double lat = read_var_int64()/1.0e6 + tx0 ;
-    double lon = read_var_int64()/1.0e6 + ty0 ;
+    MapFileISerializer s(strm_) ;
+
+    double lat = s.read_var_int64()/1.0e6 + tx0 ;
+    double lon = s.read_var_int64()/1.0e6 + ty0 ;
 
     coord_list[0] = LatLon{lat, lon} ;
 
@@ -789,8 +621,8 @@ void MapFile::readWayNodesDoubleDelta(std::vector<LatLon> &coord_list, double tx
 
     for( uint i=1 ; i<coord_list.size() ; i++ ) {
 
-        double delta_lat = previous_delta_lat + read_var_int64()/1.0e6 ;
-        double delta_lon = previous_delta_lon + read_var_int64()/1.0e6 ;
+        double delta_lat = previous_delta_lat + s.read_var_int64()/1.0e6 ;
+        double delta_lon = previous_delta_lon + s.read_var_int64()/1.0e6 ;
 
         lat += delta_lat ;
         lon += delta_lon ;
@@ -804,15 +636,17 @@ void MapFile::readWayNodesDoubleDelta(std::vector<LatLon> &coord_list, double tx
 
 void MapFile::readWayNodesSingleDelta(std::vector<LatLon> &coord_list, double tx0, double ty0)
 {
-    double lat = read_var_int64()/1.0e6 + tx0 ;
-    double lon = read_var_int64()/1.0e6 + ty0 ;
+    MapFileISerializer s(strm_) ;
+
+    double lat = s.read_var_int64()/1.0e6 + tx0 ;
+    double lon = s.read_var_int64()/1.0e6 + ty0 ;
 
     coord_list[0] = LatLon{lat, lon} ;
 
     for(uint i=1 ; i<coord_list.size() ; i++ ) {
 
-        lat += read_var_int64()/1.0e6 ;
-        lon += read_var_int64()/1.0e6 ;
+        lat += s.read_var_int64()/1.0e6 ;
+        lon += s.read_var_int64()/1.0e6 ;
 
         coord_list[i] = LatLon{lat, lon} ;
     }

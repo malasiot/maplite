@@ -5,7 +5,7 @@
 
 #include <boost/filesystem.hpp>
 
-#include "mapsforge_map_reader.hpp"
+#include "mapsforge_database.hpp"
 #include "theme.hpp"
 #include "renderer.hpp"
 #include "tile_key.hpp"
@@ -55,10 +55,10 @@ int main(int argc, char *argv[])
     uint tz = stoi(argv[i++]) ;
 
     std::shared_ptr<TileIndex> ti(new TileIndex(1000000)) ;
-    MapFile reader(ti) ;
+    MapFile reader ;
 
     try {
-        reader.open(mapFile) ;
+        reader.open(mapFile, ti) ;
     }
     catch ( std::runtime_error &e ) {
         cerr << e.what() << endl ;

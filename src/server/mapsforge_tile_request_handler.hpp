@@ -3,7 +3,7 @@
 
 #include "tile_request_handler.hpp"
 #include "database.hpp"
-#include "mapsforge_map_reader.hpp"
+#include "mapsforge_database.hpp"
 #include "theme.hpp"
 #include "renderer.hpp"
 

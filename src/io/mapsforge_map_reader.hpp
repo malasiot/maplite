@@ -57,7 +57,7 @@ class MapFile
 {
 public:
 
-    MapFile(std::shared_ptr<TileIndex> &index): index_(index) {}
+    MapFile() {}
 
     /**
      * Opens map file, reads map info and create tile index

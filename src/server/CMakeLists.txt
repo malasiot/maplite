@@ -67,6 +67,7 @@ SET ( TILE_SERVER_SOURCES
 
 	${SRC_ROOT}/io/mapsforge_database.hpp
 	${SRC_ROOT}/io/mapsforge_map_reader.cpp
+	${SRC_ROOT}/io/serializer.cpp
 )
 
 ADD_LIBRARY(mapserver STATIC ${TILE_SERVER_SOURCES} ${MT_PROTO_SOURCES} ${MT_PROTO_HEADERS})

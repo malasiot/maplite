@@ -15,6 +15,12 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/convert/osm_document.hpp
 	${SRC_ROOT}/convert/osm_rule_parser.hpp
 
+	${SRC_ROOT}/io/mapsforge_database.hpp
+	${SRC_ROOT}/io/mapsforge_map_writer.cpp
+	${SRC_ROOT}/io/mapsforge_map_reader.cpp
+	${SRC_ROOT}/io/serializer.cpp
+	${SRC_ROOT}/io/serializer.hpp
+
 	${SRC_ROOT}/util/dictionary.cpp
 	${SRC_ROOT}/util/xml_reader.cpp
 	${SRC_ROOT}/util/database.cpp

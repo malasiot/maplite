@@ -4,7 +4,7 @@
 #include <cairo/cairo.h>
 
 #include "tms.hpp"
-#include "mapsforge_map_reader.hpp"
+#include "mapsforge_database.hpp"
 #include "theme.hpp"
 #include "image_buffer.hpp"
 #include "resource_cache.hpp"

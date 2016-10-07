@@ -19,10 +19,10 @@ MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const
 {
     if ( !tile_index_) tile_index_.reset(new TileIndex(1000000)) ;
 
-    map_file_.reset(new MapFile(tile_index_)) ;
+    map_file_.reset(new MapFile()) ;
 
     try {
-        map_file_->open(map_file) ;
+        map_file_->open(map_file, tile_index_) ;
 
     }
     catch ( std::runtime_error &e ) {
