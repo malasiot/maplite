@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
 
     if (filterConfigFile.empty() || osmFiles.empty() )
         print_usage_and_exit() ;
-
+/*
     MapFile mf ;
 
     mf.create(tileSet) ;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 
     WriteOptions options ;
     mf.write(db, options) ;
-
+*/
     boost::filesystem::path tmp_dir = boost::filesystem::temp_directory_path() ;
     boost::filesystem::path tmp_file = boost::filesystem::unique_path("%%%%%.sqlite");
 
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
         exit(1) ;
     }
 
-   FilterConfig fcfg ;
+    FilterConfig fcfg ;
     if ( !fcfg.parse(filterConfigFile) ) {
         cerr << "Error parsing OSM tag filter configuration file: " << filterConfigFile << endl ;
         return 0 ;

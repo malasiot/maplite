@@ -1,7 +1,7 @@
 #include <osm_document.hpp>
 
-#include <osm/fileformat.pb.h>
-#include <osm/osmformat.pb.h>
+#include "convert/fileformat.pb.h"
+#include "convert/osmformat.pb.h"
 
 #include <fstream>
 #ifndef _WIN32

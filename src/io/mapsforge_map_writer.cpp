@@ -178,9 +178,9 @@ void MapFile::setDebug(bool debug) {
 }
 
 
-void MapFile::create(const std::string &file_path)
-{
-    strm_.open(file_path.c_str(), ios::in | ios::out | ios::binary) ;
+void MapFile::create(const std::string &file_path) {
+
+    strm_.open(file_path.c_str(),  ios::out | ios::binary) ;
 
     if ( !strm_ ) throw std::runtime_error("error in file creation") ;
 
@@ -197,6 +197,7 @@ void MapFile::write(SQLite::Database &db, WriteOptions &options) {
 
     setDebug(options.debug_);
     writeHeader(db, options) ;
+    writeSubFiles(db, options) ;
 }
 
 
@@ -323,7 +324,7 @@ void MapFile::writeSubFileInfo(const WriteOptions &options)
     }
 }
 
-void MapFile::writeSubFiles()
+void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
 {
     MapFileOSerializer s(strm_) ;
 
@@ -358,6 +359,9 @@ void MapFile::writeSubFiles()
 
             int32_t tx = col + info.min_tx_ ;
             int32_t ty = row + info.min_ty_ ;
+            int32_t tz = info.base_zoom_ ;
+
+            uint64_t bytes = writeTileData(tx, ty, tz, db, options) ;
 
 
 /*
@@ -374,4 +378,43 @@ void MapFile::writeSubFiles()
         }
 
     }
+}
+
+static string make_bbox_query(const std::string &tableName, const BBox &bbox, double buffer, double tol)
+{
+    stringstream sql ;
+
+    sql.precision(16) ;
+
+    sql << "SELECT tags," ;
+
+    if ( tol != 0.0 ) {
+        sql << "SimplifyPreserveTopology(ST_ForceLHR(ST_Intersection(geom,BuildMBR(" ;
+    }
+    else
+        sql << "ST_ForceLHR(ST_Intersection(geom,BuildMBR(" ;
+
+    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 ;
+    sql << ")))" ;
+
+
+    if ( tol != 0 )
+        sql << ", " << tol << ")" ;
+
+    sql << " AS _geom_ FROM " << tableName << " AS __table__";
+
+    sql << " WHERE " ;
+
+    sql << "__table__.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = BuildMBR(" ;
+    sql << bbox.minx_ << ',' << bbox.miny_ << ',' << bbox.maxx_ << ',' << bbox.maxy_ << "," << bbox.srid_ << ")) AND _geom_ NOT NULL" ;
+
+    return sql.str() ;
+}
+
+uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, SQLite::Database &db, const WriteOptions &options)
+{
+    BBox bbox ;
+    TileKey bt(tx, ty, tz, true) ;
+    tms::tileBounds(bt.x(), bt.y(), bt.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_) ;
+
 }
