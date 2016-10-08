@@ -127,7 +127,8 @@ int main(int argc, char *argv[])
 
     mf.create(tileSet) ;
 
-    SQLite::Database db("/tmp/2ed94.sqlite") ;
+ //   SQLite::Database db("/tmp/2ed94.sqlite") ;
+    SQLite::Database db("/tmp/0a907.sqlite") ;
 
     init_map_file_info(argc, argv, db, mf) ;
 

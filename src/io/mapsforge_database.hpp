@@ -17,6 +17,9 @@
 #include <boost/optional.hpp>
 
 struct POI {
+    POI() = default ;
+    POI(double lat, double lon): lat_(lat), lon_(lon) {}
+
     double lat_, lon_ ;
     Dictionary tags_ ;
 };
@@ -128,7 +131,7 @@ private:
     void writeTagList(const std::vector<std::string> &tags) ;
     void writeSubFileInfo(const WriteOptions &options);
     void writeSubFiles(SQLite::Database &db, const WriteOptions &options);
-    uint64_t writeTileData(int32_t tx, int32_t ty, int32_t tz, SQLite::Database &db, const WriteOptions &options);
+    uint64_t writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_z, uint8_t max_z, SQLite::Database &db, const WriteOptions &options);
 
 private:
 

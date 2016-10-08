@@ -361,7 +361,7 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
             int32_t ty = row + info.min_ty_ ;
             int32_t tz = info.base_zoom_ ;
 
-            uint64_t bytes = writeTileData(tx, ty, tz, db, options) ;
+            uint64_t bytes = writeTileData(tx, ty, tz, info.min_zoom_, info.max_zoom_, db, options) ;
 
 
 /*
@@ -380,62 +380,81 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
     }
 }
 
-static string make_bbox_query(const std::string &tableName, const BBox &bbox, double buffer, double tol)
+
+static string make_bbox_query(const std::string &tableName, const BBox &bbox, int min_zoom,
+                              int max_zoom, double buffer, double tol)
 {
     stringstream sql ;
 
     sql.precision(16) ;
 
-    sql << "SELECT osm_id," ;
+    sql << "SELECT g.osm_id, kv.key, kv.val, kv.zoom_min, kv.zoom_max, " ;
 
     if ( tol != 0.0 ) {
-        sql << "SimplifyPreserveTopology(ST_ForceLHR(ST_Intersection(geom,BuildMBR(" ;
+        sql << "SimplifyPreserveTopology(ST_ForceLHR(ST_Intersection(geom, ST_Transform(BuildMBR(" ;
     }
     else
-        sql << "ST_ForceLHR(ST_Intersection(geom,BuildMBR(" ;
+        sql << "ST_ForceLHR(ST_Intersection(geom, ST_Transform(BuildMBR(" ;
 
     sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 ;
-    sql << ")))" ;
+    sql << "),4326)))" ;
 
 
     if ( tol != 0 )
         sql << ", " << tol << ")" ;
 
-    sql << " AS _geom_ FROM " << tableName << " AS __table__";
+    sql << " AS _geom_ FROM " << tableName << " AS g JOIN kv ON kv.osm_id = g.osm_id";
 
     sql << " WHERE " ;
+    sql << "(( kv.zoom_min BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( kv.zoom_max BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( kv.zoom_min <= " << min_zoom << " AND kv.zoom_max >= " << max_zoom << "))" ;
 
-    sql << "__table__.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = BuildMBR(" ;
-    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << ")) AND _geom_ NOT NULL" ;
+    sql << "AND g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = ST_Transform(BuildMBR(" ;
+    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << "),4326)) AND _geom_ NOT NULL" ;
 
     return sql.str() ;
 }
 
-static bool fetch_pois(SQLite::Database &db, const BBox &bbox, map<string, POI> &pois) {
+static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POI> &pois, vector<vector<uint32_t>> &pois_per_level) {
     try {
         SQLite::Session session(&db) ;
         SQLite::Connection &con = session.handle() ;
 
-        string sql = make_bbox_query("geom_pois", bbox, 0, 0) ;
+        string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, 0, 0) ;
         SQLite::Query q(con, sql) ;
 
         SQLite::QueryResult res = q.exec() ;
 
-        while ( res ) {
+        string prev_id ;
+
+        while ( res ) { // each geometry appears as many times as the number of associated tags, here we group the results
 
             string osm_id = res.get<string>(0) ;
+            string key = res.get<string>(1) ;
+            string val = res.get<string>(2) ;
+            uint8_t minz = res.get<int>(3) ;
+            uint8_t maxz = res.get<int>(4) ;
 
-            int blob_size ;
-            const char *data = res.getBlob(1, blob_size) ;
+            if ( osm_id != prev_id ) {
+                int blob_size ;
+                const char *data = res.getBlob(5, blob_size) ;
 
-            gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
 
-            for( gaiaPointPtr p = geom->FirstPoint ; p != geom->LastPoint ; p = p->Next ) {
-                double lon = p->X ;
-                double lat = p->Y ;
-                POI poi{lat, lon} ;
-                pois.emplace(std::make_pair(osm_id, poi)) ;
+                for( gaiaPointPtr p = geom->FirstPoint ; p != nullptr ; p = p->Next ) {
+                    double lon = p->X ;
+                    double lat = p->Y ;
+
+                    pois.emplace_back(lat, lon) ;
+
+                    // we add the poi at the lowest possible level
+                    int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
+                    pois_per_level[z].push_back(pois.size()-1) ;
+                }
+
+                pois.back().tags_.add(key, val) ;
             }
+
+            prev_id = osm_id ;
 
             res.next() ;
         }
@@ -449,13 +468,15 @@ static bool fetch_pois(SQLite::Database &db, const BBox &bbox, map<string, POI> 
     }
 }
 
-uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, SQLite::Database &db, const WriteOptions &options)
+uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options)
 {
     BBox bbox ;
     TileKey bt(tx, ty, tz, true) ;
     tms::tileBounds(bt.x(), bt.y(), bt.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_) ;
 
-    map<string, POI> pois ;
-    fetch_pois(db, bbox, pois) ;
+    vector<POI> pois ;
+    vector<vector<uint32_t>> pois_per_level((int)max_zoom - (int)min_zoom + 1) ;
+
+    fetch_pois(db, bbox, min_zoom, max_zoom, pois, pois_per_level) ;
 
 }
