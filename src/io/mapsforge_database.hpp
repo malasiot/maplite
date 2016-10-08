@@ -127,7 +127,8 @@ private:
     void writeMapInfo();
     void writeTagList(const std::vector<std::string> &tags) ;
     void writeSubFileInfo(const WriteOptions &options);
-    void writeSubFiles();
+    void writeSubFiles(SQLite::Database &db, const WriteOptions &options);
+    uint64_t writeTileData(int32_t tx, int32_t ty, int32_t tz, SQLite::Database &db, const WriteOptions &options);
 
 private:
 
@@ -141,10 +142,6 @@ private:
     std::vector<SubFileInfo> sub_files_ ;
     bool has_debug_info_ ;
     std::mutex mtx_ ;
-
-
-
-
 };
 
 

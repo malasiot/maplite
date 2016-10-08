@@ -386,7 +386,7 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, do
 
     sql.precision(16) ;
 
-    sql << "SELECT tags," ;
+    sql << "SELECT osm_id," ;
 
     if ( tol != 0.0 ) {
         sql << "SimplifyPreserveTopology(ST_ForceLHR(ST_Intersection(geom,BuildMBR(" ;
@@ -406,9 +406,47 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, do
     sql << " WHERE " ;
 
     sql << "__table__.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = BuildMBR(" ;
-    sql << bbox.minx_ << ',' << bbox.miny_ << ',' << bbox.maxx_ << ',' << bbox.maxy_ << "," << bbox.srid_ << ")) AND _geom_ NOT NULL" ;
+    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << ")) AND _geom_ NOT NULL" ;
 
     return sql.str() ;
+}
+
+static bool fetch_pois(SQLite::Database &db, const BBox &bbox, map<string, POI> &pois) {
+    try {
+        SQLite::Session session(&db) ;
+        SQLite::Connection &con = session.handle() ;
+
+        string sql = make_bbox_query("geom_pois", bbox, 0, 0) ;
+        SQLite::Query q(con, sql) ;
+
+        SQLite::QueryResult res = q.exec() ;
+
+        while ( res ) {
+
+            string osm_id = res.get<string>(0) ;
+
+            int blob_size ;
+            const char *data = res.getBlob(1, blob_size) ;
+
+            gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+
+            for( gaiaPointPtr p = geom->FirstPoint ; p != geom->LastPoint ; p = p->Next ) {
+                double lon = p->X ;
+                double lat = p->Y ;
+                POI poi{lat, lon} ;
+                pois.emplace(std::make_pair(osm_id, poi)) ;
+            }
+
+            res.next() ;
+        }
+
+        return true ;
+
+    }
+    catch ( SQLite::Exception &e) {
+        cerr << e.what() << endl ;
+        return false ;
+    }
 }
 
 uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, SQLite::Database &db, const WriteOptions &options)
@@ -416,5 +454,8 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, SQLite::Data
     BBox bbox ;
     TileKey bt(tx, ty, tz, true) ;
     tms::tileBounds(bt.x(), bt.y(), bt.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_) ;
+
+    map<string, POI> pois ;
+    fetch_pois(db, bbox, pois) ;
 
 }
