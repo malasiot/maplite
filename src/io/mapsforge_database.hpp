@@ -22,6 +22,7 @@ struct POI {
 
     double lat_, lon_ ;
     Dictionary tags_ ;
+    std::string id_ ;
 };
 
 struct Way {
@@ -35,6 +36,19 @@ struct VectorTile {
     bool is_sea_ ;
     std::vector<POI> pois_ ;
     std::vector<Way> ways_ ;
+};
+
+struct WayDataBlock {
+
+    std::vector<std::vector<LatLon>> coords_ ; // line string or polygon
+};
+
+struct WayDataContainer {
+
+    Dictionary tags_ ;
+
+    std::vector<WayDataBlock> blocks_ ;
+    std::string id_ ;
 };
 
 struct MapFileInfo {
@@ -132,6 +146,8 @@ private:
     void writeSubFileInfo(const WriteOptions &options);
     void writeSubFiles(SQLite::Database &db, const WriteOptions &options);
     uint64_t writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_z, uint8_t max_z, SQLite::Database &db, const WriteOptions &options);
+    std::string writePOIData(const std::vector<POI> &pois, const std::vector<std::vector<uint32_t>> &pois_per_level, double lat_orig, double lon_orig) ;
+    std::string writeWayData(const std::vector<WayDataContainer> &ways, const std::vector<std::vector<uint32_t>> &ways_per_level, double lat_orig, double lon_orig) ;
 
 private:
 

@@ -49,10 +49,10 @@ static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &ta
 
     std::sort(tags.begin(), tags.end(),
               [hist](const string &a, const string &b) -> bool  {
-                    uint64_t fa = hist.find(a)->second ;
-                    uint64_t fb = hist.find(b)->second ;
-                 return fa > fb;
-             }) ;
+        uint64_t fa = hist.find(a)->second ;
+        uint64_t fb = hist.find(b)->second ;
+        return fa > fb;
+    }) ;
 }
 
 static bool get_poi_tags(SQLite::Database &db, std::vector<string> &pois) {
@@ -364,7 +364,7 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
             uint64_t bytes = writeTileData(tx, ty, tz, info.min_zoom_, info.max_zoom_, db, options) ;
 
 
-/*
+            /*
             bool is_sea_tile = ( tile_offset & 0x8000000000LL ) != 0 ;
 
             std::shared_ptr<TileData> data(new TileData(tx, ty, info.base_zoom_, is_sea_tile)) ;
@@ -382,7 +382,7 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
 
 
 static string make_bbox_query(const std::string &tableName, const BBox &bbox, int min_zoom,
-                              int max_zoom, double buffer, double tol)
+                              int max_zoom, bool clip, double buffer, double tol)
 {
     stringstream sql ;
 
@@ -390,15 +390,15 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 
     sql << "SELECT g.osm_id, kv.key, kv.val, kv.zoom_min, kv.zoom_max, " ;
 
-    if ( tol != 0.0 ) {
-        sql << "SimplifyPreserveTopology(ST_ForceLHR(ST_Intersection(geom, ST_Transform(BuildMBR(" ;
-    }
-    else
+    if ( tol != 0.0 )
+        sql << "SimplifyPreserveTopology(" ;
+
+    if ( clip ) {
         sql << "ST_ForceLHR(ST_Intersection(geom, ST_Transform(BuildMBR(" ;
-
-    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 ;
-    sql << "),4326)))" ;
-
+        sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 ;
+        sql << "),4326)))" ;
+    }
+    else sql << "geom" ;
 
     if ( tol != 0 )
         sql << ", " << tol << ")" ;
@@ -419,7 +419,7 @@ static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom,
         SQLite::Session session(&db) ;
         SQLite::Connection &con = session.handle() ;
 
-        string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, 0, 0) ;
+        string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0) ;
         SQLite::Query q(con, sql) ;
 
         SQLite::QueryResult res = q.exec() ;
@@ -468,15 +468,296 @@ static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom,
     }
 }
 
+
+static bool fetch_lines(const std::string &tableName, SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
+                        bool clip, double buffer, double tol,
+                        vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
+    try {
+        SQLite::Session session(&db) ;
+        SQLite::Connection &con = session.handle() ;
+
+        string sql = make_bbox_query(tableName, bbox, min_zoom, max_zoom, clip, buffer, tol) ;
+        SQLite::Query q(con, sql) ;
+
+        SQLite::QueryResult res = q.exec() ;
+
+        string prev_id ;
+
+        while ( res ) { // each geometry appears as many times as the number of associated tags, here we group the results
+
+            string osm_id = res.get<string>(0) ;
+            string key = res.get<string>(1) ;
+            string val = res.get<string>(2) ;
+            uint8_t minz = res.get<int>(3) ;
+            uint8_t maxz = res.get<int>(4) ;
+
+            if ( osm_id != prev_id ) {
+                int blob_size ;
+                const char *data = res.getBlob(5, blob_size) ;
+
+                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+
+                // each line may be broken into multiple linestrings by clipping
+                WayDataContainer wc ;
+
+                for( gaiaLinestringPtr p = geom->FirstLinestring ; p != nullptr ; p = p->Next ) {
+                    double *coords = p->Coords ;
+                    WayDataBlock block ;
+                    block.coords_.resize(1) ;
+
+                    for( uint i=0 ; i<p->Points ; i++ ) {
+                        double lon = *coords++ ;
+                        double lat = *coords++ ;
+                        block.coords_[0].emplace_back(lat, lon) ;
+                    }
+
+                    wc.blocks_.emplace_back(block) ;
+                }
+
+                ways.emplace_back(wc) ;
+
+                // we add the way at the lowest possible level
+                int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
+                ways_per_level[z].push_back(ways.size()-1) ;
+            }
+
+            ways.back().tags_.add(key, val) ;
+
+            prev_id = osm_id ;
+
+            res.next() ;
+        }
+
+        return true ;
+
+    }
+    catch ( SQLite::Exception &e) {
+        cerr << e.what() << endl ;
+        return false ;
+    }
+}
+
+static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, bool clip,
+                           double buffer, double tol, vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
+    try {
+        SQLite::Session session(&db) ;
+        SQLite::Connection &con = session.handle() ;
+
+        string sql = make_bbox_query("geom_polygons", bbox, min_zoom, max_zoom, clip, buffer, tol) ;
+        SQLite::Query q(con, sql) ;
+
+        SQLite::QueryResult res = q.exec() ;
+
+        string prev_id ;
+
+        while ( res ) { // each geometry appears as many times as the number of associated tags, here we group the results
+
+            string osm_id = res.get<string>(0) ;
+            string key = res.get<string>(1) ;
+            string val = res.get<string>(2) ;
+            uint8_t minz = res.get<int>(3) ;
+            uint8_t maxz = res.get<int>(4) ;
+
+            if ( osm_id != prev_id ) {
+                int blob_size ;
+                const char *data = res.getBlob(5, blob_size) ;
+
+                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+
+                // each polygon may be broken into multiple polygons by clipping
+                WayDataContainer wc ;
+
+                for( gaiaPolygonPtr p = geom->FirstPolygon ; p != nullptr ; p = p->Next ) {
+
+                    uint n_interior_rings = p->NumInteriors ;
+
+                    WayDataBlock block ;
+                    block.coords_.resize(1 + n_interior_rings) ;
+
+                    gaiaRingPtr ex_ring = p->Exterior ;
+                    double *coords = ex_ring->Coords ;
+
+                    for( uint i=0 ; i<ex_ring->Points ; i++ ) {
+                        double lon = *coords++ ;
+                        double lat = *coords++ ;
+                        block.coords_[0].emplace_back(lat, lon) ;
+                    }
+
+                    uint k=1 ;
+                    for( uint k=0 ; k< n_interior_rings ; k++ ) {
+                        gaiaRing &ir_ring = p->Interiors[k] ;
+                        double *coords = ir_ring.Coords ;
+
+                        for( uint i=0 ; i<ir_ring.Points ; i++ ) {
+                            double lon = *coords++ ;
+                            double lat = *coords++ ;
+                            block.coords_[k+1].emplace_back(lat, lon) ;
+                        }
+                    }
+
+                    wc.blocks_.emplace_back(block) ;
+                }
+
+                ways.emplace_back(wc) ;
+
+                // we add the way at the lowest possible level
+                int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
+                ways_per_level[z].push_back(ways.size()-1) ;
+            }
+
+            ways.back().tags_.add(key, val) ;
+
+
+            prev_id = osm_id ;
+
+            res.next() ;
+        }
+
+        return true ;
+
+    }
+    catch ( SQLite::Exception &e) {
+        cerr << e.what() << endl ;
+        return false ;
+    }
+}
+
+// Computes the amount of latitude degrees for a given distance in pixel at a given zoom level.
+static double deltaLat(double delta, double lat, uint8_t zoom) {
+   double mx, my, dlat, lon, px, py ;
+    tms::latlonToMeters(lat, 0, mx, my) ;
+    tms::metersToPixels(mx, my, zoom, px, py) ;
+
+    py += delta ;
+    tms::pixelsToMeters(px, py, zoom, mx, my) ;
+    tms::metersToLatLon(mx, my, dlat, lon) ;
+
+    return fabs(dlat - lat) ;
+}
+
 uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options)
 {
     BBox bbox ;
     TileKey bt(tx, ty, tz, true) ;
     tms::tileBounds(bt.x(), bt.y(), bt.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_) ;
+    int nz = (int)max_zoom - (int)min_zoom + 1 ;
 
     vector<POI> pois ;
-    vector<vector<uint32_t>> pois_per_level((int)max_zoom - (int)min_zoom + 1) ;
+    vector<vector<uint32_t>> pois_per_level(nz) ;
 
     fetch_pois(db, bbox, min_zoom, max_zoom, pois, pois_per_level) ;
+
+    vector<WayDataContainer> ways ;
+    vector<vector<uint32_t>> ways_per_level(nz) ;
+
+    // we compute simplification factor per subfile
+    double tol = ( tz <= 12 ) ? deltaLat(options.simplification_factor_, info_.max_lat_, max_zoom) : 0 ;
+
+    fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
+    fetch_lines("geom_relations", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_,tol,  ways, ways_per_level) ;
+    fetch_polygons(db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
+
+    double min_lat, min_lon, max_lat, max_lon ;
+    tms::tileLatLonBounds(bt.x(), bt.y(), bt.z(), min_lat, min_lon, max_lat, max_lon) ;
+
+    MapFileOSerializer s(strm_) ;
+
+    // write header
+    if ( options.debug_ ) {
+        stringstream sigstrm ;
+        sigstrm << "###TileStart" << tx << ',' << ty << "###" ;
+        int extra = 32-sigstrm.tellp() ;
+        for ( int i=0 ; i<extra ; i++ ) sigstrm.put(' ') ;
+        s.write_bytes((uint8_t *)sigstrm.str().c_str(), 32) ;
+    }
+
+    // write POI and way number
+    for ( uint i=0 ; i<nz ; i++ ) {
+        s.write_var_uint64(pois_per_level[i].size()) ;
+        s.write_var_uint64(ways_per_level[i].size()) ;
+    }
+
+    // we write POI and way data into a memory buffer since we need to find the offsets
+
+    string poi_data = writePOIData(pois, pois_per_level, max_lat, min_lon) ;
+    string way_data = writeWayData(ways, ways_per_level, max_lat, min_lon) ;
+
+    s.write_var_uint64(poi_data.size()) ;
+    s.write_bytes((uint8_t *)&poi_data[0], poi_data.size()) ;
+    s.write_bytes((uint8_t *)&way_data[0], way_data.size()) ;
+
+}
+
+string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32_t> > &pois_per_level, double lat0, double lon0)
+{
+    ostringstream strm ;
+    MapFileOSerializer buffer(strm) ;
+
+    uint nz = pois_per_level.size() ;
+
+    for( uint i=0 ; i<pois_per_level.size() ; i++ ) {
+
+        for( uint j=0 ; j<pois_per_level[i].size() ; j++ ) {
+            uint32_t idx = pois_per_level[i][j] ;
+            const POI &poi = pois[idx] ;
+
+            if ( has_debug_info_ ) {
+        // write header
+            stringstream sigstrm ;
+            sigstrm << "###POIStart" << poi.id_ << "###" ;
+            int extra = 32-sigstrm.tellp() ;
+            for ( int i=0 ; i<extra ; i++ ) sigstrm.put(' ') ;
+            buffer.write_bytes((uint8_t *)sigstrm.str().c_str(), 32) ;
+        }
+
+            buffer.write_var_int64(round((poi.lat_ - lat0)*1.0e6)) ;
+            buffer.write_var_int64(round((poi.lon_ - lon0)*1.0e6)) ;
+
+            uint8_t tflag = 0 ;
+
+            uint n_tags = poi.tags_.count() ;
+
+            tflag |= n_tags & 0x0f ;
+            int8_t layer = stoi(poi.tags_.get("layer", "0") ) + 5 ;
+            tflag |= ( layer << 4 ) & 0xf0;
+
+            buffer.write_uint8(tflag) ;
+
+/*
+            for( uint i=0 ; i<ntags ; i++ ) {
+                uint64_t tag_index = s.read_var_uint64() ;
+
+                string kv = poi_tags_[tag_index], tag, val ;
+                decode_key_value(kv, tag, val);
+
+                poi.tags_.add(tag, val) ;
+            }
+
+    uint8_t cflag = s.read_uint8() ;
+
+    if ( cflag & 0x80 )
+        poi.tags_.add("name", s.read_utf8()) ;
+
+    if ( cflag & 0x40 )
+        poi.tags_.add("addr:housenumber", s.read_utf8()) ;
+
+    if ( cflag & 0x20 )
+        poi.tags_.add("ele", std::to_string(s.read_var_int64())) ;
+
+    if ( layer != 0 )
+        poi.tags_.add("layer", std::to_string(layer)) ;
+
+    bytes += poi.tags_.capacity() ;
+
+    return bytes ;*/
+        }
+    }
+
+    return strm.str() ;
+
+}
+
+string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<vector<uint32_t> > &ways_per_level, double lat, double lon)
+{
 
 }

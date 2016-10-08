@@ -5,6 +5,8 @@
 
 
 struct LatLon {
+    LatLon() = default;
+    LatLon(double lat, double lon): lat_(lat), lon_(lon) {}
     double lat_, lon_ ;
 };
 
