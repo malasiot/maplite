@@ -55,14 +55,14 @@ static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &ta
     }) ;
 }
 
-static bool get_poi_tags(SQLite::Database &db, std::vector<string> &pois) {
+static bool get_poi_tags(SQLite::Database &db, std::vector<string> &pois, map<string, uint32_t> &tag_mapping) {
     try {
         SQLite::Session session(&db) ;
         SQLite::Connection &con = session.handle() ;
 
         map<string, uint64_t> tag_hist ;
 
-        string sql = "SELECT key from kv JOIN geom_pois ON geom_pois.osm_id = kv.osm_id;" ;
+        string sql = "SELECT key, val from kv JOIN geom_pois ON geom_pois.osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ele');" ;
         SQLite::Query q(con, sql) ;
 
         SQLite::QueryResult res = q.exec() ;
@@ -70,10 +70,11 @@ static bool get_poi_tags(SQLite::Database &db, std::vector<string> &pois) {
         while ( res ) {
 
             string tag = res.get<string>(0);
+            string val = res.get<string>(1);
 
             auto it = tag_hist.find(tag) ;
             if ( it == tag_hist.end() )
-                tag_hist.insert(make_pair(tag, 1)) ;
+                tag_hist.insert(make_pair(tag + '=' + val, 1)) ;
             else
                 it->second ++ ;
 
@@ -81,6 +82,9 @@ static bool get_poi_tags(SQLite::Database &db, std::vector<string> &pois) {
         }
 
         sort_histogram(tag_hist, pois) ;
+
+        for( uint i=0 ; i<pois.size() ; i++ )
+            tag_mapping.emplace(std::make_pair(pois[i], i)) ;
 
         return true ;
     }
@@ -90,12 +94,12 @@ static bool get_poi_tags(SQLite::Database &db, std::vector<string> &pois) {
     }
 }
 
-static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways) {
+static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
     try {
         SQLite::Session session(&db) ;
         SQLite::Connection &con = session.handle() ;
 
-        string sql = "SELECT key from kv JOIN geom_lines, geom_polygons, geom_relations ON geom_lines.osm_id = kv.osm_id OR geom_polygons.osm_id = kv.osm_id OR geom_relations.osm_id = kv.osm_id;" ;
+        string sql = "SELECT key, val from kv JOIN geom_lines, geom_polygons, geom_relations ON geom_lines.osm_id = kv.osm_id OR geom_polygons.osm_id = kv.osm_id OR geom_relations.osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ref');" ;
         SQLite::Query q(con, sql) ;
 
         SQLite::QueryResult res = q.exec() ;
@@ -105,10 +109,11 @@ static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways) {
         while ( res ) {
 
             string tag = res.get<string>(0);
+            string val = res.get<string>(1);
 
             auto it = tag_hist.find(tag) ;
             if ( it == tag_hist.end() )
-                tag_hist.insert(make_pair(tag, 1)) ;
+                tag_hist.insert(make_pair(tag + '=' + val, 1)) ;
             else
                 it->second ++ ;
 
@@ -116,6 +121,9 @@ static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways) {
         }
 
         sort_histogram(tag_hist, ways) ;
+
+        for( uint i=0 ; i<ways.size() ; i++ )
+            tag_mapping.emplace(std::make_pair(ways[i], i)) ;
 
         return true ;
     }
@@ -177,7 +185,6 @@ void MapFile::setDebug(bool debug) {
     if ( debug ) info_.flags_ |= 0x80 ;
 }
 
-
 void MapFile::create(const std::string &file_path) {
 
     strm_.open(file_path.c_str(),  ios::out | ios::binary) ;
@@ -215,8 +222,8 @@ void MapFile::writeHeader(SQLite::Database &db, WriteOptions &options)
     writeMapInfo() ;
 
     // get frequency sorted POI and way tags from the database
-    get_poi_tags(db, poi_tags_) ;
-    get_way_tags(db, way_tags_) ;
+    get_poi_tags(db, poi_tags_, poi_tag_mapping_) ;
+    get_way_tags(db, way_tags_, way_tag_mapping_) ;
 
     writeTagList(poi_tags_) ;
     writeTagList(way_tags_) ;
@@ -444,15 +451,16 @@ static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom,
                     double lon = p->X ;
                     double lat = p->Y ;
 
-                    pois.emplace_back(lat, lon) ;
+                    pois.emplace_back(lat, lon, osm_id) ;
 
                     // we add the poi at the lowest possible level
                     int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
                     pois_per_level[z].push_back(pois.size()-1) ;
                 }
 
-                pois.back().tags_.add(key, val) ;
             }
+
+            pois.back().tags_.add(key, val) ;
 
             prev_id = osm_id ;
 
@@ -514,6 +522,7 @@ static bool fetch_lines(const std::string &tableName, SQLite::Database &db, cons
                     wc.blocks_.emplace_back(block) ;
                 }
 
+                wc.id_ = osm_id ;
                 ways.emplace_back(wc) ;
 
                 // we add the way at the lowest possible level
@@ -598,6 +607,7 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
                     wc.blocks_.emplace_back(block) ;
                 }
 
+                wc.id_ = osm_id ;
                 ways.emplace_back(wc) ;
 
                 // we add the way at the lowest possible level
@@ -624,7 +634,7 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
 
 // Computes the amount of latitude degrees for a given distance in pixel at a given zoom level.
 static double deltaLat(double delta, double lat, uint8_t zoom) {
-   double mx, my, dlat, lon, px, py ;
+    double mx, my, dlat, lon, px, py ;
     tms::latlonToMeters(lat, 0, mx, my) ;
     tms::metersToPixels(mx, my, zoom, px, py) ;
 
@@ -702,13 +712,13 @@ string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32
             const POI &poi = pois[idx] ;
 
             if ( has_debug_info_ ) {
-        // write header
-            stringstream sigstrm ;
-            sigstrm << "###POIStart" << poi.id_ << "###" ;
-            int extra = 32-sigstrm.tellp() ;
-            for ( int i=0 ; i<extra ; i++ ) sigstrm.put(' ') ;
-            buffer.write_bytes((uint8_t *)sigstrm.str().c_str(), 32) ;
-        }
+                // write header
+                stringstream sigstrm ;
+                sigstrm << "###POIStart" << poi.id_ << "###" ;
+                int extra = 32-sigstrm.tellp() ;
+                for ( int i=0 ; i<extra ; i++ ) sigstrm.put(' ') ;
+                buffer.write_bytes((uint8_t *)sigstrm.str().c_str(), 32) ;
+            }
 
             buffer.write_var_int64(round((poi.lat_ - lat0)*1.0e6)) ;
             buffer.write_var_int64(round((poi.lon_ - lon0)*1.0e6)) ;
@@ -723,41 +733,252 @@ string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32
 
             buffer.write_uint8(tflag) ;
 
-/*
-            for( uint i=0 ; i<ntags ; i++ ) {
-                uint64_t tag_index = s.read_var_uint64() ;
+            // write tag index
 
-                string kv = poi_tags_[tag_index], tag, val ;
-                decode_key_value(kv, tag, val);
+            DictionaryIterator it(poi.tags_) ;
 
-                poi.tags_.add(tag, val) ;
+            uint8_t cflag = 0 ;
+
+            while (it) {
+                string key = it.key() ;
+                string val = it.value() ;
+
+                if ( key == "name" ) cflag |= 0x80 ;
+                else if ( key == "addr:housenumber" ) cflag |= 0x40 ;
+                else if ( key == "ele" ) cflag |= 0x20 ;
+                else {
+                    uint32_t idx = poi_tag_mapping_[key+'='+val] ;
+                    buffer.write_var_uint64(idx) ;
+                }
+                ++it ;
             }
 
-    uint8_t cflag = s.read_uint8() ;
+            buffer.write_uint8(cflag) ;
 
-    if ( cflag & 0x80 )
-        poi.tags_.add("name", s.read_utf8()) ;
+            if ( cflag & 0x80 )
+                buffer.write_utf8(poi.tags_.get("name")) ;
 
-    if ( cflag & 0x40 )
-        poi.tags_.add("addr:housenumber", s.read_utf8()) ;
+            if ( cflag & 0x40 )
+                buffer.write_utf8(poi.tags_.get("addr:housenumber")) ;
 
-    if ( cflag & 0x20 )
-        poi.tags_.add("ele", std::to_string(s.read_var_int64())) ;
+            if ( cflag & 0x20 )
+                buffer.write_var_int64(std::stoi(poi.tags_.get("ele"))) ;
 
-    if ( layer != 0 )
-        poi.tags_.add("layer", std::to_string(layer)) ;
-
-    bytes += poi.tags_.capacity() ;
-
-    return bytes ;*/
         }
     }
 
     return strm.str() ;
 
 }
+static void write_single_delta(MapFileOSerializer &buffer, const vector<LatLon> &coords, const LatLon &origin) {
 
-string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<vector<uint32_t> > &ways_per_level, double lat, double lon)
+    double lat = coords[0].lat_ ;
+    double lon = coords[0].lon_ ;
+
+    double delta_lat = lat - origin.lat_ ;
+    double delta_lon = lon - origin.lon_ ;
+
+    buffer.write_var_int64(round(delta_lat*1.0e6)) ;
+    buffer.write_var_int64(round(delta_lon*1.0e6)) ;
+
+    double previous_lat = lat, previous_lon = lon ;
+
+    for( uint i=1 ; i<coords.size() ; i++ ) {
+
+        lat = coords[i].lat_ ;
+        lon = coords[i].lon_ ;
+
+        double delta_lat = lat - previous_lat ;
+        double delta_lon = lon - previous_lon ;
+
+        buffer.write_var_int64(round(delta_lat*1.0e6)) ;
+        buffer.write_var_int64(round(delta_lon*1.0e6)) ;
+
+        previous_lat = lat ;
+        previous_lon = lon ;
+    }
+}
+
+static void write_double_delta(MapFileOSerializer &buffer, const vector<LatLon> &coords, const LatLon &origin) {
+
+    double lat = coords[0].lat_ ;
+    double lon = coords[0].lon_ ;
+
+    double delta_lat = lat - origin.lat_ ;
+    double delta_lon = lon - origin.lon_ ;
+
+    buffer.write_var_int64(round(delta_lat*1.0e6)) ;
+    buffer.write_var_int64(round(delta_lon*1.0e6)) ;
+
+    double previous_lat = lat, previous_lon = lon ;
+
+    double previous_delta_lat = 0, previous_delta_lon = 0 ;
+
+    for( uint i=1 ; i<coords.size() ; i++ ) {
+
+        lat = coords[i].lat_ ;
+        lon = coords[i].lon_ ;
+
+        double delta_lat = lat - previous_lat ;
+        double delta_lon = lon - previous_lon ;
+
+        double offset_lat = delta_lat - previous_delta_lat ;
+        double offset_lon = delta_lon - previous_delta_lon ;
+
+        buffer.write_var_int64(round(offset_lat*1.0e6)) ;
+        buffer.write_var_int64(round(offset_lon*1.0e6)) ;
+
+        previous_lat = lat ;
+        previous_lon = lon ;
+
+        previous_delta_lat = delta_lat ;
+        previous_delta_lon = delta_lon ;
+    }
+}
+
+
+static string encode_single_delta(const WayDataContainer &wc, const LatLon &origin) {
+    ostringstream strm ;
+    MapFileOSerializer buffer(strm) ;
+
+    for( const WayDataBlock &block: wc.blocks_ ) {
+        buffer.write_var_uint64(block.coords_.size()) ;
+
+        for( const auto &coords: block.coords_ ) {
+            buffer.write_var_uint64(coords.size()) ;
+            write_single_delta(buffer, coords, origin) ;
+        }
+    }
+
+    return strm.str() ;
+}
+
+static string encode_double_delta(const WayDataContainer &wc, const LatLon &origin) {
+    ostringstream strm ;
+    MapFileOSerializer buffer(strm) ;
+
+    for( const WayDataBlock &block: wc.blocks_ ) {
+        buffer.write_var_uint64(block.coords_.size()) ;
+
+        for( const auto &coords: block.coords_ ) {
+            buffer.write_var_uint64(coords.size()) ;
+            write_double_delta(buffer, coords, origin) ;
+        }
+    }
+
+    return strm.str() ;
+}
+
+static string encode_data(const WayDataContainer &wc, const LatLon &origin, WayDataContainer::Encoding &enc) {
+
+    string single_delta_encoded_data = encode_single_delta(wc, origin) ;
+    string double_delta_encoded_data = encode_double_delta(wc, origin) ;
+
+    if ( single_delta_encoded_data.size() < double_delta_encoded_data.size() ) {
+        enc = WayDataContainer::SingleDelta ;
+        return single_delta_encoded_data ;
+    }
+    else {
+        enc = WayDataContainer::DoubleDelta ;
+        return double_delta_encoded_data ;
+    }
+}
+
+string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<vector<uint32_t> > &ways_per_level, double lat0, double lon0)
 {
+    ostringstream strm ;
+    MapFileOSerializer buffer(strm) ;
+
+    uint nz = ways_per_level.size() ;
+
+    for( uint i=0 ; i<ways_per_level.size() ; i++ ) {
+
+        for( uint j=0 ; j<ways_per_level[i].size() ; j++ ) {
+            uint32_t idx = ways_per_level[i][j] ;
+            const WayDataContainer &way = ways[idx] ;
+
+            if ( has_debug_info_ ) {
+                // write header
+                stringstream sigstrm ;
+                sigstrm << "###WayStart" << way.id_ << "###" ;
+                int extra = 32-sigstrm.tellp() ;
+                for ( int i=0 ; i<extra ; i++ ) sigstrm.put(' ') ;
+                buffer.write_bytes((uint8_t *)sigstrm.str().c_str(), 32) ;
+            }
+
+            // We have to determine the bytes need to encode each way so we render it on a separate string buffer
+
+            ostringstream wstrm ;
+            MapFileOSerializer wbuffer(wstrm) ;
+
+            uint8_t tflag = 0 ;
+
+            uint n_tags = way.tags_.count() ;
+
+            tflag |= n_tags & 0x0f ;
+            int8_t layer = stoi(way.tags_.get("layer", "0") ) + 5 ;
+            tflag |= ( layer << 4 ) & 0xf0;
+
+            wbuffer.write_uint8(tflag) ;
+
+            // write tag index
+
+            DictionaryIterator it(way.tags_) ;
+
+            uint8_t cflag = 0 ;
+
+            while (it) {
+                string key = it.key() ;
+                string val = it.value() ;
+
+                if ( key == "name" ) cflag |= 0x80 ;
+                else if ( key == "addr:housenumber" ) cflag |= 0x40 ;
+                else if ( key == "ref" ) cflag |= 0x20 ;
+                else {
+                    uint32_t idx = way_tag_mapping_[key+'='+val] ;
+                    wbuffer.write_var_uint64(idx) ;
+                }
+                ++it ;
+            }
+
+            // encode data using either single or double delta encoding, returning the encoding leading to shortest buffer
+
+            WayDataContainer::Encoding encoding ;
+            string way_encoded_data = encode_data(way, LatLon(lat0, lon0), encoding) ;
+
+            if ( way.label_pos_ ) cflag |= 0x10 ;
+            if ( way.blocks_.size() > 1 ) cflag |= 0x08 ;
+            if ( encoding == WayDataContainer::DoubleDelta ) cflag |= 0x04 ;
+
+            wbuffer.write_uint8(cflag) ;
+
+            if ( cflag & 0x80 )
+                wbuffer.write_utf8(way.tags_.get("name")) ;
+
+            if ( cflag & 0x40 )
+                wbuffer.write_utf8(way.tags_.get("addr:housenumber")) ;
+
+            if ( cflag & 0x20 )
+                wbuffer.write_utf8(way.tags_.get("ref")) ;
+
+            if ( cflag & 0x10 ) {
+                double label_position_lat = way.label_pos_.get().lat_ - lat0;
+                double label_position_lon = way.label_pos_.get().lon_ - lon0 ;
+
+                wbuffer.write_var_int64(round(label_position_lat*1.0e6)) ;
+                wbuffer.write_var_int64(round(label_position_lon*1.0e6)) ;
+            }
+
+            if ( cflag & 0x08 )
+                wbuffer.write_var_uint64(way.blocks_.size()) ;
+
+            wbuffer.write_bytes((uint8_t *)&way_encoded_data[0], way_encoded_data.size()) ;
+
+
+
+        }
+    }
+
+    return strm.str() ;
 
 }

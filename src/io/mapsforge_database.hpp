@@ -18,7 +18,8 @@
 
 struct POI {
     POI() = default ;
-    POI(double lat, double lon): lat_(lat), lon_(lon) {}
+    POI(double lat, double lon, const std::string &id = std::string()):
+        lat_(lat), lon_(lon), id_(id) {}
 
     double lat_, lon_ ;
     Dictionary tags_ ;
@@ -30,6 +31,7 @@ struct Way {
     Dictionary tags_ ;
     int layer_ ;
     bool is_closed_ ;
+
 };
 
 struct VectorTile {
@@ -41,6 +43,7 @@ struct VectorTile {
 struct WayDataBlock {
 
     std::vector<std::vector<LatLon>> coords_ ; // line string or polygon
+    std::vector<std::string> encoded_coords_ ;
 };
 
 struct WayDataContainer {
@@ -49,6 +52,9 @@ struct WayDataContainer {
 
     std::vector<WayDataBlock> blocks_ ;
     std::string id_ ;
+    boost::optional<LatLon> label_pos_ ;
+    enum Encoding { SingleDelta, DoubleDelta } encoding_ ;
+    std::string encoded_data_ ;
 };
 
 struct MapFileInfo {
@@ -156,8 +162,8 @@ private:
     std::fstream strm_ ;
 
     std::string map_file_path_ ;
-    std::vector<std::string> way_tags_ ;
-    std::vector<std::string> poi_tags_ ;
+    std::vector<std::string> way_tags_, poi_tags_ ;
+    std::map<std::string, uint32_t> poi_tag_mapping_, way_tag_mapping_ ;
     std::vector<SubFileInfo> sub_files_ ;
     bool has_debug_info_ ;
     std::mutex mtx_ ;
