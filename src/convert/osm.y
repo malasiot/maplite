@@ -103,7 +103,7 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 
 %type <OSM::Filter::ExpressionNodePtr> boolean_value_expression boolean_term boolean_factor boolean_primary predicate comparison_predicate like_text_predicate exists_predicate
 %type <OSM::Filter::ExpressionNodePtr> expression term factor numeric_literal boolean_literal general_literal literal function function_argument function_argument_list attribute
-%type <OSM::Filter::ExpressionNodePtr> complex_expression list_predicate literal_list
+%type <OSM::Filter::ExpressionNodePtr> complex_expression list_predicate literal_list unary_predicate
 %type <OSM::Filter::CommandPtr> command
 %type <OSM::Filter::CommandListPtr> command_list action_block
 %type <OSM::Filter::RulePtr> rule
@@ -195,12 +195,12 @@ complex_expression:
 
 boolean_value_expression:
 	boolean_term								{ $$ = $1 ; }
-	| boolean_term OR boolean_value_expression	{ $$ = std::make_shared<OSM::Filter::BooleanOperator>( OSM::Filter::BooleanOperator::Or, $1, $3) ; }
+	| boolean_value_expression OR boolean_term 	{ $$ = std::make_shared<OSM::Filter::BooleanOperator>( OSM::Filter::BooleanOperator::Or, $1, $3) ; }
 	;
 
 boolean_term:
 	boolean_factor						{ $$ = $1 ; }
-	| boolean_factor AND boolean_term	{ $$ = std::make_shared<OSM::Filter::BooleanOperator>( OSM::Filter::BooleanOperator::And, $1, $3) ; }
+	| boolean_term AND boolean_factor	{ $$ = std::make_shared<OSM::Filter::BooleanOperator>( OSM::Filter::BooleanOperator::And, $1, $3) ; }
 	;
 
 boolean_factor:
@@ -214,12 +214,15 @@ boolean_primary:
 	;
 
 predicate:
-	comparison_predicate	{ $$ = $1 ; }
+	unary_predicate { $$ = $1 ; }
+	|  comparison_predicate	{ $$ = $1 ; }
 	| like_text_predicate	{ $$ = $1 ; }
 	| exists_predicate	    { $$ = $1 ; }
 	| list_predicate        { $$ = $1 ; }
 	;
 
+unary_predicate:
+	expression { $$ = std::make_shared<OSM::Filter::UnaryPredicate>( $1 ) ;}
 
 comparison_predicate:
 	expression EQUAL expression					{ $$ = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::Equal, $1, $3 ) ; }

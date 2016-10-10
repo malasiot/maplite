@@ -312,6 +312,14 @@ private:
 
 };
 
+class UnaryPredicate: public ExpressionNode {
+public:
+
+    UnaryPredicate(ExpressionNodePtr exp): ExpressionNode(exp) {}
+
+    Literal eval(Context &ctx) ;
+};
+
 class ComparisonPredicate: public ExpressionNode {
 public:
     enum Type { Equal, NotEqual, Less, Greater, LessOrEqual, GreaterOrEqual } ;

@@ -67,7 +67,8 @@ int main(int argc, char *argv[])
 
     TileKey key(tx, ty, tz, false) ;
 
-    VectorTile tile = reader.readTile(key);
+    VectorTile tile = reader.readTile(key, 0);
+
 
     RenderTheme theme ;
     if ( !theme.read(mapTheme) ) {

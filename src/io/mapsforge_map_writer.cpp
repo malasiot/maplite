@@ -242,7 +242,7 @@ void MapFile::writeMapInfo() {
     MapFileOSerializer s(strm_) ;
 
     s.write_uint32(info_.version_) ;
-    s.write_uint32(info_.file_size_) ;
+    s.write_uint64(info_.file_size_) ;
     s.write_uint64(info_.date_) ;
 
     s.write_int32(round(info_.min_lat_ * 1.0e6)) ;
@@ -325,9 +325,9 @@ void MapFile::writeSubFileInfo(const WriteOptions &options)
         s.write_uint8(info.base_zoom_) ;
         s.write_uint8(info.min_zoom_) ;
         s.write_uint8(info.max_zoom_) ;
+
         s.write_uint64(info.offset_) ;
         s.write_uint64(info.size_) ;
-        info.foffset_ = strm_.tellg() ; // save location of the field to populate it later
     }
 }
 
@@ -335,13 +335,18 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
 {
     MapFileOSerializer s(strm_) ;
 
+    uint64_t sf_table_pos = (int64_t)strm_.tellg() - 19 * sub_files_.size() ;
+
+    uint count = 0 ;
     for( SubFileInfo &info: sub_files_ ) {
 
         info.offset_ = strm_.tellg() ;
+        uint64_t extra = 0  ;
 
         if ( has_debug_info_ ) {
             const char *signature = "+++IndexStart+++" ;
             s.write_bytes((uint8_t *)signature, 16) ;
+            extra = 16 ;
         }
 
         // determine tiles covered by the bounding box on the base zoom level
@@ -351,12 +356,13 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
         uint64_t tile_count = rows * cols ;
 
         info.index_.resize(tile_count) ;
+        uint64_t sz = extra + 5 * tile_count ;
 
         // the tile index table contains tile_count * 5 bytes ( we will fill this later )
 
         strm_.seekg(tile_count * 5, ios::cur) ;
 
-        uint64_t current_pos = strm_.tellg() ;
+        uint64_t current_pos = sz ;
 
         for( uint j=0 ; j<tile_count ; j++ ) {
             info.index_[j] = current_pos ;
@@ -370,7 +376,8 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
 
             uint64_t bytes = writeTileData(tx, ty, tz, info.min_zoom_, info.max_zoom_, db, options) ;
 
-
+            current_pos += bytes ;
+            sz += bytes ;
             /*
             bool is_sea_tile = ( tile_offset & 0x8000000000LL ) != 0 ;
 
@@ -384,6 +391,21 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
         */
         }
 
+        info.size_ = sz ;
+
+        // fill-in offset and size information in subfile configuration table
+
+        strm_.seekg(sf_table_pos + 3 + 19*count++) ;
+        s.write_uint64(info.offset_) ;
+        s.write_uint64(info.size_) ;
+
+        // write tile offset table
+        strm_.seekg(info.offset_ + extra) ;
+        for( uint j=0 ; j<tile_count ; j++ ) {
+            s.write_offset(info.index_[j] & 0x7FFFFFFFFFLL) ;
+        }
+        // seek to end of subfile
+        strm_.seekg(info.offset_ + info.size_) ;
     }
 }
 
@@ -672,6 +694,8 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_
 
     MapFileOSerializer s(strm_) ;
 
+    uint64_t cp = strm_.tellg() ;
+
     // write header
     if ( options.debug_ ) {
         stringstream sigstrm ;
@@ -687,6 +711,7 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_
         s.write_var_uint64(ways_per_level[i].size()) ;
     }
 
+
     // we write POI and way data into a memory buffer since we need to find the offsets
 
     string poi_data = writePOIData(pois, pois_per_level, max_lat, min_lon) ;
@@ -695,6 +720,8 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_
     s.write_var_uint64(poi_data.size()) ;
     s.write_bytes((uint8_t *)&poi_data[0], poi_data.size()) ;
     s.write_bytes((uint8_t *)&way_data[0], way_data.size()) ;
+
+    return strm_.tellg() - cp ;
 
 }
 
@@ -723,21 +750,11 @@ string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32
             buffer.write_var_int64(round((poi.lat_ - lat0)*1.0e6)) ;
             buffer.write_var_int64(round((poi.lon_ - lon0)*1.0e6)) ;
 
-            uint8_t tflag = 0 ;
-
-            uint n_tags = poi.tags_.count() ;
-
-            tflag |= n_tags & 0x0f ;
-            int8_t layer = stoi(poi.tags_.get("layer", "0") ) + 5 ;
-            tflag |= ( layer << 4 ) & 0xf0;
-
-            buffer.write_uint8(tflag) ;
-
-            // write tag index
+            vector<uint32_t> tags ;
+            uint8_t cflag = 0 ;
+            int8_t layer ;
 
             DictionaryIterator it(poi.tags_) ;
-
-            uint8_t cflag = 0 ;
 
             while (it) {
                 string key = it.key() ;
@@ -746,12 +763,26 @@ string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32
                 if ( key == "name" ) cflag |= 0x80 ;
                 else if ( key == "addr:housenumber" ) cflag |= 0x40 ;
                 else if ( key == "ele" ) cflag |= 0x20 ;
+                else if ( key == "layer" ) layer = stoi(val) ;
                 else {
                     uint32_t idx = poi_tag_mapping_[key+'='+val] ;
-                    buffer.write_var_uint64(idx) ;
+                    tags.push_back(idx) ;
                 }
                 ++it ;
             }
+
+            uint8_t tflag = 0 ;
+
+            uint n_tags = tags.size() ;
+
+            tflag |= n_tags & 0x0f ;
+            tflag |= ( (layer+5) << 4 ) & 0xf0;
+            buffer.write_uint8(tflag) ;
+
+            // write tag index
+
+            for(uint32_t idx: tags)
+                buffer.write_var_uint64(idx) ;
 
             buffer.write_uint8(cflag) ;
 
@@ -911,21 +942,15 @@ string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<
             ostringstream wstrm ;
             MapFileOSerializer wbuffer(wstrm) ;
 
-            uint8_t tflag = 0 ;
+            wbuffer.write_uint16(0xffff) ; // for the moment the coverage bit flags are set to 1
 
-            uint n_tags = way.tags_.count() ;
+            // collect tags
 
-            tflag |= n_tags & 0x0f ;
-            int8_t layer = stoi(way.tags_.get("layer", "0") ) + 5 ;
-            tflag |= ( layer << 4 ) & 0xf0;
-
-            wbuffer.write_uint8(tflag) ;
-
-            // write tag index
+            vector<uint32_t> tags ;
+            int8_t layer = 0 ;
+            uint8_t cflag = 0 ;
 
             DictionaryIterator it(way.tags_) ;
-
-            uint8_t cflag = 0 ;
 
             while (it) {
                 string key = it.key() ;
@@ -934,12 +959,25 @@ string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<
                 if ( key == "name" ) cflag |= 0x80 ;
                 else if ( key == "addr:housenumber" ) cflag |= 0x40 ;
                 else if ( key == "ref" ) cflag |= 0x20 ;
+                else if ( key == "layer" ) layer = stoi(val);
                 else {
                     uint32_t idx = way_tag_mapping_[key+'='+val] ;
-                    wbuffer.write_var_uint64(idx) ;
+                    tags.push_back(idx) ;
                 }
                 ++it ;
             }
+
+            uint8_t tflag = 0 ;
+
+            tflag |= tags.size() & 0x0f ;
+            tflag |= ( (layer+5) << 4 ) & 0xf0;
+
+            wbuffer.write_uint8(tflag) ;
+
+            // write tag index
+
+            for( uint32_t idx: tags )
+               wbuffer.write_var_uint64(idx) ;
 
             // encode data using either single or double delta encoding, returning the encoding leading to shortest buffer
 
@@ -974,11 +1012,13 @@ string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<
 
             wbuffer.write_bytes((uint8_t *)&way_encoded_data[0], way_encoded_data.size()) ;
 
+            string wbuffer_bytes = wstrm.str() ;
 
-
+            // write size and way data to stream
+            buffer.write_var_uint64(wbuffer_bytes.size()) ;
+            buffer.write_bytes((uint8_t *)&wbuffer_bytes[0], wbuffer_bytes.size()) ;
         }
     }
 
     return strm.str() ;
-
 }

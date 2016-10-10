@@ -306,6 +306,7 @@ namespace OSM {
       // boolean_factor
       // boolean_primary
       // predicate
+      // unary_predicate
       // comparison_predicate
       // like_text_predicate
       // exists_predicate
@@ -904,10 +905,10 @@ namespace OSM {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 171,     ///< Last index in yytable_.
-      yynnts_ = 31,  ///< Number of nonterminal symbols.
+      yylast_ = 178,     ///< Last index in yytable_.
+      yynnts_ = 32,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
-      yyfinal_ = 42, ///< Termination state number.
+      yyfinal_ = 43, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
       yyntokens_ = 45  ///< Number of tokens.
@@ -1006,22 +1007,23 @@ namespace OSM {
       case 57: // boolean_factor
       case 58: // boolean_primary
       case 59: // predicate
-      case 60: // comparison_predicate
-      case 61: // like_text_predicate
-      case 62: // exists_predicate
-      case 63: // list_predicate
-      case 64: // literal_list
-      case 65: // expression
-      case 66: // term
-      case 67: // factor
-      case 68: // function
-      case 69: // function_argument_list
-      case 70: // function_argument
-      case 71: // literal
-      case 72: // general_literal
-      case 73: // boolean_literal
-      case 74: // numeric_literal
-      case 75: // attribute
+      case 60: // unary_predicate
+      case 61: // comparison_predicate
+      case 62: // like_text_predicate
+      case 63: // exists_predicate
+      case 64: // list_predicate
+      case 65: // literal_list
+      case 66: // expression
+      case 67: // term
+      case 68: // factor
+      case 69: // function
+      case 70: // function_argument_list
+      case 71: // function_argument
+      case 72: // literal
+      case 73: // general_literal
+      case 74: // boolean_literal
+      case 75: // numeric_literal
+      case 76: // attribute
         value.copy< OSM::Filter::ExpressionNodePtr > (other.value);
         break;
 
@@ -1093,22 +1095,23 @@ namespace OSM {
       case 57: // boolean_factor
       case 58: // boolean_primary
       case 59: // predicate
-      case 60: // comparison_predicate
-      case 61: // like_text_predicate
-      case 62: // exists_predicate
-      case 63: // list_predicate
-      case 64: // literal_list
-      case 65: // expression
-      case 66: // term
-      case 67: // factor
-      case 68: // function
-      case 69: // function_argument_list
-      case 70: // function_argument
-      case 71: // literal
-      case 72: // general_literal
-      case 73: // boolean_literal
-      case 74: // numeric_literal
-      case 75: // attribute
+      case 60: // unary_predicate
+      case 61: // comparison_predicate
+      case 62: // like_text_predicate
+      case 63: // exists_predicate
+      case 64: // list_predicate
+      case 65: // literal_list
+      case 66: // expression
+      case 67: // term
+      case 68: // factor
+      case 69: // function
+      case 70: // function_argument_list
+      case 71: // function_argument
+      case 72: // literal
+      case 73: // general_literal
+      case 74: // boolean_literal
+      case 75: // numeric_literal
+      case 76: // attribute
         value.copy< OSM::Filter::ExpressionNodePtr > (v);
         break;
 
@@ -1278,22 +1281,23 @@ namespace OSM {
       case 57: // boolean_factor
       case 58: // boolean_primary
       case 59: // predicate
-      case 60: // comparison_predicate
-      case 61: // like_text_predicate
-      case 62: // exists_predicate
-      case 63: // list_predicate
-      case 64: // literal_list
-      case 65: // expression
-      case 66: // term
-      case 67: // factor
-      case 68: // function
-      case 69: // function_argument_list
-      case 70: // function_argument
-      case 71: // literal
-      case 72: // general_literal
-      case 73: // boolean_literal
-      case 74: // numeric_literal
-      case 75: // attribute
+      case 60: // unary_predicate
+      case 61: // comparison_predicate
+      case 62: // like_text_predicate
+      case 63: // exists_predicate
+      case 64: // list_predicate
+      case 65: // literal_list
+      case 66: // expression
+      case 67: // term
+      case 68: // factor
+      case 69: // function
+      case 70: // function_argument_list
+      case 71: // function_argument
+      case 72: // literal
+      case 73: // general_literal
+      case 74: // boolean_literal
+      case 75: // numeric_literal
+      case 76: // attribute
         value.template destroy< OSM::Filter::ExpressionNodePtr > ();
         break;
 
@@ -1362,22 +1366,23 @@ namespace OSM {
       case 57: // boolean_factor
       case 58: // boolean_primary
       case 59: // predicate
-      case 60: // comparison_predicate
-      case 61: // like_text_predicate
-      case 62: // exists_predicate
-      case 63: // list_predicate
-      case 64: // literal_list
-      case 65: // expression
-      case 66: // term
-      case 67: // factor
-      case 68: // function
-      case 69: // function_argument_list
-      case 70: // function_argument
-      case 71: // literal
-      case 72: // general_literal
-      case 73: // boolean_literal
-      case 74: // numeric_literal
-      case 75: // attribute
+      case 60: // unary_predicate
+      case 61: // comparison_predicate
+      case 62: // like_text_predicate
+      case 63: // exists_predicate
+      case 64: // list_predicate
+      case 65: // literal_list
+      case 66: // expression
+      case 67: // term
+      case 68: // factor
+      case 69: // function
+      case 70: // function_argument_list
+      case 71: // function_argument
+      case 72: // literal
+      case 73: // general_literal
+      case 74: // boolean_literal
+      case 75: // numeric_literal
+      case 76: // attribute
         value.move< OSM::Filter::ExpressionNodePtr > (s.value);
         break;
 
@@ -1736,7 +1741,7 @@ namespace OSM {
 
 #line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
 } // OSM
-#line 1740 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
+#line 1745 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
 
 
 

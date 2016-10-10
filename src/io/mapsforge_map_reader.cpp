@@ -22,6 +22,7 @@ void MapFile::open(const std::string &file_path, const std::shared_ptr<TileIndex
 
     readHeader() ;
     readTileIndex() ;
+
 }
 
 struct TileData {
@@ -96,8 +97,8 @@ VectorTile MapFile::readTile(const TileKey &key, int offset)
             if ( gt.z() < si.base_zoom_ ) {
                 // calculate the XY numbers of the upper left and lower right sub-tiles
                 const int zoom_diff = (int8_t)si.base_zoom_ - (int8_t)gt.z() ;
-                block_min_x = tx << zoom_diff ;
-                block_min_y = ty << zoom_diff ;
+                block_min_x = (tx << zoom_diff) ;
+                block_min_y = (ty << zoom_diff) ;
                 block_max_x = block_min_x + ( 1 << zoom_diff ) - 1 ;
                 block_max_y = block_min_y + ( 1 << zoom_diff ) - 1 ;
             } else if ( gt.z() > si.base_zoom_ ) {
@@ -183,7 +184,7 @@ VectorTile MapFile::readTile(const TileKey &key, int offset)
             }
         }
 
-  //  exportTileDataOSM(tile, "/tmp/oo.osm");
+    exportTileDataOSM(tile, "/tmp/oo.osm");
 
     return tile ;
 }
@@ -372,6 +373,7 @@ uint64_t MapFile::readTileData(const SubFileInfo &info, int64_t offset, std::sha
     if ( has_debug_info_ ) {
         char signature[32] ;
         strm_.read(signature, 32) ;
+        cout << signature << endl ;
     }
 
     // read zoom table
@@ -470,6 +472,7 @@ uint64_t MapFile::readPOI(POI &poi, float lat_orig, float lon_orig) {
     if ( has_debug_info_ ) {
         uint8_t signature[32] ;
         s.read_bytes(signature, 32) ;
+        cout << signature << endl ;
     }
 
     double lat_diff = (double)s.read_var_int64()/1.0e6 ;
@@ -521,6 +524,7 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
     if ( has_debug_info_ ) {
         char signature[32] ;
         strm_.read(signature, 32) ;
+        cout << signature << endl ;
     }
 
     uint64_t data_sz = s.read_var_uint64() ;

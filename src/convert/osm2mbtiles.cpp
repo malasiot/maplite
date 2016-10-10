@@ -127,12 +127,14 @@ int main(int argc, char *argv[])
 
     mf.create(tileSet) ;
 
- //   SQLite::Database db("/tmp/2ed94.sqlite") ;
-    SQLite::Database db("/tmp/0a907.sqlite") ;
+    SQLite::Database db("/tmp/2ed94.sqlite") ;
+   // SQLite::Database db("/tmp/0a907.sqlite") ;
 
     init_map_file_info(argc, argv, db, mf) ;
 
     WriteOptions options ;
+    options.debug_ = true ;
+    options.simplification_factor_ = 0 ;
     mf.write(db, options) ;
 
     boost::filesystem::path tmp_dir = boost::filesystem::temp_directory_path() ;

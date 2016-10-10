@@ -336,5 +336,11 @@ Literal ExistsPredicate::eval(Context &ctx)
 
 }
 
+Literal UnaryPredicate::eval(Context &ctx)
+{
+    return children_[0]->eval(ctx).toBoolean() ;
+
+}
+
 } // namespace Filter
 } // namespace OSM
