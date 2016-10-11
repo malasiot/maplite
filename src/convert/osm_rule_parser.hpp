@@ -162,7 +162,7 @@ class ExpressionNode {
 
 class Command {
 public:
-    enum Type { Set, Add, Write, Continue, Delete, WriteAll, Exclude, Conditional } ;
+    enum Type { Set, Add, Write, Continue, Delete, WriteAll, Exclude, Attach, Conditional } ;
 
     Command() {}
 
@@ -183,6 +183,7 @@ public:
 };
 
 
+
 class TagList {
 public:
     std::vector<std::string> tags_ ;
@@ -201,6 +202,18 @@ public:
 
     std::deque<TagDeclarationPtr> tags_ ;
 };
+
+class AttachCommand: public Command {
+public:
+
+    AttachCommand(const TagList tags): tags_(tags) {}
+
+    Type type() const { return Attach ; }
+
+    TagList tags_ ;
+
+};
+
 
 class WriteCommand: public Command {
 public:

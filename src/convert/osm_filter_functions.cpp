@@ -214,6 +214,30 @@ Literal Function::eval(Context &ctx)
         else if ( ctx.type() == Context::Way ) return "way" ;
         else if ( ctx.type() == Context::Relation ) return "relation" ;
     }
+    else if ( name_ == "is_poi" ) {
+        return ( ctx.type() == Context::Node )  ;
+    }
+    else if ( name_ == "is_way" ) {
+        return ctx.type() == Context::Way ;
+    }
+    else if ( name_ == "is_relation" ) {
+        return ctx.type() == Context::Relation ;
+    }
+    else if ( name_ == "lname" ) {
+        if ( ctx.has_tag("name") ) return Literal(ctx.value("name"), false) ;
+
+        string lang = "en" ;
+        if ( children_[0]->children_.size() > 0 ) {
+            lang = children_[0]->children_[0]->eval(ctx).toString() ;
+        }
+        string tag = "name:" +  lang ;
+
+        if ( ctx.has_tag(tag) )
+            return Literal(ctx.value(tag), false) ;
+
+        return Literal() ;
+    }
+    else return Literal() ;
 
 }
 

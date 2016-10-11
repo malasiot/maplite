@@ -70,11 +70,11 @@ delete[[:space:]]+(tag)? { return OSM::BisonParser::make_DELETE_CMD(*yylloc) ; }
 "write" { return OSM::BisonParser::make_WRITE_CMD(*yylloc) ; }
 "exclude" { return OSM::BisonParser::make_EXCLUDE_CMD(*yylloc) ; }
 "continue" { return OSM::BisonParser::make_CONTINUE_CMD(*yylloc) ; }
+"attach" { return OSM::BisonParser::make_ATTACH_CMD(*yylloc) ; }
 
+z[0-9][0-9]?	{ return OSM::BisonParser::make_ZOOM_SPEC(atoi(yytext+1), *yylloc) ; }
 
-z[1-9][0-9]?	{ return OSM::BisonParser::make_ZOOM_SPEC(atoi(yytext+1), *yylloc) ; }
-
-[a-zA-Z]:[a-zA-Z0-9_]+ |
+[a-zA-Z][a-zA-Z0-9_]*:[a-zA-Z0-9_]+ |
 [a-zA-Z][a-zA-Z0-9_]* {
         return OSM::BisonParser::make_IDENTIFIER(yytext, *yylloc);
 }

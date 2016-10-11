@@ -66,7 +66,7 @@ bool Literal::toBoolean() const {
     case Null: return false ;
     case Boolean: return boolean_val_ ;
     case Number: return number_val_ != 0.0 ;
-    case String: return ( string_val_ != "0" && string_val_.empty()) ;
+    case String: return ( !string_val_.empty()) ;
     }
 }
 

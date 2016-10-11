@@ -94,17 +94,12 @@ static bool get_poi_tags(SQLite::Database &db, std::vector<string> &pois, map<st
     }
 }
 
-static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
+static bool query_kv(SQLite::Connection &con, const string &table, map<string, uint64_t> &tag_hist) {
+    string sql = "SELECT key, val from kv JOIN " + table + " ON " + table + ".osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ref');" ;
+
     try {
-        SQLite::Session session(&db) ;
-        SQLite::Connection &con = session.handle() ;
-
-        string sql = "SELECT key, val from kv JOIN geom_lines, geom_polygons, geom_relations ON geom_lines.osm_id = kv.osm_id OR geom_polygons.osm_id = kv.osm_id OR geom_relations.osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ref');" ;
         SQLite::Query q(con, sql) ;
-
         SQLite::QueryResult res = q.exec() ;
-
-        map<string, uint64_t> tag_hist ;
 
         while ( res ) {
 
@@ -120,17 +115,31 @@ static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways, map<st
             res.next() ;
         }
 
-        sort_histogram(tag_hist, ways) ;
-
-        for( uint i=0 ; i<ways.size() ; i++ )
-            tag_mapping.emplace(std::make_pair(ways[i], i)) ;
-
         return true ;
     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
         return false ;
     }
+}
+
+static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
+
+    SQLite::Session session(&db) ;
+    SQLite::Connection &con = session.handle() ;
+
+    map<string, uint64_t> tag_hist ;
+    if ( !query_kv(con, "geom_lines", tag_hist)  ||
+         !query_kv(con, "geom_polygons", tag_hist) ||
+         !query_kv(con, "geom_relations", tag_hist)  )
+        return false ;
+
+    sort_histogram(tag_hist, ways) ;
+
+    for( uint i=0 ; i<ways.size() ; i++ )
+        tag_mapping.emplace(std::make_pair(ways[i], i)) ;
+
+    return true ;
 }
 
 void MapFile::setBoundingBox(float min_lat, float min_lon, float max_lat, float max_lon) {
@@ -436,9 +445,9 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 
     sql << " WHERE " ;
     sql << "(( kv.zoom_min BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( kv.zoom_max BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( kv.zoom_min <= " << min_zoom << " AND kv.zoom_max >= " << max_zoom << "))" ;
-
+    sql << "AND _geom_ NOT NULL AND ST_IsValid(_geom_) " ;
     sql << "AND g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = ST_Transform(BuildMBR(" ;
-    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << "),4326)) AND _geom_ NOT NULL" ;
+    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << "),4326)) " ;
 
     return sql.str() ;
 }
@@ -479,6 +488,8 @@ static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom,
                     int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
                     pois_per_level[z].push_back(pois.size()-1) ;
                 }
+
+                gaiaFreeGeomColl(geom) ;
 
             }
 
@@ -550,6 +561,8 @@ static bool fetch_lines(const std::string &tableName, SQLite::Database &db, cons
                 // we add the way at the lowest possible level
                 int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
                 ways_per_level[z].push_back(ways.size()-1) ;
+
+                gaiaFreeGeomColl(geom) ;
             }
 
             ways.back().tags_.add(key, val) ;
@@ -635,6 +648,8 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
                 // we add the way at the lowest possible level
                 int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
                 ways_per_level[z].push_back(ways.size()-1) ;
+
+                gaiaFreeGeomColl(geom) ;
             }
 
             ways.back().tags_.add(key, val) ;
@@ -683,7 +698,7 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_
     vector<vector<uint32_t>> ways_per_level(nz) ;
 
     // we compute simplification factor per subfile
-    double tol = ( tz <= 12 ) ? deltaLat(options.simplification_factor_, info_.max_lat_, max_zoom) : 0 ;
+    double tol = ( tz <= 12 && options.simplification_factor_ > 0 ) ? deltaLat(options.simplification_factor_, info_.max_lat_, max_zoom) : 0 ;
 
     fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
     fetch_lines("geom_relations", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_,tol,  ways, ways_per_level) ;
@@ -977,7 +992,7 @@ string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<
             // write tag index
 
             for( uint32_t idx: tags )
-               wbuffer.write_var_uint64(idx) ;
+                wbuffer.write_var_uint64(idx) ;
 
             // encode data using either single or double delta encoding, returning the encoding leading to shortest buffer
 

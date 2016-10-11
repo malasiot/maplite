@@ -41,7 +41,7 @@ bool OSMProcessor::createGeometriesTable(const std::string &desc)
         string sql ;
 
         sql = "CREATE TABLE geom_" + desc;
-        sql += " (gid INTEGER PRIMARY KEY AUTOINCREMENT, osm_id TEXT)" ;
+        sql += " (gid INTEGER PRIMARY KEY AUTOINCREMENT, osm_id TEXT, FOREIGN KEY(osm_id) REFERENCES kv(osm_id))" ;
 
         SQLite::Command(con, sql).exec() ;
 
@@ -124,11 +124,12 @@ bool OSMProcessor::create(const std::string &name) {
         con.exec("SELECT InitSpatialMetadata(1);") ;
         con.exec("PRAGMA encoding=\"UTF-8\"") ;
 
-        return ( createGeometriesTable("lines") &&
+        return ( createTagsTable() &&
+                 createGeometriesTable("lines") &&
                  createGeometriesTable("pois") &&
                  createGeometriesTable("polygons") &&
-                 createGeometriesTable("relations") &&
-                 createTagsTable() ) ;
+                 createGeometriesTable("relations")
+                 ) ;
     }
     catch ( SQLite::Exception &e )
     {
@@ -329,6 +330,32 @@ bool OSMProcessor::addTags(SQLite::Command &cmd, const TagWriteList &tags, const
 
 }
 
+// find the zoom range of attached tags
+
+static bool normalize_tags(TagWriteList &tags) {
+    uint n_matched_tags = 0 ;
+    uint8_t minz = 255, maxz = 0;
+
+    for( TagWriteAction &a: tags.actions_ ) {
+        if ( !a.attached_ ) {
+            minz = std::min(minz, a.zoom_min_) ;
+            maxz = std::max(maxz, a.zoom_max_) ;
+            n_matched_tags ++ ;
+        }
+    }
+
+    if ( n_matched_tags == 0 ) return false ;
+
+    for( TagWriteAction &a: tags.actions_ ) {
+        if ( a.attached_ ) {
+            a.zoom_min_ = minz ;
+            a.zoom_max_ = maxz ;
+        }
+    }
+
+    return true ;
+}
+
 using namespace OSM::Filter ;
 
 bool OSMProcessor::processOsmFiles(const vector<string> &osmFiles, const FilterConfig &cfg)
@@ -377,7 +404,7 @@ bool OSMProcessor::processOsmFiles(const vector<string> &osmFiles, const FilterC
                 }
             }
 
-            if ( tags.actions_.empty() ) continue ;
+            if ( !normalize_tags(tags) ) continue ;
 
             SQLite::Command cmd_poi(con, insertFeatureSQL("pois")) ;
 
@@ -407,15 +434,15 @@ bool OSMProcessor::processOsmFiles(const vector<string> &osmFiles, const FilterC
                 }
             }
 
-            if ( tags.actions_.empty() ) continue ;
+            if ( !normalize_tags(tags) ) continue ;
 
             // deal with closed ways, potential polygon geometries (areas) are those indicated by area tag or those other than highway, barrier and contour
 
-            if ( way.nodes_.front() == way.nodes_.back() &&
-                ( way.tags_.get("area") == "yes" ) ||
+            if ( ( way.nodes_.front() == way.nodes_.back() ) &&
+                ( way.tags_.get("area") == "yes" ||
                  ( !way.tags_.contains("highway") &&
                    !way.tags_.contains("barrier") &&
-                   !way.tags_.contains("contour") ) ) {
+                   !way.tags_.contains("contour") ) ) ) {
 
                 OSM::Polygon poly ;
 
@@ -453,7 +480,7 @@ bool OSMProcessor::processOsmFiles(const vector<string> &osmFiles, const FilterC
                 }
             }
 
-            if ( tags.actions_.empty() ) continue ;
+            if ( !normalize_tags(tags) ) continue ;
 
             string rel_type = relation.tags_.get("type") ;
 
@@ -463,8 +490,10 @@ bool OSMProcessor::processOsmFiles(const vector<string> &osmFiles, const FilterC
 
                 SQLite::Command cmd_rel(con, insertFeatureSQL("relations", "CompressGeometry(ST_Multi(?))")) ;
 
-                addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_) ;
-                addTags(cmd_tags, tags, relation.id_) ;
+                if ( !chunks.empty() ) {
+                    addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_) ;
+                    addTags(cmd_tags, tags, relation.id_) ;
+                }
             }
             else if ( rel_type == "multipolygon" || rel_type == "boundary" ) {
                 OSM::Polygon polygon ;
@@ -472,8 +501,10 @@ bool OSMProcessor::processOsmFiles(const vector<string> &osmFiles, const FilterC
 
                 SQLite::Command cmd_rel(con, insertFeatureSQL("polygons", "CompressGeometry(?)")) ;
 
-                addPolygonGeometry(cmd_rel, doc, polygon, relation.id_) ;
-                addTags(cmd_tags, tags, relation.id_) ;
+                if ( !polygon.rings_.empty() ) {
+                    addPolygonGeometry(cmd_rel, doc, polygon, relation.id_) ;
+                    addTags(cmd_tags, tags, relation.id_) ;
+                }
             }
         }
 
@@ -504,14 +535,19 @@ bool OSMProcessor::matchRule(const RulePtr &rule, Context &ctx, TagWriteList &tw
             else if ( cmd->type() == Command::Set ) {
                 SimpleCommand *rc = dynamic_cast<SimpleCommand *>(cmd.get());
 
-                if ( ctx.has_tag(rc->tag_ ) )
-                    ctx.tags_[rc->tag_] = rc->val_->eval(ctx).toString() ;
-                else
-                    ctx.tags_.add(rc->tag_, rc->val_->eval(ctx).toString()) ;
+                string val = rc->val_->eval(ctx).toString() ;
+
+                if ( !val.empty() ) {
+                    if ( ctx.has_tag(rc->tag_ ) )
+                        ctx.tags_[rc->tag_] = val ;
+                    else
+                        ctx.tags_.add(rc->tag_, val) ;
+                }
             }
             else if ( cmd->type() == Command::Add ) {
                 SimpleCommand *rc = dynamic_cast<SimpleCommand *>(cmd.get());
-                ctx.tags_.add(rc->tag_, rc->val_->eval(ctx).toString()) ;
+                string val = rc->val_->eval(ctx).toString() ;
+                if ( !val.empty() ) ctx.tags_.add(rc->tag_, val) ;
             }
             else if ( cmd->type() == Command::Continue ) {
                 cont = true ;
@@ -525,7 +561,8 @@ bool OSMProcessor::matchRule(const RulePtr &rule, Context &ctx, TagWriteList &tw
                 ZoomRange zr = rc->zoom_range_ ;
                 DictionaryIterator it(ctx.tags_) ;
                 while ( it ) {
-                    tw.actions_.emplace_back(it.key(), it.value(), zr.min_zoom_, zr.max_zoom_) ;
+                    string val = it.value() ;
+                    tw.actions_.emplace_back(it.key(), val, zr.min_zoom_, zr.max_zoom_) ;
                     ++it ;
                 }
             }
@@ -534,8 +571,11 @@ bool OSMProcessor::matchRule(const RulePtr &rule, Context &ctx, TagWriteList &tw
                 ZoomRange zr = rc->zoom_range_ ;
                 for( const TagDeclarationPtr &decl: rc->tags_.tags_ ) {
                     if ( ctx.has_tag(decl->tag_) ) {
-                        if ( decl->val_ )
-                            tw.actions_.emplace_back(decl->tag_, decl->val_->eval(ctx).toString(), zr.min_zoom_, zr.max_zoom_) ;
+                        if ( decl->val_ ) {
+                            string val = decl->val_->eval(ctx).toString() ;
+                            if ( !val.empty() )
+                                tw.actions_.emplace_back(decl->tag_, val, zr.min_zoom_, zr.max_zoom_) ;
+                        }
                         else
                             tw.actions_.emplace_back(decl->tag_, ctx.value(decl->tag_), zr.min_zoom_, zr.max_zoom_) ;
                     }
@@ -551,6 +591,18 @@ bool OSMProcessor::matchRule(const RulePtr &rule, Context &ctx, TagWriteList &tw
                 while ( it ) {
                     if ( exclude.count(it.key()) == 0 )
                         tw.actions_.emplace_back(it.key(), it.value(), zr.min_zoom_, zr.max_zoom_) ;
+                    ++it ;
+                }
+            }
+            else if ( cmd->type() == Command::Attach ) {
+                AttachCommand *rc = dynamic_cast<AttachCommand *>(cmd.get());
+
+                set<string> tags(rc->tags_.tags_.begin(), rc->tags_.tags_.end()) ;
+
+                DictionaryIterator it(ctx.tags_) ;
+                while ( it ) {
+                    if ( tags.count(it.key()) )
+                        tw.actions_.emplace_back(it.key(), it.value(), 0, 255, true) ;
                     ++it ;
                 }
             }

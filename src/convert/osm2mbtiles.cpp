@@ -123,19 +123,7 @@ int main(int argc, char *argv[])
     if (filterConfigFile.empty() || osmFiles.empty() )
         print_usage_and_exit() ;
 
-    MapFile mf ;
 
-    mf.create(tileSet) ;
-
-    SQLite::Database db("/tmp/2ed94.sqlite") ;
-   // SQLite::Database db("/tmp/0a907.sqlite") ;
-
-    init_map_file_info(argc, argv, db, mf) ;
-
-    WriteOptions options ;
-    options.debug_ = true ;
-    options.simplification_factor_ = 0 ;
-    mf.write(db, options) ;
 
     boost::filesystem::path tmp_dir = boost::filesystem::temp_directory_path() ;
     boost::filesystem::path tmp_file = boost::filesystem::unique_path("%%%%%.sqlite");
@@ -162,6 +150,21 @@ int main(int argc, char *argv[])
         return 0 ;
     }
 
+    MapFile mf ;
+
+    mf.create(tileSet) ;
+
+    //SQLite::Database db("/tmp/2ed94.sqlite") ;
+   // SQLite::Database db("/tmp/0a907.sqlite") ;
+
+    SQLite::Database &db = proc.handle() ;
+
+    init_map_file_info(argc, argv, db, mf) ;
+
+    WriteOptions options ;
+    options.debug_ = true ;
+    options.simplification_factor_ = 0 ;
+    mf.write(db, options) ;
 
     return 1 ;
 

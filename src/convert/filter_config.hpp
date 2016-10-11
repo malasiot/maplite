@@ -7,11 +7,12 @@
 #include "osm_document.hpp"
 
 struct TagWriteAction {
-    TagWriteAction(const std::string &key, const std::string &val, uint8_t zmin, uint8_t zmax ):
-        key_(key), val_(val), zoom_min_(zmin), zoom_max_(zmax) {}
+    TagWriteAction(const std::string &key, const std::string &val, uint8_t zmin, uint8_t zmax, bool attached = false ):
+        key_(key), val_(val), zoom_min_(zmin), zoom_max_(zmax), attached_(attached) {}
 
     std::string key_, val_ ;
     uint8_t zoom_min_, zoom_max_ ;
+    bool attached_ ;
 };
 
 struct TagWriteList {

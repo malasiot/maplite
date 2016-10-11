@@ -93,6 +93,7 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 %token LAYER "@layer"
 %token EXCLUDE_CMD "exclude"
 %token WRITE_ALL_CMD "write all"
+%token ATTACH_CMD "attach"
 
 
 %token <std::string> IDENTIFIER "identifier";
@@ -103,7 +104,7 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 
 %type <OSM::Filter::ExpressionNodePtr> boolean_value_expression boolean_term boolean_factor boolean_primary predicate comparison_predicate like_text_predicate exists_predicate
 %type <OSM::Filter::ExpressionNodePtr> expression term factor numeric_literal boolean_literal general_literal literal function function_argument function_argument_list attribute
-%type <OSM::Filter::ExpressionNodePtr> complex_expression list_predicate literal_list unary_predicate
+%type <OSM::Filter::ExpressionNodePtr> list_predicate literal_list unary_predicate
 %type <OSM::Filter::CommandPtr> command
 %type <OSM::Filter::CommandListPtr> command_list action_block
 %type <OSM::Filter::RulePtr> rule
@@ -148,7 +149,8 @@ command_list:
 	;
 
 zoom_range:
-	LEFT_BRACKET ZOOM_SPEC MINUS ZOOM_SPEC RIGHT_BRACKET { $$ = std::make_shared<OSM::Filter::ZoomRange>($2, $4); }
+	LEFT_BRACKET ZOOM_SPEC RIGHT_BRACKET { $$ = std::make_shared<OSM::Filter::ZoomRange>($2, 255) ; }
+	| LEFT_BRACKET ZOOM_SPEC MINUS ZOOM_SPEC RIGHT_BRACKET { $$ = std::make_shared<OSM::Filter::ZoomRange>($2, $4); }
 	| LEFT_BRACKET ZOOM_SPEC MINUS RIGHT_BRACKET { $$ = std::make_shared<OSM::Filter::ZoomRange>($2, 255); }
 	| LEFT_BRACKET MINUS ZOOM_SPEC RIGHT_BRACKET { $$ = std::make_shared<OSM::Filter::ZoomRange>(0, $3); }
 
@@ -173,6 +175,7 @@ command:
 	|   DELETE_CMD IDENTIFIER COLON { $$ = std::make_shared<OSM::Filter::SimpleCommand>(OSM::Filter::Command::Delete, $2) ; }
 		/*Delete tag from node*/
 	|   WRITE_CMD zoom_range tag_decl_list COLON { $$ = std::make_shared<OSM::Filter::WriteCommand>(*$2, *$3) ; }
+	|   ATTACH_CMD tag_list COLON { $$ = std::make_shared<OSM::Filter::AttachCommand>(*$2) ; }
 	|   WRITE_CMD tag_decl_list COLON { $$ = std::make_shared<OSM::Filter::WriteCommand>( OSM::Filter::ZoomRange(0, 255), *$2) ; }
 		/*write tag(s) to file for the given zoom range*/
 	|   WRITE_ALL_CMD zoom_range COLON { $$ = std::make_shared<OSM::Filter::WriteAllCommand>(*$2) ; }
@@ -184,14 +187,8 @@ command:
 	|   CONTINUE_CMD COLON { $$ = std::make_shared<OSM::Filter::SimpleCommand>( OSM::Filter::SimpleCommand::Continue) ;}
 		/* continue with the next to level rule */
 	|   rule { $$ = std::make_shared<OSM::Filter::RuleCommand>( $1) ;}
-
-
 	;
 
-complex_expression:
-	boolean_value_expression	{ $$ = $1 ; }
-	| expression { $$ = $1 ; }
-	;
 
 boolean_value_expression:
 	boolean_term								{ $$ = $1 ; }
