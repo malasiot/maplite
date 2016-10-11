@@ -14,6 +14,9 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/convert/osm_filter_functions.hpp
 	${SRC_ROOT}/convert/osm_document.hpp
 	${SRC_ROOT}/convert/osm_rule_parser.hpp
+        ${SRC_ROOT}/convert/shp_processor.cpp
+        ${SRC_ROOT}/convert/shp_processor.hpp
+
 
 	${SRC_ROOT}/io/mapsforge_database.hpp
 	${SRC_ROOT}/io/mapsforge_map_writer.cpp
@@ -55,6 +58,6 @@ LIST(APPEND OSM2MFTILES_SOURCES ${FLEX_OSM_FILTER_SCANNER_OUTPUTS} ${BISON_OSM_F
 )
 
 ADD_EXECUTABLE(osm2mf ${OSM2MFTILES_SOURCES})
-TARGET_LINK_LIBRARIES(osm2mf ${PROTOBUF_LIBRARIES} ${ZLIB_LIBRARIES} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(osm2mf ${PROTOBUF_LIBRARIES} ${ZLIB_LIBRARIES} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} ${SHAPELIB_LIBRARY} ${Boost_LIBRARIES})
 
 INSTALL(TARGETS osm2mf DESTINATION bin  )
