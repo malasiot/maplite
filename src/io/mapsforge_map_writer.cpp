@@ -627,6 +627,7 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
                         block.coords_[0].emplace_back(lat, lon) ;
                     }
 
+                    block.coords_[0].emplace_back(block.coords_[0][0]) ;
 
                     for( uint k=0 ; k< n_interior_rings ; k++ ) {
                         gaiaRing &ir_ring = p->Interiors[k] ;
@@ -816,63 +817,63 @@ string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32
     return strm.str() ;
 
 }
-static void write_single_delta(MapFileOSerializer &buffer, const vector<LatLon> &coords, const LatLon &origin) {
+static void write_single_delta(MapFileOSerializer &buffer, const vector<ILatLon> &coords, const ILatLon &origin) {
 
-    double lat = coords[0].lat_ ;
-    double lon = coords[0].lon_ ;
+    int64_t lat = coords[0].lat_ ;
+    int64_t lon = coords[0].lon_ ;
 
-    double delta_lat = lat - origin.lat_ ;
-    double delta_lon = lon - origin.lon_ ;
+    int64_t delta_lat = lat - origin.lat_ ;
+    int64_t delta_lon = lon - origin.lon_ ;
 
-    buffer.write_var_int64(round(delta_lat*1.0e6)) ;
-    buffer.write_var_int64(round(delta_lon*1.0e6)) ;
+    buffer.write_var_int64(delta_lat) ;
+    buffer.write_var_int64(delta_lon) ;
 
-    double previous_lat = lat, previous_lon = lon ;
+    int64_t previous_lat = lat, previous_lon = lon ;
 
     for( uint i=1 ; i<coords.size() ; i++ ) {
 
         lat = coords[i].lat_ ;
         lon = coords[i].lon_ ;
 
-        double delta_lat = lat - previous_lat ;
-        double delta_lon = lon - previous_lon ;
+        int64_t delta_lat = lat - previous_lat ;
+        int64_t delta_lon = lon - previous_lon ;
 
-        buffer.write_var_int64(round(delta_lat*1.0e6)) ;
-        buffer.write_var_int64(round(delta_lon*1.0e6)) ;
+        buffer.write_var_int64(delta_lat) ;
+        buffer.write_var_int64(delta_lon) ;
 
         previous_lat = lat ;
         previous_lon = lon ;
     }
 }
 
-static void write_double_delta(MapFileOSerializer &buffer, const vector<LatLon> &coords, const LatLon &origin) {
+static void write_double_delta(MapFileOSerializer &buffer, const vector<ILatLon> &coords, const ILatLon &origin) {
 
-    double lat = coords[0].lat_ ;
-    double lon = coords[0].lon_ ;
+    int64_t lat = coords[0].lat_ ;
+    int64_t lon = coords[0].lon_ ;
 
-    double delta_lat = lat - origin.lat_ ;
-    double delta_lon = lon - origin.lon_ ;
+    int64_t delta_lat = lat - origin.lat_ ;
+    int64_t delta_lon = lon - origin.lon_ ;
 
-    buffer.write_var_int64(round(delta_lat*1.0e6)) ;
-    buffer.write_var_int64(round(delta_lon*1.0e6)) ;
+    buffer.write_var_int64(delta_lat) ;
+    buffer.write_var_int64(delta_lon) ;
 
-    double previous_lat = lat, previous_lon = lon ;
+    int64_t previous_lat = lat, previous_lon = lon ;
 
-    double previous_delta_lat = 0, previous_delta_lon = 0 ;
+    int64_t previous_delta_lat = 0, previous_delta_lon = 0 ;
 
     for( uint i=1 ; i<coords.size() ; i++ ) {
 
         lat = coords[i].lat_ ;
         lon = coords[i].lon_ ;
 
-        double delta_lat = lat - previous_lat ;
-        double delta_lon = lon - previous_lon ;
+        int64_t delta_lat = lat - previous_lat ;
+        int64_t delta_lon = lon - previous_lon ;
 
-        double offset_lat = delta_lat - previous_delta_lat ;
-        double offset_lon = delta_lon - previous_delta_lon ;
+        int64_t offset_lat = delta_lat - previous_delta_lat ;
+        int64_t offset_lon = delta_lon - previous_delta_lon ;
 
-        buffer.write_var_int64(round(offset_lat*1.0e6)) ;
-        buffer.write_var_int64(round(offset_lon*1.0e6)) ;
+        buffer.write_var_int64(offset_lat) ;
+        buffer.write_var_int64(offset_lon) ;
 
         previous_lat = lat ;
         previous_lon = lon ;
@@ -883,7 +884,7 @@ static void write_double_delta(MapFileOSerializer &buffer, const vector<LatLon> 
 }
 
 
-static string encode_single_delta(const WayDataContainer &wc, const LatLon &origin) {
+static string encode_single_delta(const WayDataContainer &wc, const ILatLon &origin) {
     ostringstream strm ;
     MapFileOSerializer buffer(strm) ;
 
@@ -899,7 +900,7 @@ static string encode_single_delta(const WayDataContainer &wc, const LatLon &orig
     return strm.str() ;
 }
 
-static string encode_double_delta(const WayDataContainer &wc, const LatLon &origin) {
+static string encode_double_delta(const WayDataContainer &wc, const ILatLon &origin) {
     ostringstream strm ;
     MapFileOSerializer buffer(strm) ;
 
@@ -915,10 +916,10 @@ static string encode_double_delta(const WayDataContainer &wc, const LatLon &orig
     return strm.str() ;
 }
 
-static string encode_data(const WayDataContainer &wc, const LatLon &origin, WayDataContainer::Encoding &enc) {
+static string encode_data(const WayDataContainer &wc, const ILatLon &origin, WayDataContainer::Encoding &enc) {
 
     string single_delta_encoded_data = encode_single_delta(wc, origin) ;
-    return single_delta_encoded_data ; // TODO:
+ //   return single_delta_encoded_data ; // TODO:
     string double_delta_encoded_data = encode_double_delta(wc, origin) ;
 
     if ( single_delta_encoded_data.size() < double_delta_encoded_data.size() ) {
@@ -998,7 +999,7 @@ string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<
             // encode data using either single or double delta encoding, returning the encoding leading to shortest buffer
 
             WayDataContainer::Encoding encoding ;
-            string way_encoded_data = encode_data(way, LatLon(lat0, lon0), encoding) ;
+            string way_encoded_data = encode_data(way, ILatLon(lat0, lon0), encoding) ;
 
             if ( way.label_pos_ ) cflag |= 0x10 ;
             if ( way.blocks_.size() > 1 ) cflag |= 0x08 ;

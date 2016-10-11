@@ -40,9 +40,16 @@ struct VectorTile {
     std::vector<Way> ways_ ;
 };
 
+struct ILatLon {
+public:
+    ILatLon() = default;
+    ILatLon(double lat, double lon): lat_(round(lat*1.0e6)), lon_(round(lon*1.0e6)) {}
+    int64_t lat_, lon_ ;
+};
+
 struct WayDataBlock {
 
-    std::vector<std::vector<LatLon>> coords_ ; // line string or polygon
+    std::vector<std::vector<ILatLon>> coords_ ; // line string or polygon
     std::vector<std::string> encoded_coords_ ;
 };
 
@@ -52,7 +59,7 @@ struct WayDataContainer {
 
     std::vector<WayDataBlock> blocks_ ;
     std::string id_ ;
-    boost::optional<LatLon> label_pos_ ;
+    boost::optional<ILatLon> label_pos_ ;
     enum Encoding { SingleDelta, DoubleDelta } encoding_ ;
     std::string encoded_data_ ;
 };
