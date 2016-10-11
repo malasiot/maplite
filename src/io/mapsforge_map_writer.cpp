@@ -627,7 +627,7 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
                         block.coords_[0].emplace_back(lat, lon) ;
                     }
 
-                    uint k=1 ;
+
                     for( uint k=0 ; k< n_interior_rings ; k++ ) {
                         gaiaRing &ir_ring = p->Interiors[k] ;
                         double *coords = ir_ring.Coords ;
@@ -702,7 +702,7 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_
 
     fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
     fetch_lines("geom_relations", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_,tol,  ways, ways_per_level) ;
-    fetch_polygons(db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
+    fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
 
     double min_lat, min_lon, max_lat, max_lon ;
     tms::tileLatLonBounds(bt.x(), bt.y(), bt.z(), min_lat, min_lon, max_lat, max_lon) ;
@@ -918,6 +918,7 @@ static string encode_double_delta(const WayDataContainer &wc, const LatLon &orig
 static string encode_data(const WayDataContainer &wc, const LatLon &origin, WayDataContainer::Encoding &enc) {
 
     string single_delta_encoded_data = encode_single_delta(wc, origin) ;
+    return single_delta_encoded_data ; // TODO:
     string double_delta_encoded_data = encode_double_delta(wc, origin) ;
 
     if ( single_delta_encoded_data.size() < double_delta_encoded_data.size() ) {

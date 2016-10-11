@@ -164,6 +164,7 @@ int main(int argc, char *argv[])
     WriteOptions options ;
     options.debug_ = true ;
     options.simplification_factor_ = 0 ;
+    options.polygon_clipping_ = false ;
     mf.write(db, options) ;
 
     return 1 ;
