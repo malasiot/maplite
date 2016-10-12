@@ -94,6 +94,10 @@ class Connection: boost::noncopyable {
         return sqlite3_last_insert_rowid(handle_);
     }
 
+    int changes() {
+        return sqlite3_changes(handle_);
+    }
+
     sqlite3 *handle() { return handle_ ; }
 protected:
 

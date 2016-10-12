@@ -1,7 +1,8 @@
-#include "mapsforge_database.hpp"
+#include "mapsforge_map_writer.hpp"
 #include "serializer.hpp"
 #include "database.hpp"
 #include "tms.hpp"
+#include "tile_key.hpp"
 
 #include <string>
 #include <stdexcept>
@@ -11,33 +12,7 @@
 #include <spatialite.h>
 using namespace std ;
 
-static void get_geometry_extent(SQLite::Connection &con, const string &desc, float &min_lat, float &min_lon, float &max_lat, float &max_lon) {
-    string sql = "SELECT Extent(geom) from geom_" + desc ;
-    SQLite::Query q(con, sql) ;
 
-    SQLite::QueryResult res = q.exec() ;
-
-    if ( res ) {
-        int blob_size ;
-        const char *data = res.getBlob(0, blob_size) ;
-
-        gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
-
-        gaiaPolygonPtr poly = geom->FirstPolygon ;
-        gaiaRingPtr ring = poly->Exterior ;
-
-        double *c = ring->Coords ;
-
-        for( uint i=0 ; i<ring->Points ; i++ ) {
-            double lon = *c++, lat = *c++ ;
-
-            min_lat = std::min<float>(min_lat, lat) ;
-            min_lon = std::min<float>(min_lon, lon) ;
-            max_lat = std::max<float>(max_lat, lat) ;
-            max_lon = std::max<float>(max_lon, lon) ;
-        }
-    }
-}
 
 static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &tags) {
     vector<uint64_t> freq ;
@@ -142,59 +117,47 @@ static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways, map<st
     return true ;
 }
 
-void MapFile::setBoundingBox(float min_lat, float min_lon, float max_lat, float max_lon) {
-    info_.min_lat_ = min_lat ;
-    info_.min_lon_ = min_lon ;
-    info_.max_lat_ = max_lat ;
-    info_.max_lon_ = max_lon ;
+void MapFileWriter::setBoundingBox(const BBox &box) {
+    info_.min_lat_ = box.miny_ ;
+    info_.min_lon_ = box.minx_ ;
+    info_.max_lat_ = box.maxy_ ;
+    info_.max_lon_ = box.maxx_ ;
 }
 
-void MapFile::setBoundingBoxFromGeometries(SQLite::Database &db) {
 
-    info_.min_lon_ = info_.min_lat_ = std::numeric_limits<float>::max() ;
-    info_.max_lat_ = info_.max_lon_ = -std::numeric_limits<float>::max() ;
 
-    SQLite::Session session(&db) ;
-    SQLite::Connection &con = session.handle() ;
-
-    get_geometry_extent(con, "pois", info_.min_lat_, info_.min_lon_, info_.max_lat_, info_.max_lon_) ;
-    get_geometry_extent(con, "lines", info_.min_lat_, info_.min_lon_, info_.max_lat_, info_.max_lon_) ;
-    get_geometry_extent(con, "relations", info_.min_lat_, info_.min_lon_, info_.max_lat_, info_.max_lon_) ;
-    get_geometry_extent(con, "polygons", info_.min_lat_, info_.min_lon_, info_.max_lat_, info_.max_lon_) ;
-}
-
-void MapFile::setStartPosition(float lat, float lon) {
+void MapFileWriter::setStartPosition(float lat, float lon) {
     info_.start_lat_ = lat ;
     info_.start_lon_ = lon ;
     info_.flags_ |= 0x40 ;
 }
 
-void MapFile::setStartZoom(uint8_t zoom) {
+void MapFileWriter::setStartZoom(uint8_t zoom) {
     info_.start_zoom_level_ = zoom ;
     info_.flags_ |= 0x20 ;
 }
 
-void MapFile::setPreferredLanguages(const std::string &langs) {
+void MapFileWriter::setPreferredLanguages(const std::string &langs) {
     info_.lang_preference_ = langs ;
     info_.flags_ |= 0x10 ;
 }
 
-void MapFile::setComment(const std::string &comment) {
+void MapFileWriter::setComment(const std::string &comment) {
     info_.comment_ = comment ;
     info_.flags_ |= 0x08 ;
 }
 
-void MapFile::setCreator(const std::string &creator) {
+void MapFileWriter::setCreator(const std::string &creator) {
     info_.created_by_ = creator ;
     info_.flags_ |= 0x04 ;
 }
 
-void MapFile::setDebug(bool debug) {
+void MapFileWriter::setDebug(bool debug) {
     has_debug_info_ = debug ;
     if ( debug ) info_.flags_ |= 0x80 ;
 }
 
-void MapFile::create(const std::string &file_path) {
+void MapFileWriter::create(const std::string &file_path) {
 
     strm_.open(file_path.c_str(),  ios::out | ios::binary) ;
 
@@ -209,7 +172,7 @@ void MapFile::create(const std::string &file_path) {
     info_.projection_ = "Mercator" ;
 }
 
-void MapFile::write(SQLite::Database &db, WriteOptions &options) {
+void MapFileWriter::write(SQLite::Database &db, WriteOptions &options) {
 
     setDebug(options.debug_);
     writeHeader(db, options) ;
@@ -218,7 +181,7 @@ void MapFile::write(SQLite::Database &db, WriteOptions &options) {
 
 
 
-void MapFile::writeHeader(SQLite::Database &db, WriteOptions &options)
+void MapFileWriter::writeHeader(SQLite::Database &db, WriteOptions &options)
 {
     MapFileOSerializer so(strm_) ;
 
@@ -247,7 +210,7 @@ void MapFile::writeHeader(SQLite::Database &db, WriteOptions &options)
     strm_.seekg(cp) ;
 }
 
-void MapFile::writeMapInfo() {
+void MapFileWriter::writeMapInfo() {
     MapFileOSerializer s(strm_) ;
 
     s.write_uint32(info_.version_) ;
@@ -284,7 +247,7 @@ void MapFile::writeMapInfo() {
 
 }
 
-void MapFile::writeTagList(const vector<string> &tags)
+void MapFileWriter::writeTagList(const vector<string> &tags)
 {
     MapFileOSerializer s(strm_) ;
 
@@ -295,7 +258,7 @@ void MapFile::writeTagList(const vector<string> &tags)
 }
 
 
-void MapFile::writeSubFileInfo(const WriteOptions &options)
+void MapFileWriter::writeSubFileInfo(const WriteOptions &options)
 {
 
     MapFileOSerializer s(strm_) ;
@@ -340,7 +303,7 @@ void MapFile::writeSubFileInfo(const WriteOptions &options)
     }
 }
 
-void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
+void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
 {
     MapFileOSerializer s(strm_) ;
 
@@ -363,6 +326,8 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
         uint32_t rows = info.max_ty_ - info.min_ty_ + 1 ;
         uint32_t cols = info.max_tx_ - info.min_tx_ + 1 ;
         uint64_t tile_count = rows * cols ;
+
+        cout << "writing sub-file at level " << count << ": " << tile_count << " tiles" << endl ;
 
         info.index_.resize(tile_count) ;
         uint64_t sz = extra + 5 * tile_count ;
@@ -420,13 +385,14 @@ void MapFile::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
 
 
 static string make_bbox_query(const std::string &tableName, const BBox &bbox, int min_zoom,
-                              int max_zoom, bool clip, double buffer, double tol)
+                              int max_zoom, bool clip, double buffer, double tol, bool centroid)
 {
     stringstream sql ;
 
     sql.precision(16) ;
 
     sql << "SELECT g.osm_id, kv.key, kv.val, kv.zoom_min, kv.zoom_max, " ;
+
 
     if ( tol != 0.0 )
         sql << "SimplifyPreserveTopology(" ;
@@ -441,7 +407,9 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
     if ( tol != 0 )
         sql << ", " << tol << ")" ;
 
-    sql << " AS _geom_ FROM " << tableName << " AS g JOIN kv ON kv.osm_id = g.osm_id";
+    sql << " AS _geom_ " ;
+    if ( centroid ) sql << ", ST_Centroid(geom) " ;
+    sql << " FROM " << tableName << " AS g JOIN kv ON kv.osm_id = g.osm_id";
 
     sql << " WHERE " ;
     sql << "(( kv.zoom_min BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( kv.zoom_max BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( kv.zoom_min <= " << min_zoom << " AND kv.zoom_max >= " << max_zoom << "))" ;
@@ -452,12 +420,12 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
     return sql.str() ;
 }
 
-static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POI> &pois, vector<vector<uint32_t>> &pois_per_level) {
+static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
     try {
         SQLite::Session session(&db) ;
         SQLite::Connection &con = session.handle() ;
 
-        string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0) ;
+        string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0, false) ;
         SQLite::Query q(con, sql) ;
 
         SQLite::QueryResult res = q.exec() ;
@@ -482,7 +450,7 @@ static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom,
                     double lon = p->X ;
                     double lat = p->Y ;
 
-                    pois.emplace_back(lat, lon, osm_id) ;
+                    pois.emplace_back(ILatLon(lat, lon), osm_id) ;
 
                     // we add the poi at the lowest possible level
                     int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
@@ -517,7 +485,7 @@ static bool fetch_lines(const std::string &tableName, SQLite::Database &db, cons
         SQLite::Session session(&db) ;
         SQLite::Connection &con = session.handle() ;
 
-        string sql = make_bbox_query(tableName, bbox, min_zoom, max_zoom, clip, buffer, tol) ;
+        string sql = make_bbox_query(tableName, bbox, min_zoom, max_zoom, clip, buffer, tol, false) ;
         SQLite::Query q(con, sql) ;
 
         SQLite::QueryResult res = q.exec() ;
@@ -563,6 +531,7 @@ static bool fetch_lines(const std::string &tableName, SQLite::Database &db, cons
                 ways_per_level[z].push_back(ways.size()-1) ;
 
                 gaiaFreeGeomColl(geom) ;
+
             }
 
             ways.back().tags_.add(key, val) ;
@@ -582,12 +551,12 @@ static bool fetch_lines(const std::string &tableName, SQLite::Database &db, cons
 }
 
 static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, bool clip,
-                           double buffer, double tol, vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
+                           double buffer, double tol, bool labels, vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
     try {
         SQLite::Session session(&db) ;
         SQLite::Connection &con = session.handle() ;
 
-        string sql = make_bbox_query("geom_polygons", bbox, min_zoom, max_zoom, clip, buffer, tol) ;
+        string sql = make_bbox_query("geom_polygons", bbox, min_zoom, max_zoom, clip, buffer, tol, labels) ;
         SQLite::Query q(con, sql) ;
 
         SQLite::QueryResult res = q.exec() ;
@@ -651,10 +620,19 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
                 ways_per_level[z].push_back(ways.size()-1) ;
 
                 gaiaFreeGeomColl(geom) ;
+
+
+                if ( labels ) {
+                    const char *data = res.getBlob(6, blob_size) ;
+                    geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+                    double lon = geom->FirstPoint->X ;
+                    double lat = geom->FirstPoint->Y ;
+                    wc.label_pos_ = ILatLon(lat, lon) ;
+                    gaiaFreeGeomColl(geom) ;
+                }
             }
 
             ways.back().tags_.add(key, val) ;
-
 
             prev_id = osm_id ;
 
@@ -683,14 +661,14 @@ static double deltaLat(double delta, double lat, uint8_t zoom) {
     return fabs(dlat - lat) ;
 }
 
-uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options)
+uint64_t MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options)
 {
     BBox bbox ;
     TileKey bt(tx, ty, tz, true) ;
     tms::tileBounds(bt.x(), bt.y(), bt.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_) ;
     int nz = (int)max_zoom - (int)min_zoom + 1 ;
 
-    vector<POI> pois ;
+    vector<POIData> pois ;
     vector<vector<uint32_t>> pois_per_level(nz) ;
 
     fetch_pois(db, bbox, min_zoom, max_zoom, pois, pois_per_level) ;
@@ -703,7 +681,7 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_
 
     fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
     fetch_lines("geom_relations", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_,tol,  ways, ways_per_level) ;
-    fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
+    fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, options.label_positions_, tol, ways, ways_per_level) ;
 
     double min_lat, min_lon, max_lat, max_lon ;
     tms::tileLatLonBounds(bt.x(), bt.y(), bt.z(), min_lat, min_lon, max_lat, max_lon) ;
@@ -727,11 +705,10 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_
         s.write_var_uint64(ways_per_level[i].size()) ;
     }
 
-
     // we write POI and way data into a memory buffer since we need to find the offsets
 
-    string poi_data = writePOIData(pois, pois_per_level, max_lat, min_lon) ;
-    string way_data = writeWayData(ways, ways_per_level, max_lat, min_lon) ;
+    string poi_data = writePOIData(pois, pois_per_level, ILatLon(max_lat, min_lon)) ;
+    string way_data = writeWayData(ways, ways_per_level, ILatLon(max_lat, min_lon)) ;
 
     s.write_var_uint64(poi_data.size()) ;
     s.write_bytes((uint8_t *)&poi_data[0], poi_data.size()) ;
@@ -741,7 +718,7 @@ uint64_t MapFile::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_
 
 }
 
-string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32_t> > &pois_per_level, double lat0, double lon0)
+string MapFileWriter::writePOIData(const vector<POIData> &pois, const vector<vector<uint32_t> > &pois_per_level, const ILatLon &orig)
 {
     ostringstream strm ;
     MapFileOSerializer buffer(strm) ;
@@ -752,7 +729,7 @@ string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32
 
         for( uint j=0 ; j<pois_per_level[i].size() ; j++ ) {
             uint32_t idx = pois_per_level[i][j] ;
-            const POI &poi = pois[idx] ;
+            const POIData &poi = pois[idx] ;
 
             if ( has_debug_info_ ) {
                 // write header
@@ -763,8 +740,8 @@ string MapFile::writePOIData(const vector<POI> &pois, const vector<vector<uint32
                 buffer.write_bytes((uint8_t *)sigstrm.str().c_str(), 32) ;
             }
 
-            buffer.write_var_int64(round((poi.lat_ - lat0)*1.0e6)) ;
-            buffer.write_var_int64(round((poi.lon_ - lon0)*1.0e6)) ;
+            buffer.write_var_int64(poi.coords_.lat_ - orig.lat_) ;
+            buffer.write_var_int64(poi.coords_.lon_ - orig.lon_) ;
 
             vector<uint32_t> tags ;
             uint8_t cflag = 0 ;
@@ -932,12 +909,10 @@ static string encode_data(const WayDataContainer &wc, const ILatLon &origin, Way
     }
 }
 
-string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<vector<uint32_t> > &ways_per_level, double lat0, double lon0)
+string MapFileWriter::writeWayData(const vector<WayDataContainer> &ways, const vector<vector<uint32_t> > &ways_per_level, const ILatLon &orig)
 {
     ostringstream strm ;
     MapFileOSerializer buffer(strm) ;
-
-    uint nz = ways_per_level.size() ;
 
     for( uint i=0 ; i<ways_per_level.size() ; i++ ) {
 
@@ -999,7 +974,7 @@ string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<
             // encode data using either single or double delta encoding, returning the encoding leading to shortest buffer
 
             WayDataContainer::Encoding encoding ;
-            string way_encoded_data = encode_data(way, ILatLon(lat0, lon0), encoding) ;
+            string way_encoded_data = encode_data(way, orig, encoding) ;
 
             if ( way.label_pos_ ) cflag |= 0x10 ;
             if ( way.blocks_.size() > 1 ) cflag |= 0x08 ;
@@ -1017,8 +992,8 @@ string MapFile::writeWayData(const vector<WayDataContainer> &ways, const vector<
                 wbuffer.write_utf8(way.tags_.get("ref")) ;
 
             if ( cflag & 0x10 ) {
-                double label_position_lat = way.label_pos_.get().lat_ - lat0;
-                double label_position_lon = way.label_pos_.get().lon_ - lon0 ;
+                double label_position_lat = way.label_pos_.get().lat_ - orig.lat_;
+                double label_position_lon = way.label_pos_.get().lon_ - orig.lon_ ;
 
                 wbuffer.write_var_int64(round(label_position_lat*1.0e6)) ;
                 wbuffer.write_var_int64(round(label_position_lon*1.0e6)) ;

@@ -4,6 +4,7 @@
 #include "database.hpp"
 #include "dictionary.hpp"
 #include "osm_document.hpp"
+#include "geometry.hpp"
 
 #include "filter_config.hpp"
 
@@ -29,12 +30,18 @@ public:
     bool createGeometriesTable(const std::string &desc);
     bool createTagsTable() ;
 
-    std::string insertFeatureSQL(const std::string &desc, const std::string &geomCmd = "?") ;
+    bool processOsmFile(const string &path,  const FilterConfig &cfg) ;
 
-    bool processOsmFiles(const vector<string> &files, const FilterConfig &cfg) ;
-    bool processShpFile(const string &file_name, const string &table_name, int srid, const string &char_enc) ;
+    // requires as input a shape file containing the land polygon and clip box (bounding box of the map)
+    bool processLandPolygon(const string &shape_file, const BBox &clip_box) ;
+
+    // covers all map with land
+    bool addDefaultLandPolygon(const BBox &clip_box) ;
+
+    BBox getBoundingBoxFromGeometries();
 
 private:
+    string insertFeatureSQL(const std::string &desc, const std::string &geomCmd = "?") ;
 
     bool matchRule(const OSM::Filter::RulePtr &rule, OSM::Filter::Context &ctx, TagWriteList &tw, bool &cont) ;
 
@@ -48,7 +55,6 @@ private:
 private:
 
     std::shared_ptr<SQLite::Database> db_ ;
-
 };
 
 #endif

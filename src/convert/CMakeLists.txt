@@ -14,13 +14,10 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/convert/osm_filter_functions.hpp
 	${SRC_ROOT}/convert/osm_document.hpp
 	${SRC_ROOT}/convert/osm_rule_parser.hpp
-        ${SRC_ROOT}/convert/shp_processor.cpp
-        ${SRC_ROOT}/convert/shp_processor.hpp
 
-
-	${SRC_ROOT}/io/mapsforge_database.hpp
+	${SRC_ROOT}/io/mapsforge_map_writer.hpp
 	${SRC_ROOT}/io/mapsforge_map_writer.cpp
-	${SRC_ROOT}/io/mapsforge_map_reader.cpp
+
 	${SRC_ROOT}/io/serializer.cpp
 	${SRC_ROOT}/io/serializer.hpp
 

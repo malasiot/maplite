@@ -12,6 +12,7 @@
 #include "cache.hpp"
 #include "tile_key.hpp"
 #include "geometry.hpp"
+#include "mapsforge_map_info.hpp"
 
 struct POI {
     double lat_, lon_ ;
@@ -31,33 +32,16 @@ struct VectorTile {
     std::vector<Way> ways_ ;
 };
 
-struct MapFileInfo {
-
-    uint32_t version_ ;
-    uint64_t file_size_ ;
-    uint64_t date_ ;
-    float min_lat_, min_lon_, max_lat_, max_lon_ ;
-    uint8_t start_zoom_level_ ;
-    float start_lon_, start_lat_ ;
-    int16_t tile_sz_ ;
-    std::string projection_ ;
-    std::string lang_preference_, comment_, created_by_ ;
-    uint8_t flags_ ;
-
-    uint8_t min_zoom_level_ ;
-    uint8_t max_zoom_level_ ;
-};
-
 struct TileData;
-class MapFile ;
-typedef std::tuple<uint32_t, uint32_t, uint8_t, MapFile *> cache_key_type; // the tile is encoded by its index and a dataset id
+class MapFileReader ;
+typedef std::tuple<uint32_t, uint32_t, uint8_t, MapFileReader *> cache_key_type; // the tile is encoded by its index and a dataset id
 typedef Cache<cache_key_type, std::shared_ptr<TileData>> TileIndex ;
 
-class MapFile
+class MapFileReader
 {
 public:
 
-    MapFile() {}
+    MapFileReader() {}
 
     /**
      * Opens map file, reads map info and create tile index
@@ -68,14 +52,17 @@ public:
 
     void open(const std::string &file_path) ;
 
-    ~MapFile() {}
+    ~MapFileReader() {}
 
     const MapFileInfo &getMapFileInfo() const { return info_ ; }
 
     // read tile data corresponding to given tile key +- offset around it
+
     VectorTile readTile(const TileKey &, int offset = 1);
 
-    void readTiles() ;
+    // initializes a global in-memory a tile cache to be shared among instances of readers
+
+    static void initTileCache(uint64_t bytes) ;
 
 private:
 
@@ -90,13 +77,14 @@ private:
 
 private:
 
+    void readTiles() ;
     void readHeader() ;
     void readMapInfo() ;
     void readTagList(std::vector<std::string> &tags) ;
     void readSubFileInfo() ;
     void readTileIndex() ;
 
-    uint64_t readTileData(const SubFileInfo &info, int64_t offset, std::shared_ptr<TileData> &) ;
+    uint64_t readTileData(const SubFileInfo &info, int64_t offset, std::shared_ptr<TileData> &data) ;
     uint64_t readPOI(POI &poi, float lat, float lon);
     uint64_t readWays(std::vector<Way> &ways, float lat, float lon);
     void readWayNodesDoubleDelta(std::vector<LatLon> &coord_list, double tx0, double ty0) ;
@@ -118,7 +106,7 @@ private:
 
 private:
 
-    std::shared_ptr<TileIndex> index_ ;
+    static std::shared_ptr<TileIndex> g_tile_index_ ;
     MapFileInfo info_ ;
     std::ifstream strm_ ;
     std::string map_file_path_ ;

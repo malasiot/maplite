@@ -12,17 +12,20 @@ using namespace std ;
 namespace fs = boost::filesystem ;
 using namespace http ;
 
-std::shared_ptr<TileIndex> MapsforgeTileRequestHandler::tile_index_ ;
+bool MapsforgeTileRequestHandler::g_init_tile_index_ = false ;
 
 MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const string &map_file, const string &theme_file, bool debug):
     TileRequestHandler(id, map_file)
 {
-    if ( !tile_index_) tile_index_.reset(new TileIndex(1000000)) ;
+    if ( !g_init_tile_index_) {
+        MapFileReader::initTileCache(1000000) ;
+        g_init_tile_index_ = true ;
+    }
 
-    map_file_.reset(new MapFile()) ;
+    map_file_.reset(new MapFileReader()) ;
 
     try {
-        map_file_->open(map_file, tile_index_) ;
+        map_file_->open(map_file) ;
 
     }
     catch ( std::runtime_error &e ) {

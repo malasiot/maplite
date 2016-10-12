@@ -5,7 +5,7 @@
 
 #include <boost/filesystem.hpp>
 
-#include "mapsforge_database.hpp"
+#include "mapsforge_map_reader.hpp"
 #include "theme.hpp"
 #include "renderer.hpp"
 #include "tile_key.hpp"
@@ -21,7 +21,7 @@ void printUsageAndExit()
 
 int main(int argc, char *argv[])
 {
-    string mapFile, mapTheme, mapLayer, outFile ;
+    string map_file, map_theme, mapLayer, out_file ;
 
     int i = 1;
     for( ; i<argc ; i++ )
@@ -30,11 +30,11 @@ int main(int argc, char *argv[])
 
         if ( arg == "--map" ) {
             if ( ++i < argc )
-                mapFile = argv[i] ;
+                map_file = argv[i] ;
         }
         else if ( arg == "--theme" ) {
             if ( ++i < argc )
-                mapTheme = argv[i] ;
+                map_theme = argv[i] ;
         }
         else if ( arg == "--layer" ) {
             if ( ++i < argc )
@@ -42,23 +42,23 @@ int main(int argc, char *argv[])
         }
         else if ( arg == "--out" ) {
             if ( ++i < argc )
-                outFile = argv[i] ;
+                out_file = argv[i] ;
         }
         else break ;
     }
 
-    if ( i != argc - 3 || mapFile.empty() || mapTheme.empty() || outFile.empty() )
+    if ( i != argc - 3 || map_file.empty() || map_theme.empty() || out_file.empty() )
         printUsageAndExit() ;
 
     uint tx = stoi(argv[i++]) ;
     uint ty = stoi(argv[i++]) ;
     uint tz = stoi(argv[i++]) ;
 
-    std::shared_ptr<TileIndex> ti(new TileIndex(1000000)) ;
-    MapFile reader ;
+    MapFileReader::initTileCache(100000) ;
+    MapFileReader reader ;
 
     try {
-        reader.open(mapFile, ti) ;
+        reader.open(map_file) ;
     }
     catch ( std::runtime_error &e ) {
         cerr << e.what() << endl ;
@@ -71,19 +71,18 @@ int main(int argc, char *argv[])
 
 
     RenderTheme theme ;
-    if ( !theme.read(mapTheme) ) {
-        cerr << "Can't read theme file: " << mapTheme << endl ;
+    if ( !theme.read(map_theme) ) {
+        cerr << "Can't read theme file: " << map_theme << endl ;
         exit(1) ;
     }
-    //theme.read("/home/malasiot/source/mftools/build/data/maps/greece/themes/elevate4/Elevate.xml") ;
 
-    Renderer r(theme, "el", false) ;
+    Renderer r(theme, "en", false) ;
 
     ImageBuffer buf(256, 256) ;
 
     r.render(key, buf, tile, mapLayer.empty() ? theme.defaultLayer() : mapLayer) ;
 
-    buf.saveToPNG(outFile) ;
+    buf.saveToPNG(out_file) ;
 
     return 0 ;
 }

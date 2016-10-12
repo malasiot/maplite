@@ -1,4 +1,4 @@
-#include "mapsforge_database.hpp"
+#include "mapsforge_map_reader.hpp"
 #include "serializer.hpp"
 #include "tms.hpp"
 
@@ -11,18 +11,15 @@
 using namespace std ;
 
 
-void MapFile::open(const std::string &file_path, const std::shared_ptr<TileIndex> &index)
-{
 
+void MapFileReader::open(const std::string &file_path)
+{
     strm_.open(file_path.c_str(), ios::in | ios::binary) ;
 
     if ( !strm_ ) throw std::runtime_error("error openning file") ;
 
-    index_ = index ;
-
     readHeader() ;
     readTileIndex() ;
-
 }
 
 struct TileData {
@@ -49,7 +46,7 @@ struct TileData {
     }
 };
 
-VectorTile MapFile::readTile(const TileKey &key, int offset)
+VectorTile MapFileReader::readTile(const TileKey &key, int offset)
 {
 
     BBox query_box ;
@@ -155,7 +152,7 @@ VectorTile MapFile::readTile(const TileKey &key, int offset)
 
                 cache_key_type key(btx, bty, si.base_zoom_, this) ;
 
-                if ( !index_->fetch(key, data) ) { // if not in cache load from disk
+                if ( !g_tile_index_ || !g_tile_index_->fetch(key, data) ) { // if not in cache load from disk
 
                     std::lock_guard<std::mutex> guard(mtx_) ; // TODO: this effectively serializes request, make better syncronization
 
@@ -164,7 +161,7 @@ VectorTile MapFile::readTile(const TileKey &key, int offset)
                     data.reset(new TileData(btx, bty, si.base_zoom_, is_sea_tile)) ;
                     uint64_t payload = readTileData(si, tile_offset, data) ;
 
-                    index_->insert(key, data, payload) ;
+                    if ( g_tile_index_ ) g_tile_index_->insert(key, data, payload) ;
                 }
 
                 // copy all ways and pois at zoom level equal or lower the requested zoom level
@@ -189,7 +186,13 @@ VectorTile MapFile::readTile(const TileKey &key, int offset)
     return tile ;
 }
 
-void MapFile::readHeader()
+std::shared_ptr<TileIndex> MapFileReader::g_tile_index_ ;
+
+void MapFileReader::initTileCache(uint64_t bytes) {
+    g_tile_index_.reset(new TileIndex(bytes)) ;
+}
+
+void MapFileReader::readHeader()
 {
     MapFileISerializer s(strm_) ;
 
@@ -213,7 +216,7 @@ void MapFile::readHeader()
     readSubFileInfo() ;
 }
 
-void MapFile::readMapInfo()
+void MapFileReader::readMapInfo()
 {
     MapFileISerializer s(strm_) ;
 
@@ -260,7 +263,7 @@ void MapFile::readMapInfo()
         info_.created_by_ = s.read_utf8() ;
 }
 
-void MapFile::readTagList(std::vector<string> &tags)
+void MapFileReader::readTagList(std::vector<string> &tags)
 {
     MapFileISerializer s(strm_) ;
 
@@ -271,7 +274,7 @@ void MapFile::readTagList(std::vector<string> &tags)
     }
 }
 
-void MapFile::readSubFileInfo()
+void MapFileReader::readSubFileInfo()
 {
     MapFileISerializer s(strm_) ;
 
@@ -305,7 +308,7 @@ void MapFile::readSubFileInfo()
     }
 }
 
-void MapFile::readTileIndex()
+void MapFileReader::readTileIndex()
 {
     MapFileISerializer s(strm_) ;
 
@@ -332,7 +335,7 @@ void MapFile::readTileIndex()
     }
 }
 
-void MapFile::readTiles()
+void MapFileReader::readTiles()
 {
     for( uint i=0 ; i<sub_files_.size() ; i++ ) {
         SubFileInfo &info = sub_files_[i] ;
@@ -364,7 +367,7 @@ void MapFile::readTiles()
     }
 }
 
-uint64_t MapFile::readTileData(const SubFileInfo &info, int64_t offset, std::shared_ptr<TileData> &data) {
+uint64_t MapFileReader::readTileData(const SubFileInfo &info, int64_t offset, std::shared_ptr<TileData> &data) {
 
     MapFileISerializer s(strm_) ;
 
@@ -463,7 +466,7 @@ static void decode_key_value(const string &kv, string &key, string &val) {
     }
 }
 
-uint64_t MapFile::readPOI(POI &poi, float lat_orig, float lon_orig) {
+uint64_t MapFileReader::readPOI(POI &poi, float lat_orig, float lon_orig) {
 
     MapFileISerializer s(strm_) ;
 
@@ -515,7 +518,7 @@ uint64_t MapFile::readPOI(POI &poi, float lat_orig, float lon_orig) {
     return bytes ;
 }
 
-uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
+uint64_t MapFileReader::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
 
     MapFileISerializer s(strm_) ;
 
@@ -612,7 +615,7 @@ uint64_t MapFile::readWays(vector<Way> &ways, float lat_orig, float lon_orig) {
 
 }
 
-void MapFile::readWayNodesDoubleDelta(std::vector<LatLon> &coord_list, double tx0, double ty0)
+void MapFileReader::readWayNodesDoubleDelta(std::vector<LatLon> &coord_list, double tx0, double ty0)
 {
     MapFileISerializer s(strm_) ;
 
@@ -638,7 +641,7 @@ void MapFile::readWayNodesDoubleDelta(std::vector<LatLon> &coord_list, double tx
     }
 }
 
-void MapFile::readWayNodesSingleDelta(std::vector<LatLon> &coord_list, double tx0, double ty0)
+void MapFileReader::readWayNodesSingleDelta(std::vector<LatLon> &coord_list, double tx0, double ty0)
 {
     MapFileISerializer s(strm_) ;
 
@@ -672,7 +675,7 @@ static string escape_xml_string(const std::string &src) {
     return buffer ;
 }
 
-void MapFile::exportTileDataOSM(const VectorTile &data, const string &filename)
+void MapFileReader::exportTileDataOSM(const VectorTile &data, const string &filename)
 {
     ofstream strm(filename.c_str()) ;
 

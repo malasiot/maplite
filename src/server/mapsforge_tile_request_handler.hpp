@@ -3,7 +3,7 @@
 
 #include "tile_request_handler.hpp"
 #include "database.hpp"
-#include "mapsforge_database.hpp"
+#include "mapsforge_map_reader.hpp"
 #include "theme.hpp"
 #include "renderer.hpp"
 
@@ -19,9 +19,8 @@ public:
 
 private:
 
-    static std::shared_ptr<TileIndex> tile_index_ ;
-    std::shared_ptr<MapFile> map_file_ ;
-
+    static bool g_init_tile_index_ ;
+    std::shared_ptr<MapFileReader> map_file_ ;
     RenderTheme theme_ ;
     std::shared_ptr<Renderer> renderer_ ;
 };

@@ -19,10 +19,15 @@ struct Coord {
 
 struct BBox {
 
+    BBox() = default ;
+    BBox( double min_x, double min_y, double max_x, double max_y ):
+        minx_(min_x), miny_(min_y), maxx_(max_x), maxy_(max_y) {}
+
     double width() const { return maxx_ - minx_ ; }
     double height() const { return maxy_ - miny_ ; }
 
     bool contains(double x, double y) const { return ( x >= minx_ && y >= miny_ && x < maxx_ && y < maxy_ ) ; }
+
     bool intersects(const BBox &other) const {
         return (minx_ < other.maxx_ && maxx_ > other.minx_ && miny_ < other.maxy_ && maxy_ > other.miny_) ;
     }
