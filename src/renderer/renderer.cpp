@@ -37,7 +37,7 @@ extern void sample_linear_geometry(
 void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<vector<Coord>> &res) ;
 
 
-Renderer::Renderer(const RenderTheme &theme, const std::string &lang, bool debug):
+Renderer::Renderer(RenderTheme &theme, const std::string &lang, bool debug):
     theme_(theme), debug_(debug), text_engine_(cache_, lang)
 {
 
@@ -117,7 +117,11 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
                 else if ( ri->type() == RenderInstruction::Symbol ) {
 
                     double mx, my ;
-                    get_poi_from_area(way, coords[0], mx, my) ;
+                    if ( way.label_pos_ ) {
+                       LatLon lp = way.label_pos_.get() ;
+                       tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
+                    }
+                    else get_poi_from_area(way, coords[0], mx, my) ;
 
                     symbol_id = count ;
 
@@ -127,14 +131,24 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
                 else if ( ri->type() == RenderInstruction::Caption )
                 {
                     double mx, my ;
-                    get_poi_from_area(way, coords[0], mx, my) ;
+                    if ( way.label_pos_ ) {
+                       LatLon lp = way.label_pos_.get() ;
+                       tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
+                    }
+                    else get_poi_from_area(way, coords[0], mx, my) ;
+
                     if ( query_extents.contains(mx, my) )
                         instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
                 }
                 else if ( ri->type() == RenderInstruction::Circle )
                 {
                     double mx, my ;
-                    get_poi_from_area(way, coords[0], mx, my) ;
+                    if ( way.label_pos_ ) {
+                       LatLon lp = way.label_pos_.get() ;
+                       tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
+                    }
+                    else get_poi_from_area(way, coords[0], mx, my) ;
+
                     if ( query_extents.contains(mx, my) )
                         instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
                 }

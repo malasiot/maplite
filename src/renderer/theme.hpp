@@ -40,7 +40,7 @@ public:
     // match feature against theme to determine render instructions
 
     bool match(const std::string &layer, const Dictionary &tags, uint8_t zoom, bool is_closed, bool is_way,
-               std::vector<RenderInstructionPtr> &ris) const ;
+               std::vector<RenderInstructionPtr> &ris) ;
 
     std::string defaultLayer() const { return default_layer_ ; }
     uint32_t backgroundColor() const { return map_bg_ ; }
@@ -57,6 +57,7 @@ private:
     std::string version_ ;
     uint32_t map_bg_, map_bg_outside_ ;
     std::string resource_dir_ ;
+    std::map<std::string, std::vector<RenderInstructionPtr>> rule_match_cache_ ;
 
 private:
     LayerPtr get_safe_layer(const std::string &id) const ;

@@ -177,6 +177,13 @@ void MapFileWriter::write(SQLite::Database &db, WriteOptions &options) {
     setDebug(options.debug_);
     writeHeader(db, options) ;
     writeSubFiles(db, options) ;
+
+    // write file size
+    info_.file_size_ = strm_.tellg() ;
+    strm_.seekg(28) ;
+
+    MapFileOSerializer s(strm_) ;
+    s.write_uint64(info_.file_size_) ;
 }
 
 
@@ -391,8 +398,7 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 
     sql.precision(16) ;
 
-    sql << "SELECT g.osm_id, kv.key, kv.val, kv.zoom_min, kv.zoom_max, " ;
-
+    sql << "SELECT osm_id, kv.key, kv.val, kv.zoom_min, kv.zoom_max, " ;
 
     if ( tol != 0.0 )
         sql << "SimplifyPreserveTopology(" ;
@@ -409,10 +415,10 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 
     sql << " AS _geom_ " ;
     if ( centroid ) sql << ", ST_Centroid(geom) " ;
-    sql << " FROM " << tableName << " AS g JOIN kv ON kv.osm_id = g.osm_id";
+    sql << " FROM " << tableName << " AS g JOIN kv USING (osm_id) ";
 
     sql << " WHERE " ;
-    sql << "(( kv.zoom_min BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( kv.zoom_max BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( kv.zoom_min <= " << min_zoom << " AND kv.zoom_max >= " << max_zoom << "))" ;
+    sql << "(( g.zoom_min BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( g.zoom_max BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( g.zoom_min <= " << min_zoom << " AND g.zoom_max >= " << max_zoom << "))" ;
     sql << "AND _geom_ NOT NULL AND ST_IsValid(_geom_) " ;
     sql << "AND g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = ST_Transform(BuildMBR(" ;
     sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << "),4326)) " ;
@@ -681,7 +687,7 @@ uint64_t MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_
 
     fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
     fetch_lines("geom_relations", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_,tol,  ways, ways_per_level) ;
-    fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, options.label_positions_, tol, ways, ways_per_level) ;
+    fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, tol, options.label_positions_, ways, ways_per_level) ;
 
     double min_lat, min_lon, max_lat, max_lon ;
     tms::tileLatLonBounds(bt.x(), bt.y(), bt.z(), min_lat, min_lon, max_lat, max_lon) ;

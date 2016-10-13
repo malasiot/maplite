@@ -44,7 +44,7 @@ bool OSMProcessor::createGeometriesTable(const std::string &desc)
         string sql ;
 
         sql = "CREATE TABLE geom_" + desc;
-        sql += " (gid INTEGER PRIMARY KEY AUTOINCREMENT, osm_id TEXT, FOREIGN KEY(osm_id) REFERENCES kv(osm_id))" ;
+        sql += " (osm_id TEXT, zoom_min INTEGER, zoom_max INTEGER, PRIMARY KEY(osm_id))" ;
 
         SQLite::Command(con, sql).exec() ;
 
@@ -53,9 +53,9 @@ bool OSMProcessor::createGeometriesTable(const std::string &desc)
         string geom_type ;
 
         if ( desc == "lines" )
-            geom_type = "LINESTRING" ;
+            geom_type = "MULTILINESTRING" ;
         else if ( desc == "polygons")
-            geom_type = "POLYGON" ;
+            geom_type = "MULTIPOLYGON" ;
         else if ( desc == "pois")
             geom_type = "POINT" ;
         else if ( desc == "relations" )
@@ -87,7 +87,7 @@ bool OSMProcessor::createTagsTable()
         string sql ;
 
         sql = "CREATE TABLE kv ";
-        sql += "(gid INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, val TEXT, osm_id TEXT, zoom_min INTEGER, zoom_max INTEGER)" ;
+        sql += "(key TEXT, val TEXT, osm_id TEXT, zoom_min INTEGER, zoom_max INTEGER);CREATE INDEX kv_index ON kv(osm_id)" ;
 
         SQLite::Command(con, sql).exec() ;
 
@@ -106,7 +106,7 @@ static string insert_feature_sql(const string &desc, const string &geom_cmd = "?
     string sql ;
 
     sql = "INSERT INTO geom_" + desc ;
-    sql += " (geom, osm_id) VALUES (" + geom_cmd + ", ?)";
+    sql += " (geom, osm_id, zoom_min, zoom_max) VALUES (" + geom_cmd + ", ?, ?, ?)";
     return sql ;
 }
 
@@ -186,7 +186,7 @@ bool OSMProcessor::create(const std::string &name) {
     }
 }
 
-bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const OSM::Way &way)
+bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const OSM::Way &way, uint8_t minz, uint8_t maxz)
 {
     try {
         unsigned char *blob;
@@ -207,6 +207,8 @@ bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, con
 
         cmd.bind(1, blob, blob_size) ;
         cmd.bind(2, way.id_) ;
+        cmd.bind(3, (int)minz) ;
+        cmd.bind(4, (int)maxz) ;
 
         cmd.exec() ;
 
@@ -224,7 +226,8 @@ bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, con
     return true ;
 }
 
-bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const std::vector<OSM::Way> &ways, const string &id)
+bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const std::vector<OSM::Way> &ways, const string &id,
+                                        uint8_t minz, uint8_t maxz)
 {
     try {
         unsigned char *blob;
@@ -248,6 +251,9 @@ bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc
 
         cmd.bind(1, blob, blob_size) ;
         cmd.bind(2, id) ;
+        cmd.bind(3, minz) ;
+        cmd.bind(4, maxz) ;
+
 
         cmd.exec() ;
 
@@ -265,7 +271,7 @@ bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc
     return true ;
 }
 
-bool OSMProcessor::addPOIGeometry(SQLite::Command &cmd, const OSM::Node &poi)
+bool OSMProcessor::addPOIGeometry(SQLite::Command &cmd, const OSM::Node &poi, uint8_t minz, uint8_t maxz)
 {
     try {
         unsigned char *blob;
@@ -281,6 +287,8 @@ bool OSMProcessor::addPOIGeometry(SQLite::Command &cmd, const OSM::Node &poi)
 
         cmd.bind(1, blob, blob_size) ;
         cmd.bind(2, poi.id_) ;
+        cmd.bind(3, minz) ;
+        cmd.bind(4, maxz) ;
 
         cmd.exec() ;
 
@@ -297,7 +305,8 @@ bool OSMProcessor::addPOIGeometry(SQLite::Command &cmd, const OSM::Node &poi)
 
 }
 
-bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document &doc, const OSM::Polygon &poly, const string &id)
+bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document &doc, const OSM::Polygon &poly, const string &id,
+                                      uint8_t minz, uint8_t maxz)
 {
     try {
         unsigned char *blob;
@@ -337,6 +346,8 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document 
 
         cmd.bind(1, blob, blob_size) ;
         cmd.bind(2, id) ;
+        cmd.bind(3, minz) ;
+        cmd.bind(4, maxz) ;
 
         cmd.exec() ;
 
@@ -376,9 +387,9 @@ bool OSMProcessor::addTags(SQLite::Command &cmd, const TagWriteList &tags, const
 
 // find the zoom range of attached tags
 
-static bool normalize_tags(TagWriteList &tags) {
+static bool normalize_tags(TagWriteList &tags, uint8_t &minz, uint8_t &maxz) {
     uint n_matched_tags = 0 ;
-    uint8_t minz = 255, maxz = 0;
+    minz = 255 ; maxz = 0;
 
     for( TagWriteAction &a: tags.actions_ ) {
         if ( !a.attached_ ) {
@@ -410,6 +421,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
 
     SQLite::Session session(&db) ;
     SQLite::Connection &con = session.handle() ;
+
+    uint8_t minz, maxz ;
 
     try {
 
@@ -447,11 +460,11 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
                 }
             }
 
-            if ( !normalize_tags(tags) ) continue ;
+            if ( !normalize_tags(tags, minz, maxz) ) continue ;
 
             SQLite::Command cmd_poi(con, insert_feature_sql("pois")) ;
 
-            addPOIGeometry(cmd_poi, node) ;
+            addPOIGeometry(cmd_poi, node, minz, maxz) ;
             addTags(cmd_tags, tags, node.id_) ;
         }
 
@@ -477,7 +490,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
                 }
             }
 
-            if ( !normalize_tags(tags) ) continue ;
+            if ( !normalize_tags(tags, minz, maxz) ) continue ;
 
             // deal with closed ways, potential polygon geometries (areas) are those indicated by area tag or those other than highway, barrier and contour
 
@@ -493,15 +506,15 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
                 ring.nodes_.insert(ring.nodes_.end(), way.nodes_.begin(), way.nodes_.end()) ;
                 poly.rings_.push_back(ring) ;
 
-                SQLite::Command cmd_poly(con, insert_feature_sql("polygons", "CompressGeometry(?)")) ;
+                SQLite::Command cmd_poly(con, insert_feature_sql("polygons", "CompressGeometry(ST_Multi(?))")) ;
 
-                addPolygonGeometry(cmd_poly, doc, poly, way.id_) ;
+                addPolygonGeometry(cmd_poly, doc, poly, way.id_, minz, maxz) ;
                 addTags(cmd_tags, tags, way.id_) ;
             }
             else {
-                SQLite::Command cmd_line(con, insert_feature_sql("lines", "CompressGeometry(?)")) ;
+                SQLite::Command cmd_line(con, insert_feature_sql("lines", "CompressGeometry(ST_Multi(?))")) ;
 
-                addLineGeometry(cmd_line, doc, way) ;
+                addLineGeometry(cmd_line, doc, way, minz, maxz) ;
                 addTags(cmd_tags, tags, way.id_) ;
             }
         }
@@ -523,7 +536,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
                 }
             }
 
-            if ( !normalize_tags(tags) ) continue ;
+            if ( !normalize_tags(tags, minz, maxz) ) continue ;
 
             string rel_type = relation.tags_.get("type") ;
 
@@ -534,7 +547,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
                 SQLite::Command cmd_rel(con, insert_feature_sql("relations", "CompressGeometry(ST_Multi(?))")) ;
 
                 if ( !chunks.empty() ) {
-                    addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_) ;
+                    addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_, minz, maxz) ;
                     addTags(cmd_tags, tags, relation.id_) ;
                 }
             }
@@ -542,10 +555,10 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
                 OSM::Polygon polygon ;
                 if ( !OSM::Document::makePolygonsFromRelation(doc, relation, polygon) ) continue ;
 
-                SQLite::Command cmd_rel(con, insert_feature_sql("polygons", "CompressGeometry(?)")) ;
+                SQLite::Command cmd_rel(con, insert_feature_sql("polygons", "CompressGeometry(ST_Multi(?))")) ;
 
                 if ( !polygon.rings_.empty() ) {
-                    addPolygonGeometry(cmd_rel, doc, polygon, relation.id_) ;
+                    addPolygonGeometry(cmd_rel, doc, polygon, relation.id_, minz, maxz) ;
                     addTags(cmd_tags, tags, relation.id_) ;
                 }
             }
@@ -730,7 +743,7 @@ static void parse_record(DBFHandle db_handle, int index, const vector<DBField> &
 
 static bool write_box_geometry(SQLite::Connection &con, const BBox &box, const std::string &id ) {
 
-    SQLite::Command cmd(con, insert_feature_sql("polygons", "?")) ;
+    SQLite::Command cmd(con, insert_feature_sql("polygons", "ST_Multi(?)")) ;
 
     unsigned char *blob;
     int blob_size;
@@ -812,14 +825,14 @@ bool OSMProcessor::processLandPolygon(const string &shp_file, const BBox &clip_b
     SQLite::Transaction trans(con) ;
 
     stringstream sql ;
-    sql <<  "INSERT INTO geom_polygons (geom, osm_id) SELECT ST_Intersection(?, " ;
+    sql <<  "INSERT INTO geom_polygons (geom, osm_id) SELECT ST_Multi(ST_Intersection(?, " ;
     sql <<  "ST_GeomFromText('POLYGON((" ;
     sql <<  clip_box.minx_ << ' ' << clip_box.miny_ << ',' ;
     sql <<  clip_box.maxx_ << ' ' << clip_box.miny_ << ',' ;
     sql <<  clip_box.maxx_ << ' ' << clip_box.maxy_ << ',' ;
     sql <<  clip_box.minx_ << ' ' << clip_box.maxy_ << ',' ;
-    sql <<  clip_box.minx_ << ' ' << clip_box.miny_ << "))', 4326)) AS geom" ;
-    sql <<  ",? WHERE geom NOT NULL;" ;
+    sql <<  clip_box.minx_ << ' ' << clip_box.miny_ << "))', 4326))) AS geom" ;
+    sql <<  ",? WHERE ST_IsValid(geom) AND geom NOT NULL;" ;
 
     string cmd_str = sql.str() ;
     SQLite::Command cmd(con, cmd_str) ;
@@ -828,6 +841,7 @@ bool OSMProcessor::processLandPolygon(const string &shp_file, const BBox &clip_b
     uint64_t id = 1000000000 ;
 
     for( uint i=0 ; i<shp_entities ; i++ ) {
+
 
         SHPObject *obj = SHPReadObject( shp_handle, i );
 
@@ -851,9 +865,6 @@ bool OSMProcessor::processLandPolygon(const string &shp_file, const BBox &clip_b
                 gaiaSetPoint (ring->Coords, j, *vx++, *vy++);
             }
 
-                //      gaiaClockwise(ring) ;
-                //     gaiaRingPtr iring = gaiaCloneRingSpecial(ring, GAIA_REVERSE_ORDER) ;
-
            if ( gpoly ) {
                gaiaInsertInteriorRing(gpoly, ring);
            }
@@ -863,6 +874,10 @@ bool OSMProcessor::processLandPolygon(const string &shp_file, const BBox &clip_b
 
         }
 
+        gaiaOutBuffer buffer ;
+
+        gaiaOutBufferInitialize(&buffer);
+          gaiaOutWkt (&buffer,geom);
         SHPDestroyObject(obj) ;
 
         string sid = str(boost::format("%d") % id) ;

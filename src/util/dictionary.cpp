@@ -122,6 +122,17 @@ void Dictionary::dump() const
         cout << (*it).first << ':' << (*it).second << endl ;
 }
 
+string Dictionary::serialize(const char *sep)
+{
+    stringstream strm ;
+    ContainerType::const_iterator it = container_.begin() ;
+
+    for( ; it != container_.end() ; ++it )
+        strm << (*it).first << '=' << (*it).second << sep ;
+
+    return strm.str() ;
+}
+
 int Dictionary::count() const { return container_.size() ; }
 
 int Dictionary::count(const regex &rx) const

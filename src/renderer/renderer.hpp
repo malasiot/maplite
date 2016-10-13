@@ -23,7 +23,7 @@ class Renderer {
 
 public:
 
-    Renderer(const RenderTheme &theme, const std::string &languages, bool debug=false) ;
+    Renderer(RenderTheme &theme, const std::string &languages, bool debug=false) ;
 
     // render a single tile
     bool render(const TileKey &key,                 // tile key
@@ -35,7 +35,7 @@ public:
 private:
 
     ResourceCache cache_ ;
-    const RenderTheme &theme_ ;
+    RenderTheme &theme_ ;
     TextEngine text_engine_ ;
 
 private:

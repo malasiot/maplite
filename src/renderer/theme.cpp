@@ -268,15 +268,48 @@ bool RenderTheme::read(const std::string &file_name, const string &resource_dir)
     return true ;
 }
 
-bool RenderTheme::match(const string &layer_id, const Dictionary &tags, uint8_t zoom, bool is_closed, bool is_way, std::vector<RenderInstructionPtr> &ris) const
+static string make_match_key(const Dictionary &dict, const std::string &layer_id, uint8_t zoom, bool is_closed, bool is_way) {
+
+    stringstream strm ;
+
+    strm << layer_id << ';' ;
+
+    DictionaryIterator it(dict) ;
+
+    for( ;  it ; ++it  ) {
+        string key = it.key() ;
+        string value = it.value() ;
+
+        if ( key == "name" ) continue ;
+        if ( key == "addr:housenumber" ) continue ;
+        if ( key == "ref" ) continue ;
+        if ( key == "ele" ) continue ;
+
+        strm << key << '=' << value << ';' ;
+    }
+
+    strm << (int)zoom << ';' << is_closed << ';' << is_way ;
+    return strm.str() ;
+}
+
+bool RenderTheme::match(const string &layer_id, const Dictionary &tags, uint8_t zoom, bool is_closed, bool is_way, std::vector<RenderInstructionPtr> &ris)
 {
     set<string> categories ;
 
     LayerPtr layer = get_safe_layer(layer_id) ;
     get_categories(layer, categories) ;
 
-    for( const RulePtr &r: rules_ ) {
-        if ( r->match(categories, tags, zoom, is_closed, is_way, ris) ) return true ;
+    string key = make_match_key(tags, layer_id, zoom, is_closed, is_way) ;
+    auto it = rule_match_cache_.find(key) ;
+    if ( it != rule_match_cache_.end() )
+        ris = it->second ;
+    else {
+        for( const RulePtr &r: rules_ ) {
+            if ( r->match(categories, tags, zoom, is_closed, is_way, ris) ) {
+                rule_match_cache_.insert(std::make_pair(key, ris)) ;
+                return true ;
+            }
+        }
     }
 
     return ( !ris.empty() ) ;

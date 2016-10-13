@@ -54,6 +54,8 @@ class Dictionary
 
     void dump() const ;
 
+    std::string serialize(const char *sep) ;
+
 public:
 
     typedef std::map<std::string, std::string> ContainerType ;

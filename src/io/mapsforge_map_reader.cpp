@@ -560,15 +560,14 @@ uint64_t MapFileReader::readWays(vector<Way> &ways, float lat_orig, float lon_or
     if ( cflag & 0x20 )
         tags.add("ref", s.read_utf8()) ;
 
+    boost::optional<LatLon> label_pos ;
+
     if ( cflag & 0x10 ) {
         double label_position_lat_diff = s.read_var_int64()/1.0e6 ;
         double label_position_lon_diff = s.read_var_int64()/1.0e6 ;
-        tags.add("label:lat", std::to_string(label_position_lat_diff + lat_orig) ) ;
-        tags.add("label:lon", std::to_string(label_position_lon_diff + lon_orig) ) ;
-    }
 
-    if ( layer != 0 )
-        tags.add("layer", std::to_string(layer)) ;
+        label_pos = LatLon(label_position_lat_diff + lat_orig, label_position_lon_diff + lon_orig) ;
+    }
 
     bytes += tags.capacity() ;
 
@@ -583,6 +582,7 @@ uint64_t MapFileReader::readWays(vector<Way> &ways, float lat_orig, float lon_or
         Way way ;
         way.tags_ = tags ;
         way.layer_ = layer ;
+        way.label_pos_ = label_pos ;
 
         uint64_t n_way_coord_blocks = s.read_var_uint64() ;
 

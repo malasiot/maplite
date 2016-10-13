@@ -45,10 +45,10 @@ private:
 
     bool matchRule(const OSM::Filter::RulePtr &rule, OSM::Filter::Context &ctx, TagWriteList &tw, bool &cont) ;
 
-    bool addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const OSM::Way &way ) ;
-    bool addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const std::vector<OSM::Way> &ways, const std::string &id ) ;
-    bool addPOIGeometry(SQLite::Command &cmd, const OSM::Node &poi ) ;
-    bool addPolygonGeometry(SQLite::Command &cmd, const OSM::Document &doc, const OSM::Polygon &poly, const std::string &id) ;
+    bool addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const OSM::Way &way, uint8_t minz, uint8_t maxz) ;
+    bool addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const std::vector<OSM::Way> &ways, const std::string &id , uint8_t minz, uint8_t maxz) ;
+    bool addPOIGeometry(SQLite::Command &cmd, const OSM::Node &poi , uint8_t minz, uint8_t maxz) ;
+    bool addPolygonGeometry(SQLite::Command &cmd, const OSM::Document &doc, const OSM::Polygon &poly, const std::string &id, uint8_t minz, uint8_t maxz) ;
 
     bool addTags(SQLite::Command &cmd, const TagWriteList &tags, const string &id) ;
 

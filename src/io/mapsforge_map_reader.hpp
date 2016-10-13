@@ -14,6 +14,8 @@
 #include "geometry.hpp"
 #include "mapsforge_map_info.hpp"
 
+#include <boost/optional.hpp>
+
 struct POI {
     double lat_, lon_ ;
     Dictionary tags_ ;
@@ -22,6 +24,7 @@ struct POI {
 struct Way {
     std::vector<std::vector<LatLon>> coords_ ; // line or polygon
     Dictionary tags_ ;
+    boost::optional<LatLon> label_pos_ ;
     int layer_ ;
     bool is_closed_ ;
 };
