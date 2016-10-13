@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
         cerr << "Error parsing OSM tag filter configuration file: " << filter_config_file << endl ;
         return 0 ;
     }
-/*
+
     for( const string &fp: osm_files ) {
         if ( !proc.processOsmFile(fp, fcfg) ) {
             cerr << "Error while populating temporary spatialite database" << endl ;
@@ -272,12 +272,12 @@ int main(int argc, char *argv[])
     else
         proc.addDefaultLandPolygon(box) ;
 
-*/
+
     writer.create(out_map_file) ;
 
     //SQLite::Database db("/tmp/2ed94.sqlite") ;
     // SQLite::Database db("/tmp/0a907.sqlite") ;
-     SQLite::Database db("/tmp/41716.sqlite") ;
+  //   SQLite::Database db("/tmp/41716.sqlite") ;
 
     cout << "encoding file" << endl ;
 

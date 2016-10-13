@@ -69,7 +69,7 @@ public:
     Context() {}
     Context(const OSM::Node &node): tags_(node.tags_), id_(node.id_), type_(Node) {}
     Context(const OSM::Way &way): tags_(way.tags_), id_(way.id_), type_(Way) {}
-    Context(const OSM::Relation &rel): tags_(rel.tags_), id_(rel.id_), type_(Relation) {}
+    Context(const OSM::Relation &rel): tags_(rel.tags_), id_(rel.id_), type_(Way) {}
 
     FeatureType type() const { return type_ ; }
 

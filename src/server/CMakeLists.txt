@@ -65,7 +65,6 @@ SET ( TILE_SERVER_SOURCES
 	${SRC_ROOT}/server/png_writer.cpp
 	${SRC_ROOT}/server/png_writer.hpp
 
-	${SRC_ROOT}/io/mapsforge_database.hpp
 	${SRC_ROOT}/io/mapsforge_map_reader.cpp
 	${SRC_ROOT}/io/serializer.cpp
 )

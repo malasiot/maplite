@@ -120,6 +120,8 @@ static void get_geometry_extent(SQLite::Connection &con, const string &desc, dou
         int blob_size ;
         const char *data = res.getBlob(0, blob_size) ;
 
+        if ( data == nullptr ) return ;
+
         gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
 
         gaiaPolygonPtr poly = geom->FirstPolygon ;

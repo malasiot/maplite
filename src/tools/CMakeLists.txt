@@ -11,7 +11,6 @@ TARGET_LINK_LIBRARIES(makeres ${SQLITE3_LIBRARY} ${Boost_LIBRARIES} pthread dl z
 
 SET ( RENDER_TILE_SOURCES
 	${SRC_ROOT}/io/mapsforge_map_reader.cpp
-	${SRC_ROOT}/io/mapsforge_database.hpp
 	${SRC_ROOT}/io/serializer.cpp
 
 	${SRC_ROOT}/util/dictionary.cpp
