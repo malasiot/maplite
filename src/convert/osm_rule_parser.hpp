@@ -64,12 +64,12 @@ class Context {
 
 public:
 
-    enum FeatureType { Way, Node, Relation } ;
+    enum FeatureType { Way, Node } ;
 
     Context() {}
     Context(const OSM::Node &node): tags_(node.tags_), id_(node.id_), type_(Node) {}
     Context(const OSM::Way &way): tags_(way.tags_), id_(way.id_), type_(Way) {}
-    Context(const OSM::Relation &rel): tags_(rel.tags_), id_(rel.id_), type_(Relation) {}
+    Context(const Dictionary &tags, const std::string &id, FeatureType t): tags_(tags), id_(id), type_(t) {}
 
     FeatureType type() const { return type_ ; }
 

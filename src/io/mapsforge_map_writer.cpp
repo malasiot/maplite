@@ -104,10 +104,10 @@ static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways, map<st
     SQLite::Connection &con = session.handle() ;
 
     map<string, uint64_t> tag_hist ;
+
     if ( !query_kv(con, "geom_lines", tag_hist)  ||
-         !query_kv(con, "geom_polygons", tag_hist) ||
-         !query_kv(con, "geom_relations", tag_hist)  )
-        return false ;
+         !query_kv(con, "geom_polygons", tag_hist)
+    ) return false ;
 
     sort_histogram(tag_hist, ways) ;
 
@@ -418,7 +418,7 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
     sql << " FROM " << tableName << " AS g JOIN kv USING (osm_id) ";
 
     sql << " WHERE " ;
-    sql << "(( g.zoom_min BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( g.zoom_max BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( g.zoom_min <= " << min_zoom << " AND g.zoom_max >= " << max_zoom << "))" ;
+    sql << "(( g.zmin BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( g.zmax BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( g.zmin <= " << min_zoom << " AND g.zmax >= " << max_zoom << "))" ;
     sql << "AND _geom_ NOT NULL AND ST_IsValid(_geom_) " ;
     sql << "AND g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = ST_Transform(BuildMBR(" ;
     sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << "),4326)) " ;
@@ -686,7 +686,6 @@ uint64_t MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_
     double tol = ( tz <= 12 && options.simplification_factor_ > 0 ) ? deltaLat(options.simplification_factor_, info_.max_lat_, max_zoom) : 0 ;
 
     fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
-    fetch_lines("geom_relations", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_,tol,  ways, ways_per_level) ;
     fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, tol, options.label_positions_, ways, ways_per_level) ;
 
     double min_lat, min_lon, max_lat, max_lon ;

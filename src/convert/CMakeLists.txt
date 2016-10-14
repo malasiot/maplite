@@ -36,6 +36,9 @@ SET ( OSM2MFTILES_SOURCES
 	${SRC_ROOT}/util/database.hpp
 	${SRC_ROOT}/util/zfstream.hpp
 	${SRC_ROOT}/util/base64.hpp
+	${SRC_ROOT}/util/progress_stream.hpp
+	${SRC_ROOT}/util/progress_stream.cpp
+
 )
 
 PROTOBUF_GENERATE_CPP(OSM_PROTO_SOURCES OSM_PROTO_HEADERS ${SRC_ROOT}/protobuf/osmformat.proto ${SRC_ROOT}/protobuf/fileformat.proto)

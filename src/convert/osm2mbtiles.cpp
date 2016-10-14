@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
 
     //SQLite::Database db("/tmp/2ed94.sqlite") ;
     // SQLite::Database db("/tmp/0a907.sqlite") ;
-     SQLite::Database db("/tmp/41716.sqlite") ;
+     SQLite::Database db("/tmp/a4581.sqlite") ;
 
     cout << "encoding file" << endl ;
 

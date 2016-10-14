@@ -284,10 +284,6 @@ Literal IsTypePredicate::eval(Context &ctx)
     {
         return ctx.type() == Context::Way ;
     }
-    else if ( keyword_ == "relation" )
-    {
-        return ctx.type() == Context::Relation ;
-    }
 
 }
 
