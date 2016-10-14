@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     uint ty = stoi(argv[i++]) ;
     uint tz = stoi(argv[i++]) ;
 
-    MapFileReader::initTileCache(100000) ;
+//    MapFileReader::initTileCache(100000) ;
     MapFileReader reader ;
 
     try {
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 
     TileKey key(tx, ty, tz, false) ;
 
-    VectorTile tile = reader.readTile(key, 0);
+    VectorTile tile = reader.readTile(key, 1);
 
 
     RenderTheme theme ;

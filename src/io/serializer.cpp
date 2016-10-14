@@ -163,6 +163,12 @@ void MapFileOSerializer::write_bytes(uint8_t *bytes, uint32_t len)
         throw WriteException() ;
 }
 
+void MapFileOSerializer::write_bytes(const std::string &bytes)
+{
+    if ( !strm_.write((char *)&bytes[0], bytes.size()) )
+        throw WriteException() ;
+}
+
 void MapFileOSerializer::write_utf8(const string &str)
 {
     write_var_uint64(str.length()) ;

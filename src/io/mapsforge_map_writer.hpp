@@ -100,7 +100,12 @@ private:
     void writeTagList(const std::vector<std::string> &tags) ;
     void writeSubFileInfo(const WriteOptions &options);
     void writeSubFiles(SQLite::Database &db, const WriteOptions &options);
-    uint64_t writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_z, uint8_t max_z, SQLite::Database &db, const WriteOptions &options);
+    void fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options,
+                       std::vector<POIData> &pois, std::vector<std::vector<uint32_t> > &pois_per_level,
+                       std::vector<WayDataContainer> &ways, std::vector<std::vector<uint32_t> > &ways_per_level);
+    std::string writeTileData(int32_t tx, int32_t ty, int32_t tz, const WriteOptions &options, const std::vector<POIData> &pois,
+                           const std::vector<std::vector<uint32_t> > &pois_per_level,
+                           const std::vector<WayDataContainer> &ways, const std::vector<std::vector<uint32_t> > &ways_per_level);
     std::string writePOIData(const std::vector<POIData> &pois, const std::vector<std::vector<uint32_t>> &pois_per_level, const ILatLon &orig) ;
     std::string writeWayData(const std::vector<WayDataContainer> &ways, const std::vector<std::vector<uint32_t>> &ways_per_level, const ILatLon &orig) ;
 private:
@@ -112,6 +117,7 @@ private:
     std::map<std::string, uint32_t> poi_tag_mapping_, way_tag_mapping_ ;
     std::vector<SubFileInfo> sub_files_ ;
     bool has_debug_info_ ;
+
 };
 
 

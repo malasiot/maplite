@@ -3,6 +3,7 @@
 #include "database.hpp"
 #include "tms.hpp"
 #include "tile_key.hpp"
+#include "progress_stream.hpp"
 
 #include <string>
 #include <stdexcept>
@@ -10,6 +11,8 @@
 #include <ctime>
 
 #include <spatialite.h>
+#include <omp.h>
+
 using namespace std ;
 
 
@@ -107,7 +110,7 @@ static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways, map<st
 
     if ( !query_kv(con, "geom_lines", tag_hist)  ||
          !query_kv(con, "geom_polygons", tag_hist)
-    ) return false ;
+         ) return false ;
 
     sort_histogram(tag_hist, ways) ;
 
@@ -310,6 +313,8 @@ void MapFileWriter::writeSubFileInfo(const WriteOptions &options)
     }
 }
 
+ConsoleProgressPrinter g_prog ;
+
 void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
 {
     MapFileOSerializer s(strm_) ;
@@ -334,7 +339,9 @@ void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &opti
         uint32_t cols = info.max_tx_ - info.min_tx_ + 1 ;
         uint64_t tile_count = rows * cols ;
 
-        cout << "writing sub-file at level " << count << ": " << tile_count << " tiles" << endl ;
+        stringstream msg ;
+        msg << "writing sub-file at level " << count << ": " << tile_count << " tiles" ;
+        g_prog.beginTask(msg.str(), tile_count) ;
 
         info.index_.resize(tile_count) ;
         uint64_t sz = extra + 5 * tile_count ;
@@ -345,20 +352,49 @@ void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &opti
 
         uint64_t current_pos = sz ;
 
-        for( uint j=0 ; j<tile_count ; j++ ) {
-            info.index_[j] = current_pos ;
+        const uint chunk_size = 512 ;
+        uint chunk_left = chunk_size ;
 
-            int32_t row = j / cols ;
-            int32_t col = j % cols ;
+        omp_set_num_threads(12);
 
-            int32_t tx = col + info.min_tx_ ;
-            int32_t ty = row + info.min_ty_ ;
-            int32_t tz = info.base_zoom_ ;
+        for( uint j=0 ; j<tile_count ; j+= chunk_size ) {
 
-            uint64_t bytes = writeTileData(tx, ty, tz, info.min_zoom_, info.max_zoom_, db, options) ;
+            if (j + chunk_size > tile_count ) chunk_left = tile_count - j ;
 
-            current_pos += bytes ;
-            sz += bytes ;
+            g_prog.advance(j+1);
+
+            vector<string> tile_data(chunk_left) ;
+
+#pragma omp parallel for
+            for( uint k = j ; k< j + chunk_left ; k++ ) {
+
+                int32_t row = k / cols ;
+                int32_t col = k % cols ;
+
+                int32_t tx = col + info.min_tx_ ;
+                int32_t ty = row + info.min_ty_ ;
+                int32_t tz = info.base_zoom_ ;
+
+                vector<POIData> pois ;
+                vector<vector<uint32_t>> pois_per_level ;
+                vector<WayDataContainer> ways ;
+                vector<vector<uint32_t>> ways_per_level ;
+
+                fetchTileData(tx, ty, tz, info.min_zoom_, info.max_zoom_, db, options, pois, pois_per_level, ways, ways_per_level ) ;
+
+                string bytes = writeTileData(tx, ty, tz, options, pois, pois_per_level, ways, ways_per_level) ;
+                tile_data[k-j] = bytes ;
+            }
+
+            // serial write to file
+            for( uint k = j ; k< j + chunk_left ; k++ ) {
+                info.index_[k] = current_pos ;
+                const string &bytes = tile_data[k-j] ;
+                s.write_bytes(bytes) ;
+                current_pos += bytes.size() ;
+                sz += bytes.size() ;
+            }
+
             /*
             bool is_sea_tile = ( tile_offset & 0x8000000000LL ) != 0 ;
 
@@ -667,33 +703,44 @@ static double deltaLat(double delta, double lat, uint8_t zoom) {
     return fabs(dlat - lat) ;
 }
 
-uint64_t MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options)
+void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options,
+                                  vector<POIData> &pois,
+                                  vector<vector<uint32_t>> &pois_per_level,
+                                  vector<WayDataContainer> &ways,
+                                  vector<vector<uint32_t>> &ways_per_level)
 {
     BBox bbox ;
     TileKey bt(tx, ty, tz, true) ;
     tms::tileBounds(bt.x(), bt.y(), bt.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_) ;
     int nz = (int)max_zoom - (int)min_zoom + 1 ;
 
-    vector<POIData> pois ;
-    vector<vector<uint32_t>> pois_per_level(nz) ;
-
-    fetch_pois(db, bbox, min_zoom, max_zoom, pois, pois_per_level) ;
-
-    vector<WayDataContainer> ways ;
-    vector<vector<uint32_t>> ways_per_level(nz) ;
+    pois_per_level.resize(nz) ;
+    ways_per_level.resize(nz) ;
 
     // we compute simplification factor per subfile
     double tol = ( tz <= 12 && options.simplification_factor_ > 0 ) ? deltaLat(options.simplification_factor_, info_.max_lat_, max_zoom) : 0 ;
 
+    fetch_pois(db, bbox, min_zoom, max_zoom, pois, pois_per_level) ;
     fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
     fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, tol, options.label_positions_, ways, ways_per_level) ;
+}
+
+std::string MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz,
+                                         const WriteOptions &options,
+                                         const vector<POIData> &pois,
+                                         const vector<vector<uint32_t>> &pois_per_level,
+                                         const vector<WayDataContainer> &ways,
+                                         const vector<vector<uint32_t>> &ways_per_level
+                                         ) {
+
+    ostringstream buffer ;
+
+    TileKey bt(tx, ty, tz, true) ;
 
     double min_lat, min_lon, max_lat, max_lon ;
     tms::tileLatLonBounds(bt.x(), bt.y(), bt.z(), min_lat, min_lon, max_lat, max_lon) ;
 
-    MapFileOSerializer s(strm_) ;
-
-    uint64_t cp = strm_.tellg() ;
+    MapFileOSerializer s(buffer) ;
 
     // write header
     if ( options.debug_ ) {
@@ -705,7 +752,7 @@ uint64_t MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_
     }
 
     // write POI and way number
-    for ( uint i=0 ; i<nz ; i++ ) {
+    for ( uint i=0 ; i<pois_per_level.size() ; i++ ) {
         s.write_var_uint64(pois_per_level[i].size()) ;
         s.write_var_uint64(ways_per_level[i].size()) ;
     }
@@ -719,7 +766,7 @@ uint64_t MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz, uint8_
     s.write_bytes((uint8_t *)&poi_data[0], poi_data.size()) ;
     s.write_bytes((uint8_t *)&way_data[0], way_data.size()) ;
 
-    return strm_.tellg() - cp ;
+    return buffer.str() ;
 
 }
 
@@ -739,7 +786,7 @@ string MapFileWriter::writePOIData(const vector<POIData> &pois, const vector<vec
             if ( has_debug_info_ ) {
                 // write header
                 stringstream sigstrm ;
-                sigstrm << "###POIStart" << poi.id_ << "###" ;
+                sigstrm << "***POIStart" << poi.id_ << "***" ;
                 int extra = 32-sigstrm.tellp() ;
                 for ( int i=0 ; i<extra ; i++ ) sigstrm.put(' ') ;
                 buffer.write_bytes((uint8_t *)sigstrm.str().c_str(), 32) ;
@@ -901,7 +948,7 @@ static string encode_double_delta(const WayDataContainer &wc, const ILatLon &ori
 static string encode_data(const WayDataContainer &wc, const ILatLon &origin, WayDataContainer::Encoding &enc) {
 
     string single_delta_encoded_data = encode_single_delta(wc, origin) ;
- //   return single_delta_encoded_data ; // TODO:
+    //   return single_delta_encoded_data ; // TODO:
     string double_delta_encoded_data = encode_double_delta(wc, origin) ;
 
     if ( single_delta_encoded_data.size() < double_delta_encoded_data.size() ) {
@@ -928,7 +975,7 @@ string MapFileWriter::writeWayData(const vector<WayDataContainer> &ways, const v
             if ( has_debug_info_ ) {
                 // write header
                 stringstream sigstrm ;
-                sigstrm << "###WayStart" << way.id_ << "###" ;
+                sigstrm << "---WayStart" << way.id_ << "---" ;
                 int extra = 32-sigstrm.tellp() ;
                 for ( int i=0 ; i<extra ; i++ ) sigstrm.put(' ') ;
                 buffer.write_bytes((uint8_t *)sigstrm.str().c_str(), 32) ;

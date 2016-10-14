@@ -56,6 +56,7 @@ public:
     void write_var_int64(int64_t val) ;
     void write_offset(int64_t val);
     void write_bytes(uint8_t *bytes, uint32_t len);
+    void write_bytes(const std::string &bytes);
 
 private:
 

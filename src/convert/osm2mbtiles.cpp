@@ -112,7 +112,7 @@ void init_map_file_info(int &argc, char *argv[], MapFileWriter &map, bool &has_b
 
 }
 
-void init_write_options(int argc, char *argv[], WriteOptions &options) {
+void init_write_options(int &argc, char *argv[], WriteOptions &options) {
 
 
     for( int i=1 ; i<argc ; i++ )
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
         cerr << "Error parsing OSM tag filter configuration file: " << filter_config_file << endl ;
         return 0 ;
     }
-/*
+
     for( const string &fp: osm_files ) {
         if ( !proc.processOsmFile(fp, fcfg) ) {
             cerr << "Error while populating temporary spatialite database" << endl ;
@@ -272,13 +272,12 @@ int main(int argc, char *argv[])
     else
         proc.addDefaultLandPolygon(box) ;
 
-*/
     writer.create(out_map_file) ;
 
     //SQLite::Database db("/tmp/2ed94.sqlite") ;
     // SQLite::Database db("/tmp/0a907.sqlite") ;
 
-     SQLite::Database db("/tmp/a4581.sqlite") ;
+//     SQLite::Database db("/tmp/a157a.sqlite") ;
 
     cout << "encoding file" << endl ;
 

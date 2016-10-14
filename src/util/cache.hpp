@@ -81,7 +81,9 @@ private:
     void evict() {
 
         // Assert method is never called when cache is empty
-        assert(!key_tracker_.empty());
+        //assert(!key_tracker_.empty());
+
+        if ( key_tracker_.empty() ) return ;
 
         // Identify least recently used key
         const typename key_to_value_type::iterator it  = key_to_value_.find(key_tracker_.front());

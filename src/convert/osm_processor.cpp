@@ -162,7 +162,7 @@ bool OSMProcessor::create(const std::string &name) {
     if ( boost::filesystem::exists(name) )
         boost::filesystem::remove(name);
 
-    db_.reset(new SQLite::Database(name)) ;
+    db_.reset(new SQLite::Database(name, 16)) ;
 
     SQLite::Session session(db_.get()) ;
     SQLite::Connection &con = session.handle() ;
