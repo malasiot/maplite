@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
     VectorTile tile = reader.readTile(key, 1);
 
 
-    RenderTheme theme ;
-    if ( !theme.read(map_theme) ) {
+    std::shared_ptr<RenderTheme> theme(new RenderTheme) ;
+    if ( !theme->read(map_theme) ) {
         cerr << "Can't read theme file: " << map_theme << endl ;
         exit(1) ;
     }
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 
     ImageBuffer buf(256, 256) ;
 
-    r.render(key, buf, tile, mapLayer.empty() ? theme.defaultLayer() : mapLayer) ;
+    r.render(key, buf, tile, mapLayer.empty() ? theme->defaultLayer() : mapLayer) ;
 
     buf.saveToPNG(out_file) ;
 

@@ -13,7 +13,7 @@ set(Boost_USE_STATIC_LIBS       OFF)
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 
-set(BOOST_COMPONENTS regex filesystem system serialization coroutine context)
+set(BOOST_COMPONENTS regex filesystem system serialization coroutine context program_options)
 
 #IF ( WIN32 )
 #    set(BOOST_COMPONENTS ${BOOST_COMPONENTS} thread_win32)
@@ -37,6 +37,7 @@ FIND_PACKAGE(Fontconfig REQUIRED)
 FIND_PACKAGE(Cairo REQUIRED)
 FIND_PACKAGE(HarfBuzz REQUIRED)
 FIND_PACKAGE(GEOS 3.4.2 REQUIRED)
+FIND_PACKAGE(PROJ4 REQUIRED)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)

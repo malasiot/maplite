@@ -1,4 +1,4 @@
-#include "main_window.hpp"
+#include "MainWindow.h"
 
 #include <QApplication>
 #include <QDesktopServices>
@@ -9,28 +9,9 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "logger.hpp"
-#include "map_server.hpp"
-
 using namespace std ;
 
 QStringList application_data_dirs_ ;
-
-
-class DefaultLogger: public Logger
-{
-public:
-    DefaultLogger() {
-        addAppender(make_shared<LogStreamAppender>(Trace, make_shared<LogPatternFormatter>("%In function %c, %F:%l: %m"), std::cerr)) ;
-        addAppender(make_shared<LogFileAppender>(Info, make_shared<LogPatternFormatter>("%V: %d %r: %m"), "/tmp/tileserver.log")) ;
-    }
-};
-
-
-Logger &get_current_logger() {
-    static DefaultLogger g_server_logger_ ;
-    return g_server_logger_ ;
-}
 
 void setupDirs(int &argc, char **argv)
 {
@@ -82,15 +63,12 @@ int main(int argc, char *argv[])
 
     setupDirs(argc, argv) ;
 
+    MainWindow win(argc, argv);
 
-//    std::shared_ptr<MapServer> server(new MapServer(application_data_dirs_.join(";").toUtf8().constData(), "5000")) ;
-//    std::thread t(&MapServer::run, server.get()) ;
+    QPixmapCache::setCacheLimit(100*1024) ;
 
-     MainWindow win(argc, argv);
     win.show() ;
 
-    app.exec();
+    return app.exec();
 
- //   server->stop() ;
- //   t.join() ;
 }

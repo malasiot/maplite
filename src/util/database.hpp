@@ -146,6 +146,7 @@ public:
     Statement &bind(int idx, const NullType &p);
     Statement &bind(int idx, int v);
     Statement &bind(int idx, long long int v);
+    Statement &bind(int idx, unsigned long long int v);
     Statement &bind(int idx, double v);
     Statement &bind(int idx, std::string const & v);
     Statement &bind(int idx, void const * buf, size_t buf_size);
@@ -156,6 +157,7 @@ public:
     Statement &bindp(const std::string &name, NullType const & p);
     Statement &bindp(const std::string &name, int p);
     Statement &bindp(const std::string &name, long long int p);
+    Statement &bindp(const std::string &name, unsigned long long int p);
     Statement &bindp(const std::string &name, double p);
     Statement &bindp(const std::string &name, const std::string &p);
     Statement &bindp(const std::string &name, void const * buf, size_t buf_size);
@@ -166,6 +168,7 @@ public:
     Statement &bind(NullType const & p);
     Statement &bind(int p);
     Statement &bind(long long int p);
+    Statement &bind(unsigned long long int p);
     Statement &bind(double p);
     Statement &bind(const std::string &p);
     Statement &bind(void const * buf, size_t buf_size);
@@ -303,6 +306,7 @@ private:
     int get(int idx, int) const;
     double get(int idx, double) const;
     long long int get(int idx, long long int) const;
+    unsigned long long int get(int idx, unsigned long long int) const;
     char const* get(int idx, char const*) const;
     std::string get(int idx, std::string) const;
     void const* get(int idx, void const*) const;

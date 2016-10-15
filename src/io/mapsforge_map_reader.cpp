@@ -714,9 +714,9 @@ void MapFileReader::exportTileDataOSM(const VectorTile &data, const string &file
     {
         const Way &way = data.ways_[i] ;
 
-        if ( way.coords_.size() == 1 ) {
+        for ( uint k = 0 ; k<way.coords_.size() ; k++ ) {
 
-            const vector<LatLon> &coords = way.coords_[0] ;
+            const vector<LatLon> &coords = way.coords_[k] ;
 
             for( uint j=0 ; j<coords.size() ; j++ ) {
                 strm << "<node id='" << count + j << "' visible='true' lat='" << setprecision(12) << coords[j].lat_ <<
@@ -734,9 +734,9 @@ void MapFileReader::exportTileDataOSM(const VectorTile &data, const string &file
     {
         const Way &way = data.ways_[i] ;
 
-        if ( way.coords_.size() == 1 ) {
+        for ( uint k = 0 ; k<way.coords_.size() ; k++ ) {
 
-            const vector<LatLon> &coords = way.coords_[0] ;
+            const vector<LatLon> &coords = way.coords_[k] ;
 
             strm << "<way id='" << -100000000 + wcount++ << "' action='modify' visible='true'>\n" ;
 
@@ -754,6 +754,9 @@ void MapFileReader::exportTileDataOSM(const VectorTile &data, const string &file
             strm << "</way>\n" ;
 
             count += coords.size() ;
+        }
+        if ( way.coords_.size() > 1 ) {
+
         }
 
     }

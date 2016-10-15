@@ -148,6 +148,13 @@ Statement &Statement::bind(int idx, long long int v){
     return *this ;
 }
 
+Statement &Statement::bind(int idx, unsigned long long int v){
+    check();
+    if ( sqlite3_bind_int64(handle_, idx, v) != SQLITE_OK )
+        throw Exception(con_.handle());
+    return *this ;
+}
+
 Statement &Statement::bind(int idx, double v){
     check() ;
     if ( sqlite3_bind_double(handle_, idx, v) != SQLITE_OK )
@@ -181,6 +188,10 @@ Statement &Statement::bind(long long int v){
     return bind(++last_arg_idx, v) ;
 }
 
+Statement &Statement::bind(unsigned long long int v){
+    return bind(++last_arg_idx, v) ;
+}
+
 Statement &Statement::bind(double v){
     return bind(++last_arg_idx, v) ;
 }
@@ -206,6 +217,12 @@ Statement &Statement::bindp(const string &name, int v) {
 }
 
 Statement &Statement::bindp(const string &name, long long int v){
+    int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
+    if ( idx ) return bind(idx, v) ;
+    else throw Exception(name + " is not a valid statement placeholder") ;
+}
+
+Statement &Statement::bindp(const string &name, unsigned long long int v){
     int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
     if ( idx ) return bind(idx, v) ;
     else throw Exception(name + " is not a valid statement placeholder") ;
@@ -319,6 +336,12 @@ double QueryResult::get(int idx, double) const
 }
 
 long long int QueryResult::get(int idx, long long int) const
+{
+    cmd_.check() ;
+    return sqlite3_column_int64(cmd_.handle(), idx);
+}
+
+unsigned long long int QueryResult::get(int idx, unsigned long long int) const
 {
     cmd_.check() ;
     return sqlite3_column_int64(cmd_.handle(), idx);

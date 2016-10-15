@@ -23,7 +23,8 @@ class Renderer {
 
 public:
 
-    Renderer(RenderTheme &theme, const std::string &languages, bool debug=false) ;
+    Renderer(const std::shared_ptr<RenderTheme> &theme, const std::string &languages, bool debug=false) ;
+    Renderer(const std::string &languages, bool debug=false) ;
 
     // render a single tile
     bool render(const TileKey &key,                 // tile key
@@ -32,10 +33,12 @@ public:
                 const std::string &layer,           // layer
                 unsigned int query_buffer = 128) ;    // extra space around image (feature query) to avoid artifacts across tiles
 
+    void setTheme(const std::shared_ptr<RenderTheme> &theme) { theme_ = theme ; }
+
 private:
 
     ResourceCache cache_ ;
-    RenderTheme &theme_ ;
+    std::shared_ptr<RenderTheme> theme_ ;
     TextEngine text_engine_ ;
 
 private:

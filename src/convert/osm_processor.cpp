@@ -673,72 +673,6 @@ struct DBField {
     int width_, precision_ ;
     char name_[12] ;
 };
-/*
-string to_utf8( const string &src, const string &enc )
-{
-    std::vector<char> in_buf(src.begin(), src.end());
-    char* src_ptr = &in_buf[0];
-    size_t src_size = src.size();
-
-    const size_t buf_size_ = 1024 ;
-    const bool ignore_error_ = true ;
-
-    std::vector<char> buf(buf_size_);
-    std::string dst;
-
-    iconv_t cd = iconv_open( "UTF-8", enc.c_str() );
-
-    if ( cd != (iconv_t)-1 ) {
-
-        while ( 0 < src_size ) {
-
-            char* dst_ptr = &buf[0];
-            size_t dst_size = buf.size();
-            size_t res = ::iconv(cd, &src_ptr, &src_size, &dst_ptr, &dst_size);
-
-            if (res == (size_t)-1) {
-                if (errno == E2BIG)  ;
-                else if ( ignore_error_ ) {
-                    // skip character
-                    ++src_ptr;
-                    --src_size;
-                } else {
-                    break ;
-                }
-            }
-            dst.append(&buf[0], buf.size() - dst_size);
-        }
-
-        iconv_close( cd );
-    }
-
-    return  dst ;
-}
-*/
-static void parse_record(DBFHandle db_handle, int index, const vector<DBField> &fields, Dictionary &dict, const string &enc) {
-    for( uint i=0 ;i<fields.size() ; i++ ) {
-        const DBField &f = fields[i] ;
-
-        stringstream fstr ;
-        if ( f.type_ == FTDouble ) {
-            double val = DBFReadDoubleAttribute(db_handle, index, i) ;
-            fstr << std::setiosflags(ios::fixed) << val ;
-        }
-        else if ( f.type_ == FTInteger ) {
-            int val = DBFReadIntegerAttribute(db_handle, index, i) ;
-            fstr << val ;
-        }
-        else if ( f.type_ == FTString ) {
-            const char *p = DBFReadStringAttribute(db_handle, index, i) ;
-    //        fstr << to_utf8(p, enc) ;
-        }
-
-        string sval = fstr.str() ;
-
-        if ( !sval.empty() )
-            dict.add(f.name_, sval) ;
-    }
-}
 
 static bool write_box_geometry(SQLite::Connection &con, const BBox &box, const std::string &id ) {
 
@@ -764,6 +698,8 @@ static bool write_box_geometry(SQLite::Connection &con, const BBox &box, const s
 
     cmd.bind(1, blob, blob_size) ;
     cmd.bind(2, id) ;
+    cmd.bind(3, 0) ;
+    cmd.bind(4, 255) ;
 
     cmd.exec() ;
 
@@ -824,14 +760,14 @@ bool OSMProcessor::processLandPolygon(const string &shp_file, const BBox &clip_b
     SQLite::Transaction trans(con) ;
 
     stringstream sql ;
-    sql <<  "INSERT INTO geom_polygons (geom, osm_id) SELECT ST_Multi(ST_Intersection(?, " ;
+    sql <<  "INSERT INTO geom_polygons (geom, osm_id, zmin, zmax) SELECT ST_Multi(ST_Intersection(?, " ;
     sql <<  "ST_GeomFromText('POLYGON((" ;
     sql <<  clip_box.minx_ << ' ' << clip_box.miny_ << ',' ;
     sql <<  clip_box.maxx_ << ' ' << clip_box.miny_ << ',' ;
     sql <<  clip_box.maxx_ << ' ' << clip_box.maxy_ << ',' ;
     sql <<  clip_box.minx_ << ' ' << clip_box.maxy_ << ',' ;
     sql <<  clip_box.minx_ << ' ' << clip_box.miny_ << "))', 4326))) AS geom" ;
-    sql <<  ",? WHERE ST_IsValid(geom) AND geom NOT NULL;" ;
+    sql <<  ",?, 0, 255 WHERE ST_IsValid(geom) AND geom NOT NULL;" ;
 
     string cmd_str = sql.str() ;
     SQLite::Command cmd(con, cmd_str) ;

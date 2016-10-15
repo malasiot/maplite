@@ -37,8 +37,14 @@ extern void sample_linear_geometry(
 void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<vector<Coord>> &res) ;
 
 
-Renderer::Renderer(RenderTheme &theme, const std::string &lang, bool debug):
+Renderer::Renderer(const std::shared_ptr<RenderTheme> &theme, const std::string &lang, bool debug):
     theme_(theme), debug_(debug), text_engine_(cache_, lang)
+{
+
+}
+
+Renderer::Renderer(const std::string &lang, bool debug):
+    debug_(debug), text_engine_(cache_, lang)
 {
 
 }
@@ -93,12 +99,13 @@ public:
 void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_extents, cairo_matrix_t &cmm, const std::vector<Way> &ways,
                           std::vector<WayInstruction> &winstructions, std::vector<POIInstruction> &poi_instructions, int32_t &count)
 {
+    assert(theme_) ;
 
     for( uint32_t idx = 0 ; idx < ways.size() ; ++idx  ) {
         const Way &way = ways[idx] ;
         vector<RenderInstructionPtr> ris ;
 
-        if ( theme_.match(layer, way.tags_, zoom, way.is_closed_, true, ris)) {
+        if ( theme_->match(layer, way.tags_, zoom, way.is_closed_, true, ris)) {
 
             int32_t symbol_id = -1 ;
             vector<POIInstruction> instructions ;
@@ -208,11 +215,13 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
 void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, const std::vector<POI> &pois,
                           std::vector<POIInstruction> &instructions, int32_t &count)
 {
+    assert(theme_) ;
+
     for( uint32_t idx = 0 ; idx < pois.size() ; ++idx  ) {
         const POI &poi = pois[idx] ;
         vector<RenderInstructionPtr> ris ;
 
-        if ( theme_.match(layer, poi.tags_, zoom, false, false, ris)) {
+        if ( theme_->match(layer, poi.tags_, zoom, false, false, ris)) {
 
             int32_t symbol_id = -1 ;
             std::vector<POIInstruction> instr ;
@@ -293,7 +302,7 @@ bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile 
     cairo_restore(cr) ;
 
     double a, r, g, b;
-    get_argb_color(theme_.backgroundColor(), a, r, g, b) ;
+    get_argb_color(theme_->backgroundColor(), a, r, g, b) ;
 
     if ( a == 1 ) cairo_set_source_rgb(cr, r, g, b);
     else cairo_set_source_rgba(cr, r, g, b, a) ;

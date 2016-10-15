@@ -43,8 +43,8 @@ void ConsoleProgressPrinter::advance(unsigned int steps)
         strm_ << " - done.\n" ;
         last_tick_ == -1 ;
     }
-    else
-        strm_.flush() ;
+
+    strm_.flush() ;
 
 }
 

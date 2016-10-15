@@ -33,7 +33,7 @@ MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const
         return ;
     }
 
-    if ( !theme_.read(theme_file) ) {
+    if ( !theme_->read(theme_file) ) {
          LOG_FATAL_STREAM("Error reading map theme :" << theme_file) ;
          return ;
     }
@@ -62,7 +62,7 @@ void MapsforgeTileRequestHandler::handle_request(const Request &request, Respons
         ty = stoi(m.str(4)) ;
     }
     else if ( boost::regex_match(sq, m, TileRequestHandler::uri_pattern_)  ){
-        layer = theme_.defaultLayer() ;
+        layer = theme_->defaultLayer() ;
         zoom = stoi(m.str(1)) ;
         tx = stoi(m.str(2)) ;
         ty = stoi(m.str(3)) ;

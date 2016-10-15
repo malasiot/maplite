@@ -21,7 +21,7 @@ private:
 
     static bool g_init_tile_index_ ;
     std::shared_ptr<MapFileReader> map_file_ ;
-    RenderTheme theme_ ;
+    std::shared_ptr<RenderTheme> theme_ ;
     std::shared_ptr<Renderer> renderer_ ;
 };
 
