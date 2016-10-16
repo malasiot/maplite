@@ -9,7 +9,7 @@
 #include <QFileInfo>
 
 
-CollectionData *importGpx(const QString &fileName, quint64 folder_id, MapFeatureIndex *fidx)
+CollectionData *importGpx(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     // try to load the document from file
 
@@ -69,7 +69,7 @@ CollectionData *importGpx(const QString &fileName, quint64 folder_id, MapFeature
 
     QDomNodeList wptList = docElem.elementsByTagName("wpt") ;
 
-    QVector<MapFeaturePtr> featureList ;
+    QVector<MapOverlayPtr> featureList ;
 
     for(int i=0 ; i<wptList.count() ; i++ )
     {
@@ -103,14 +103,14 @@ CollectionData *importGpx(const QString &fileName, quint64 folder_id, MapFeature
 
         // create marker feature
 
-        MarkerFeature *marker = new MarkerFeature(wptName) ;
+        MarkerOverlay *marker = new MarkerOverlay(wptName) ;
 
         Q_FOREACH(const QString &key, wptMap.keys())
             marker->attributes_.insert(key, wptMap.value(key)) ;
 
         marker->setPoint(QPointF(lon, lat)) ;
 
-        featureList.append(MapFeaturePtr(marker)) ;
+        featureList.append(MapOverlayPtr(marker)) ;
 
     }
 
@@ -177,7 +177,7 @@ CollectionData *importGpx(const QString &fileName, quint64 folder_id, MapFeature
                 }
                 else trksegName += QString(" Segment %1").arg(cseg) ;
 
-                PolygonFeature *poly = new PolygonFeature(trksegName) ;
+                PolygonOverlay *poly = new PolygonOverlay(trksegName) ;
 
                 qDebug() << j << trksegName ;
                 for(int k=0 ; k<trkptList.count() ; k++ )
@@ -194,7 +194,7 @@ CollectionData *importGpx(const QString &fileName, quint64 folder_id, MapFeature
                 Q_FOREACH(const QString &key, trkMap.keys())
                     poly->attributes_.insert(key, trkMap.value(key)) ;
 
-                featureList.append(MapFeaturePtr(poly)) ;
+                featureList.append(MapOverlayPtr(poly)) ;
 
             }
         }

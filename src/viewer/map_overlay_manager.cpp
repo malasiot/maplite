@@ -17,10 +17,10 @@
 using namespace SpatialIndex ;
 using namespace std ;
 
-const size_t MapFeatureIndex::index_page_size_ = 4096 ;
-const size_t MapFeatureIndex::index_buffer_capacity_ = 256 ;
+const size_t MapOverlayManager::index_page_size_ = 4096 ;
+const size_t MapOverlayManager::index_buffer_capacity_ = 256 ;
 
-bool MapFeatureIndex::open(const QString &storage)
+bool MapOverlayManager::open(const QString &storage)
 {
     // Create a new storage manager with the provided base name and a 4K page size.
 
@@ -96,7 +96,7 @@ public:
     QVector<quint64> &ovr_ ;
 };
 
-MapFeaturePtr MapFeatureIndex::findNearest(const QByteArray &searchType, const QPoint &click, MapWidget *view, double thresh)
+MapOverlayPtr MapOverlayManager::findNearest(const QByteArray &searchType, const QPoint &click, MapWidget *view, double thresh)
 {
     QVector<quint64> ids ;
 
@@ -111,16 +111,16 @@ MapFeaturePtr MapFeatureIndex::findNearest(const QByteArray &searchType, const Q
 
     index_->pointLocationQuery(p, v) ;
 
-    if ( ids.isEmpty() ) return MapFeaturePtr() ;
+    if ( ids.isEmpty() ) return MapOverlayPtr() ;
 
-    QVector<MapFeaturePtr> features ;
+    QVector<MapOverlayPtr> features ;
 
     getAllFeatures(ids, features) ;
 
     double min_dist = DBL_MAX ;
-    MapFeaturePtr best ;
+    MapOverlayPtr best ;
 
-    Q_FOREACH(MapFeaturePtr feature, features)
+    Q_FOREACH(MapOverlayPtr feature, features)
     {
         if ( feature->type() != searchType )  continue ;
 
@@ -136,12 +136,12 @@ MapFeaturePtr MapFeatureIndex::findNearest(const QByteArray &searchType, const Q
         }
     }
 
-    if ( min_dist > thresh ) best = MapFeaturePtr() ;
+    if ( min_dist > thresh ) best = MapOverlayPtr() ;
 
     return best ;
 }
 
-MapFeaturePtr MapFeatureIndex::load(quint64 id)
+MapOverlayPtr MapOverlayManager::load(quint64 id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -159,7 +159,7 @@ MapFeaturePtr MapFeatureIndex::load(quint64 id)
             string type = res.get<string>(1) ;
             QString name = QString::fromUtf8(res.get<string>(2).c_str()) ;
 
-            MapFeaturePtr obj = MapFeature::create(type, name) ;
+            MapOverlayPtr obj = MapOverlay::create(type, name) ;
 
             int bs ;
             const char *blob = res.getBlob(3, bs) ;
@@ -174,20 +174,20 @@ MapFeaturePtr MapFeatureIndex::load(quint64 id)
 
             return obj ;
         }
-        else return MapFeaturePtr();
+        else return MapOverlayPtr();
 
     }
     catch ( SQLite::Exception &e )
     {
         qDebug() <<  e.what() ;
-        return MapFeaturePtr() ;
+        return MapOverlayPtr() ;
     }
 }
 
-bool MapFeatureIndex::update(const MapFeaturePtr &feature)
+bool MapOverlayManager::update(const MapOverlayPtr &feature)
 {
     // we need to load the old feature to get its MBR
-    MapFeaturePtr old_feature = load(feature->id()) ;
+    MapOverlayPtr old_feature = load(feature->id()) ;
 
     if (!old_feature ) return false ;
 
@@ -248,7 +248,7 @@ bool MapFeatureIndex::update(const MapFeaturePtr &feature)
 }
 
 
-bool MapFeatureIndex::write(const QVector<MapFeaturePtr> &objects, quint64 collection_id)
+bool MapOverlayManager::write(const QVector<MapOverlayPtr> &objects, quint64 collection_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -263,7 +263,7 @@ bool MapFeatureIndex::write(const QVector<MapFeaturePtr> &objects, quint64 colle
 
             for(int i=0 ; i<objects.size() ; i++)
             {
-                MapFeaturePtr object = objects[i] ;
+                MapOverlayPtr object = objects[i] ;
 
                 QByteArray data = object->serialize() ;
                 QByteArray name = object->name().toUtf8() ;
@@ -293,7 +293,7 @@ bool MapFeatureIndex::write(const QVector<MapFeaturePtr> &objects, quint64 colle
 
             for(int i=0 ; i<objects.size() ; i++)
             {
-                MapFeaturePtr object = objects[i] ;
+                MapOverlayPtr object = objects[i] ;
 
                 cmd.bind(1, (long long int)object->storage_id_) ;
                 cmd.bind(2, (long long int)collection_id) ;
@@ -309,7 +309,7 @@ bool MapFeatureIndex::write(const QVector<MapFeaturePtr> &objects, quint64 colle
         {
             double plow[2], phigh[2];
 
-            MapFeaturePtr object = objects[i] ;
+            MapOverlayPtr object = objects[i] ;
             QRectF mbr = object->boundingBox().normalized() ;
 
             plow[0] = std::min(mbr.left(), mbr.right());
@@ -339,7 +339,7 @@ bool MapFeatureIndex::write(const QVector<MapFeaturePtr> &objects, quint64 colle
 
 
 
-void MapFeatureIndex::query(QVector<quint64> &ovr, QVector<QRectF> &boxes)
+void MapOverlayManager::query(QVector<quint64> &ovr, QVector<QRectF> &boxes)
 {
     QueryVisitor vis(ovr) ;
 
@@ -360,7 +360,7 @@ void MapFeatureIndex::query(QVector<quint64> &ovr, QVector<QRectF> &boxes)
 
 }
 
-bool MapFeatureIndex::addNewFolder(const QString &name, quint64 parent_id, QString &name_unique, quint64 &item_id)
+bool MapOverlayManager::addNewFolder(const QString &name, quint64 parent_id, QString &name_unique, quint64 &item_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -406,7 +406,7 @@ bool MapFeatureIndex::addNewFolder(const QString &name, quint64 parent_id, QStri
 }
 
 
-bool MapFeatureIndex::addNewCollection(const QString &name, quint64 folder_id, const QMap<QString, QVariant> &attributes, QString &name_unique, quint64 &item_id)
+bool MapOverlayManager::addNewCollection(const QString &name, quint64 folder_id, const QMap<QString, QVariant> &attributes, QString &name_unique, quint64 &item_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -459,7 +459,7 @@ bool MapFeatureIndex::addNewCollection(const QString &name, quint64 folder_id, c
 
 }
 
-bool MapFeatureIndex::addFeaturesInCollection(quint64 collection_id, const QVector<quint64> &features)
+bool MapOverlayManager::addFeaturesInCollection(quint64 collection_id, const QVector<quint64> &features)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -493,7 +493,7 @@ bool MapFeatureIndex::addFeaturesInCollection(quint64 collection_id, const QVect
 
 }
 
-bool MapFeatureIndex::deleteFeaturesFromCollection(quint64 collection_id, const QVector<quint64> &features)
+bool MapOverlayManager::deleteFeaturesFromCollection(quint64 collection_id, const QVector<quint64> &features)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -523,15 +523,13 @@ bool MapFeatureIndex::deleteFeaturesFromCollection(quint64 collection_id, const 
         qDebug() <<  e.what() ;
         return false ;
     }
-
-
 }
 
 
-MapFeatureIndex::MapFeatureIndex(QObject *parent): QObject(parent), index_(0), db_(0) {
+MapOverlayManager::MapOverlayManager(): index_(0), db_(0) {
 }
 
-MapFeatureIndex::~MapFeatureIndex()
+MapOverlayManager::~MapOverlayManager()
 {
     if ( index_ )
     {
@@ -544,7 +542,7 @@ MapFeatureIndex::~MapFeatureIndex()
 }
 
 
-bool MapFeatureIndex::getSubFolders(QVector<quint64> &ids, QVector<QString> &names, QVector<bool> &states, quint64 parent_id)
+bool MapOverlayManager::getSubFolders(QVector<quint64> &ids, QVector<QString> &names, QVector<bool> &states, quint64 parent_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -578,7 +576,7 @@ bool MapFeatureIndex::getSubFolders(QVector<quint64> &ids, QVector<QString> &nam
 }
 
 
-bool MapFeatureIndex::getFolderCollections(QVector<quint64> &ids, QVector<QString> &names, QVector<bool> &states, quint64 folder_id)
+bool MapOverlayManager::getFolderCollections(QVector<quint64> &ids, QVector<QString> &names, QVector<bool> &states, quint64 folder_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -611,7 +609,7 @@ bool MapFeatureIndex::getFolderCollections(QVector<quint64> &ids, QVector<QStrin
     }
 }
 
-int MapFeatureIndex::getNumCollections(quint64 folder_id)
+int MapOverlayManager::getNumCollections(quint64 folder_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -635,7 +633,7 @@ int MapFeatureIndex::getNumCollections(quint64 folder_id)
 
 }
 
-bool MapFeatureIndex::getAllFeatures(const QVector<quint64> feature_ids, QVector<MapFeaturePtr> &features)
+bool MapOverlayManager::getAllFeatures(const QVector<quint64> feature_ids, QVector<MapOverlayPtr> &features)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -662,7 +660,7 @@ bool MapFeatureIndex::getAllFeatures(const QVector<quint64> feature_ids, QVector
             string type = res.get<string>(1) ;
             string name = res.get<string>(2) ;
 
-            MapFeaturePtr feature = MapFeature::create(type, QString::fromUtf8(name.c_str())) ;
+            MapOverlayPtr feature = MapOverlay::create(type, QString::fromUtf8(name.c_str())) ;
             feature->storage_id_ = id ;
 
             int bs ;
@@ -688,7 +686,7 @@ bool MapFeatureIndex::getAllFeatures(const QVector<quint64> feature_ids, QVector
 }
 
 
-bool MapFeatureIndex::getAllFeaturesInCollection(quint64 collection_id, QVector<MapFeaturePtr> &features)
+bool MapOverlayManager::getAllFeaturesInCollection(quint64 collection_id, QVector<MapOverlayPtr> &features)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -705,7 +703,7 @@ bool MapFeatureIndex::getAllFeaturesInCollection(quint64 collection_id, QVector<
             string type = res.get<string>(1) ;
             string name = res.get<string>(2) ;
 
-            MapFeaturePtr feature = MapFeature::create(type, QString::fromUtf8(name.c_str())) ;
+            MapOverlayPtr feature = MapOverlay::create(type, QString::fromUtf8(name.c_str())) ;
             feature->storage_id_ = id ;
 
             int bs ;
@@ -731,7 +729,7 @@ bool MapFeatureIndex::getAllFeaturesInCollection(quint64 collection_id, QVector<
 }
 
 
-bool MapFeatureIndex::deleteFolder(quint64 folder_id)
+bool MapOverlayManager::deleteFolder(quint64 folder_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -787,7 +785,7 @@ bool MapFeatureIndex::deleteFolder(quint64 folder_id)
     }
 }
 
-bool MapFeatureIndex::deleteCollection(quint64 collection_id)
+bool MapOverlayManager::deleteCollection(quint64 collection_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -826,7 +824,7 @@ bool MapFeatureIndex::deleteCollection(quint64 collection_id)
 }
 
 
-bool MapFeatureIndex::getFeatureCollectionAndFolder(quint64 feature_id, quint64 &collection_id, quint64 &folder_id)
+bool MapOverlayManager::getFeatureCollectionAndFolder(quint64 feature_id, quint64 &collection_id, quint64 &folder_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -867,7 +865,7 @@ bool MapFeatureIndex::getFeatureCollectionAndFolder(quint64 feature_id, quint64 
 }
 
 
-bool MapFeatureIndex::renameFolder(quint64 folder_id, const QString &newName)
+bool MapOverlayManager::renameFolder(quint64 folder_id, const QString &newName)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -892,7 +890,7 @@ bool MapFeatureIndex::renameFolder(quint64 folder_id, const QString &newName)
 }
 
 
-bool MapFeatureIndex::renameCollection(quint64 collection_id, const QString &newName)
+bool MapOverlayManager::renameCollection(quint64 collection_id, const QString &newName)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -916,7 +914,7 @@ bool MapFeatureIndex::renameCollection(quint64 collection_id, const QString &new
     }
 }
 
-bool MapFeatureIndex::moveFolder(quint64 folder_id, quint64 parent_folder_id)
+bool MapOverlayManager::moveFolder(quint64 folder_id, quint64 parent_folder_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -942,7 +940,7 @@ bool MapFeatureIndex::moveFolder(quint64 folder_id, quint64 parent_folder_id)
 
 }
 
-bool MapFeatureIndex::moveCollection(quint64 collection_id, quint64 parent_folder_id)
+bool MapOverlayManager::moveCollection(quint64 collection_id, quint64 parent_folder_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -968,7 +966,7 @@ bool MapFeatureIndex::moveCollection(quint64 collection_id, quint64 parent_folde
 
 }
 
-bool MapFeatureIndex::setCollectionVisibility(quint64 id, bool state)
+bool MapOverlayManager::setCollectionVisibility(quint64 id, bool state)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -1003,7 +1001,7 @@ bool MapFeatureIndex::setCollectionVisibility(quint64 id, bool state)
     }
 }
 
-bool MapFeatureIndex::setFolderVisibility(quint64 id, bool state, bool update_children)
+bool MapOverlayManager::setFolderVisibility(quint64 id, bool state, bool update_children)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -1074,7 +1072,7 @@ bool MapFeatureIndex::setFolderVisibility(quint64 id, bool state, bool update_ch
         return false ;
     }
 }
-QString MapFeatureIndex::uniqueFeatureName(const QString &pattern, quint64 collection_id, int &counter)
+QString MapOverlayManager::uniqueFeatureName(const QString &pattern, quint64 collection_id, int &counter)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -1110,15 +1108,15 @@ QString MapFeatureIndex::uniqueFeatureName(const QString &pattern, quint64 colle
 
 }
 
-QRectF MapFeatureIndex::getFeatureBBox(const QVector<quint64> &feature_ids)
+QRectF MapOverlayManager::getFeatureBBox(const QVector<quint64> &feature_ids)
 {
-    QVector<MapFeaturePtr> features ;
+    QVector<MapOverlayPtr> features ;
 
     getAllFeatures(feature_ids, features) ;
 
     QRectF box ;
 
-    Q_FOREACH(MapFeaturePtr feature, features)  {
+    Q_FOREACH(MapOverlayPtr feature, features)  {
         box = box.united(feature->boundingBox()) ;
     }
 
@@ -1127,15 +1125,15 @@ QRectF MapFeatureIndex::getFeatureBBox(const QVector<quint64> &feature_ids)
 
 
 
-QRectF MapFeatureIndex::getCollectionBBox(quint64 collection_id)
+QRectF MapOverlayManager::getCollectionBBox(quint64 collection_id)
 {
-    QVector<MapFeaturePtr> features ;
+    QVector<MapOverlayPtr> features ;
 
     getAllFeaturesInCollection(collection_id, features) ;
 
     QRectF box ;
 
-    Q_FOREACH(MapFeaturePtr feature, features) {
+    Q_FOREACH(MapOverlayPtr feature, features) {
         box = box.united(feature->boundingBox()) ;
     }
 

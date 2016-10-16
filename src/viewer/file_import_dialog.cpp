@@ -10,7 +10,7 @@
 #include <QTimer>
 
 
-FileImportDialog::FileImportDialog(const QStringList &files, quint64 parent_folder_id, MapFeatureIndex *index, QWidget *parent) : QDialog(parent)
+FileImportDialog::FileImportDialog(const QStringList &files, quint64 parent_folder_id, QSharedPointer<MapOverlayManager> index, QWidget *parent) : QDialog(parent)
 {
     progress_bar_ = new QProgressBar(this);
     name_label_ = new QLabel ("Name");
@@ -82,19 +82,19 @@ void FileImportWorker::run()
         emit importStarted(QFileInfo(file_name).fileName()) ;
 
         if ( QFileInfo(file_name).completeSuffix().toUpper() == "GPX" )  {
-            CollectionData *col = importGpx(file_name, parent_folder_id_, index_) ;
+            CollectionData *col = importGpx(file_name, parent_folder_id_, overlay_manager_) ;
 
             collections_.append(col) ;
         }
         else if ( QFileInfo(file_name).completeSuffix().toUpper() == "KMZ"  )
         {
-            CollectionTreeNode *cl =  importKmz(file_name, parent_folder_id_, index_);
+            CollectionTreeNode *cl =  importKmz(file_name, parent_folder_id_, overlay_manager_);
 
             if ( cl ) documents_.append(cl) ;
         }
         else if ( QFileInfo(file_name).completeSuffix().toUpper() == "KML"  )
         {
-            CollectionTreeNode *cl =  importKml(file_name, parent_folder_id_, index_);
+            CollectionTreeNode *cl =  importKml(file_name, parent_folder_id_, overlay_manager_);
 
             if ( cl ) documents_.append(cl) ;
         }

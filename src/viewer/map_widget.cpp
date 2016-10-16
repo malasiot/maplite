@@ -51,7 +51,7 @@ QPointF px2ll(const QPoint &coord, unsigned int zoomLevel, unsigned int tile_siz
 }
 
 
-MapWidget::MapWidget(QWidget *parent): QWidget(parent), feature_cache_(10000), cache_tiles_(false) {
+MapWidget::MapWidget(QWidget *parent): QWidget(parent), overlay_cache_(10000), cache_tiles_(false) {
 
     zoom_ = 10 ;
     zoom_mode_ = Mouse ;
@@ -97,26 +97,26 @@ QPointF MapWidget::getCenter() const
     return px2ll(center_, zoom_, base_map_->tileSize()) ;
 }
 
-void MapWidget::setCurrentFeature(const MapFeaturePtr &o)
+void MapWidget::setCurrentOverlay(const MapOverlayPtr &o)
 {
  //   selected_.clear() ;
-    current_feature_ = o ;
-    if ( o && o->id() > 0 ) feature_cache_.remove(o->id()) ;
+    current_overlay_ = o ;
+    if ( o && o->id() > 0 ) overlay_cache_.remove(o->id()) ;
 }
 
 
-void MapWidget::saveFeature(const MapFeaturePtr &o, bool update)
+void MapWidget::saveOverlay(const MapOverlayPtr &o, bool update)
 {
     undo_stack_->setActive() ;
 
     if ( update )
     {
-        feature_index_->update(o) ;
+        overlay_manager_->update(o) ;
     }
     else
     {
-     //   feature_cache_.insert(o->id(), o, o->cost()) ;
-        emit newFeature(o) ;
+     //   overlay_cache_.insert(o->id(), o, o->cost()) ;
+        emit newOverlay(o) ;
     }
 
 }
@@ -412,7 +412,7 @@ void MapWidget::drawBaseMap(QPainter &painter, const QRegion &region)
     }
 }
 
-void MapWidget::updateFeature(const MapFeaturePtr &ovr)
+void MapWidget::updateOverlay(const MapOverlayPtr &ovr)
 {
     QRect rect = ovr->displayRect(this) ;
     update(rect) ;
@@ -428,7 +428,7 @@ void MapWidget::zoomToRect(const QRectF &coords)
 
 void MapWidget::invalidateOverlay()
 {
-    feature_cache_.clear() ;
+    overlay_cache_.clear() ;
     update() ;
 }
 
@@ -445,26 +445,26 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
 
     // query spatialindex for objects that are within the repaint area
     QVector<quint64> ovr ;
-    feature_index_->query(ovr, bboxes) ;
+    overlay_manager_->query(ovr, bboxes) ;
 
-    QVector<MapFeaturePtr> features_to_draw ;
+    QVector<MapOverlayPtr> features_to_draw ;
 
     // search the cache for already available objects otherwise load them from storage
 
     Q_FOREACH( quint64 id, ovr )
     {
 
-        MapFeaturePtr obj ;
+        MapOverlayPtr obj ;
 
-        if ( current_feature_ && current_feature_->id() == id ) continue ;
+        if ( current_overlay_ && current_overlay_->id() == id ) continue ;
 
-        if ( feature_cache_.contains(id) )
+        if ( overlay_cache_.contains(id) )
         {
-            obj = MapFeaturePtr(feature_cache_.object(id)) ;
+            obj = MapOverlayPtr(overlay_cache_.object(id)) ;
 //            qDebug() << "loading cached object" << obj->id() << obj->name() ;
         }
         else  {
-            obj = feature_index_->load(id) ;
+            obj = overlay_manager_->load(id) ;
  //           qDebug() << "loading stored object" << obj->id() << obj->name() ;
         }
 
@@ -484,22 +484,22 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
 /*
     Q_FOREACH( MapFeature *o, features_to_draw )
     {
-       //  if ( !feature_cache_.contains(o->id())) ;
-            feature_cache_.insert(o->id(), o, o->cost()) ;
+       //  if ( !overlay_cache_.contains(o->id())) ;
+            overlay_cache_.insert(o->id(), o, o->cost()) ;
 
     }
 */
     // draw currently active object if any
 
-    if ( current_feature_ )
+    if ( current_overlay_ )
     {
-        QRect ovr_box = current_feature_->displayRect(this) ;
+        QRect ovr_box = current_overlay_->displayRect(this) ;
 
         Q_FOREACH( QRect r, rects )
         {
             if ( r.intersects(ovr_box) )
             {
-                current_feature_->draw(painter, this) ;
+                current_overlay_->draw(painter, this) ;
             }
         }
     }

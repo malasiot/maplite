@@ -23,7 +23,7 @@ class FeatureLibraryModel: public QAbstractItemModel
     Q_OBJECT
 
 public:
-    FeatureLibraryModel(MapFeatureIndex *fidx) ;
+    FeatureLibraryModel(QSharedPointer<MapOverlayManager> m) ;
     ~FeatureLibraryModel() ;
 
     QVariant data(const QModelIndex &index, int role) const;
@@ -73,7 +73,7 @@ Q_SIGNALS:
 
 private:
 
-    MapFeatureIndex *feature_index_ ;
+    QSharedPointer<MapOverlayManager> overlay_manager_ ;
     mutable LibraryNode *root_;
     QFileIconProvider *icon_provider_ ;
 } ;
@@ -83,7 +83,7 @@ class FeatureLibraryView: public QTreeView {
 
 public:
 
-    FeatureLibraryView(MapFeatureIndex *idx, QWidget *parent) ;
+    FeatureLibraryView(QSharedPointer<MapOverlayManager> mgr, QWidget *parent) ;
 
     void addCollection(const CollectionData *col);
     void addCollectionTree(const CollectionTreeNode *col);
@@ -120,7 +120,7 @@ private:
 
     FeatureLibraryModel model_;
     QMenu *context_menu_ ;
-    MapFeatureIndex *feature_index_ ;
+    QSharedPointer<MapOverlayManager> overlay_manager_ ;
     QAction *zoom_action_, *paste_action_, *new_folder_action_, *new_collection_action_, *delete_item_action_ ;
 
 } ;
@@ -131,7 +131,7 @@ class FeatureListView: public QListView {
 
 public:
 
-    FeatureListView(MapFeatureIndex *idx, QWidget *parent) ;
+    FeatureListView(QSharedPointer<MapOverlayManager> mgr, QWidget *parent) ;
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) ;
@@ -159,7 +159,7 @@ Q_SIGNALS:
 private:
 
     quint64 collection_id_ ;
-    MapFeatureIndex *feature_index_ ;
+    QSharedPointer<MapOverlayManager> overlay_manager_ ;
     QStandardItemModel model_;
     QMenu *context_menu_ ;
     QAction *zoom_action_, *copy_action_, *cut_action_, *duplicate_action_, *delete_item_action_ ;

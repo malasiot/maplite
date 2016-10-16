@@ -19,7 +19,7 @@ class FileImportDialog: public QDialog
     Q_OBJECT
 
 public:
-    FileImportDialog(const QStringList &files, quint64 parent_folder_id, MapFeatureIndex *index, QWidget *parent);
+    FileImportDialog(const QStringList &files, quint64 parent_folder_id, QSharedPointer<MapOverlayManager> ovrmgr, QWidget *parent);
 
     QVector<CollectionData *> collections_ ;
     QVector<CollectionTreeNode *> documents_ ;
@@ -37,7 +37,6 @@ private:
     QLabel *name_label_;
     QProgressBar *progress_bar_;
 
-
     FileImportWorker *worker_ ;
 };
 
@@ -45,8 +44,8 @@ private:
 class FileImportWorker: public QThread
 {
 public:
-    FileImportWorker(const QStringList &files, quint64 folder_id, MapFeatureIndex *feature_index):
-        stop_flag_(0), files_(files), parent_folder_id_(folder_id), index_(feature_index) {}
+    FileImportWorker(const QStringList &files, quint64 folder_id, QSharedPointer<MapOverlayManager> ovmgr):
+        stop_flag_(0), files_(files), parent_folder_id_(folder_id), overlay_manager_(ovmgr) {}
 
 private:
     Q_OBJECT
@@ -63,7 +62,7 @@ private:
     QAtomicInt stop_flag_ ;
     QStringList files_ ;
     quint64 parent_folder_id_ ;
-    MapFeatureIndex *index_ ;
+    QSharedPointer<MapOverlayManager> overlay_manager_ ;
 
  public:
 

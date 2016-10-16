@@ -23,7 +23,7 @@ struct CollectionTreeNode
     quint64 folder_id_ ;
     CollectionTreeNode *parent_ ;
     CollectionData * collection_ ;
-    QVector<MapFeaturePtr> feature_list_ ;
+    QVector<MapOverlayPtr> overlay_list_ ;
 
     ~CollectionTreeNode() {
         if ( collection_ ) delete collection_ ;
@@ -31,9 +31,9 @@ struct CollectionTreeNode
     }
 };
 
-CollectionData *importGpx(const QString &fileName, quint64 folder_id, MapFeatureIndex *fidx) ;
-CollectionTreeNode *importKmz(const QString &fileName, quint64 folder_id, MapFeatureIndex *fidx) ;
-CollectionTreeNode *importKml(const QString &fileName, quint64 folder_id, MapFeatureIndex *fidx) ;
-CollectionTreeNode *importKml(QIODevice *data, quint64 folder_id, MapFeatureIndex *fidx) ;
+CollectionData *importGpx(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx) ;
+CollectionTreeNode *importKmz(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx) ;
+CollectionTreeNode *importKml(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx) ;
+CollectionTreeNode *importKml(QIODevice *data, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx) ;
 
 #endif

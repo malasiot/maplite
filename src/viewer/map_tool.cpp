@@ -254,7 +254,7 @@ void PolygonTool::paint(QPainter &painter)
 
         painter.setPen(QPen(Qt::red)) ;
 
-        PolygonFeature *co = dynamic_cast<PolygonFeature *>(current_object_.data()) ;
+        PolygonOverlay *co = dynamic_cast<PolygonOverlay *>(current_object_.data()) ;
 
         const QPolygonF &poly_ = co->getPolygon() ;
 
@@ -277,13 +277,13 @@ void PolygonTool::mouseReleased(QMouseEvent *mouseEvent)
     {
         if ( current_object_ == 0  )
         {
-            MapFeatureIndex *index = view_->getIndex() ;
-            QString name = index->uniqueFeatureName("Track %1", view_->currentCollection(), track_counter_) ;
+            QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
+            QString name = mgr->uniqueFeatureName("Track %1", view_->currentCollection(), track_counter_) ;
 
-            current_object_ = MapFeaturePtr(new PolygonFeature(name)) ;
+            current_object_ = MapOverlayPtr(new PolygonOverlay(name)) ;
             current_object_->setSelected(true) ;
 
-            view_->setCurrentFeature(current_object_) ;
+            view_->setCurrentOverlay(current_object_) ;
 
             undo_stack_->clear() ;
         }
@@ -306,9 +306,9 @@ void PolygonTool::mouseDoubleClicked(QMouseEvent *mouseEvent)
 {
     is_editing_ = false ;
 
-    view_->saveFeature(current_object_) ;
+    view_->saveOverlay(current_object_) ;
     current_object_->setSelected(false) ;
-    view_->setCurrentFeature(MapFeaturePtr()) ;
+    view_->setCurrentOverlay(MapOverlayPtr()) ;
     view_->update() ;
     current_object_.clear() ;
 
@@ -339,7 +339,7 @@ void PointTool::deinit()
     if ( current_object_ )
     {
         current_object_->setSelected(false) ;
-        view_->updateFeature(current_object_) ;
+        view_->updateOverlay(current_object_) ;
         current_object_.clear() ;
     }
 }
@@ -361,21 +361,21 @@ void PointTool::mouseReleased(QMouseEvent *mouseEvent)
         if ( current_object_ )
         {
             current_object_->setSelected(false) ;
-            view_->updateFeature(current_object_) ;
+            view_->updateOverlay(current_object_) ;
         }
 
-        MapFeatureIndex *index = view_->getIndex() ;
-        QString name = index->uniqueFeatureName("%1", view_->currentCollection(), point_counter_) ;
+        QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
+        QString name = mgr->uniqueFeatureName("%1", view_->currentCollection(), point_counter_) ;
 
-        MarkerFeature *mf = new MarkerFeature(name) ;
+        MarkerOverlay *mf = new MarkerOverlay(name) ;
         mf->setPoint(view_->displayToCoords(p)) ;
 
-        current_object_ = MapFeaturePtr(mf) ;
+        current_object_ = MapOverlayPtr(mf) ;
         current_object_->setSelected(true) ;
 
-        view_->saveFeature(current_object_) ;
-        view_->setCurrentFeature(current_object_);
-        view_->updateFeature(current_object_) ;
+        view_->saveOverlay(current_object_) ;
+        view_->setCurrentOverlay(current_object_);
+        view_->updateOverlay(current_object_) ;
 
     }
     else if ( mouseEvent->button() == Qt::RightButton )
@@ -464,10 +464,10 @@ void FeatureSelectTool::mouseReleased(QMouseEvent *mouseEvent)
     if ( is_panning_ )
         is_panning_ = false ;
     else {
-        MapFeatureIndex *index = view_->getIndex() ;
+        QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
 
-        MapFeaturePtr obj = index->findNearest("marker", start_, view_, 10) ;
-        if ( !obj ) obj = index->findNearest("polygon", start_, view_, 10) ;
+        MapOverlayPtr obj = mgr->findNearest("marker", start_, view_, 10) ;
+        if ( !obj ) obj = mgr->findNearest("polygon", start_, view_, 10) ;
 
         if ( obj ) {
             emit featureClicked(obj->id()) ;
@@ -701,7 +701,7 @@ void FeatureEditTool::mouseReleased(QMouseEvent *mouseEvent)
 
     if ( !is_editing_ )
     {
-        MapFeatureIndex *index = view_->getIndex() ;
+        QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
         QPointF coords = view_->displayToCoords(start_) ;
 
         if ( current_object_ != 0 )
@@ -709,23 +709,23 @@ void FeatureEditTool::mouseReleased(QMouseEvent *mouseEvent)
             if ( object_modified_ )
             {
                 undo_stack_->clear() ;
-                view_->saveFeature(current_object_, true) ;
+                view_->saveOverlay(current_object_, true) ;
             }
 
             current_object_->setActive(false) ;
             view_->update();
 
             current_object_.clear() ;
-            view_->setCurrentFeature(current_object_) ;
+            view_->setCurrentOverlay(current_object_) ;
         }
 
-        MapFeaturePtr obj = index->findNearest("marker", start_, view_, 10) ;
-        if ( !obj ) obj = index->findNearest("polygon", start_, view_, 10) ;
+        MapOverlayPtr obj = mgr->findNearest("marker", start_, view_, 10) ;
+        if ( !obj ) obj = mgr->findNearest("polygon", start_, view_, 10) ;
 
         if ( obj ) {
             current_object_ = obj ;
             current_object_->setActive(true) ;
-            view_->setCurrentFeature(current_object_) ;
+            view_->setCurrentOverlay(current_object_) ;
             view_->update() ;
             is_editing_ = true ;
             object_modified_ = true ;
@@ -752,14 +752,14 @@ void FeatureEditUndoCommand::undo()
     {
     case FEATURE_APPEND_POINT_CMD:
     {
-        PolygonFeature *feature = static_cast<PolygonFeature *>(feature_.data()) ;
+        PolygonOverlay *feature = static_cast<PolygonOverlay *>(feature_.data()) ;
         feature->popBack() ;
         view_->update() ;
         break ;
     }
     case FEATURE_PREPEND_POINT_CMD:
     {
-        PolygonFeature *feature = static_cast<PolygonFeature *>(feature_.data()) ;
+        PolygonOverlay *feature = static_cast<PolygonOverlay *>(feature_.data()) ;
         feature->popFront() ;
         view_->update() ;
         break ;
@@ -793,7 +793,7 @@ void FeatureEditUndoCommand::undo()
     }
 
     tool_->current_object_ = feature_ ;
-    view_->setCurrentFeature(feature_);
+    view_->setCurrentOverlay(feature_);
 }
 
 void FeatureEditUndoCommand::redo()
@@ -802,14 +802,14 @@ void FeatureEditUndoCommand::redo()
     {
     case FEATURE_APPEND_POINT_CMD:
     {
-        PolygonFeature *feature = static_cast<PolygonFeature *>(feature_.data()) ;
+        PolygonOverlay *feature = static_cast<PolygonOverlay *>(feature_.data()) ;
         feature->addPoint(pt_) ;
         view_->update() ;
         break ;
     }
     case FEATURE_PREPEND_POINT_CMD:
     {
-        PolygonFeature *feature = static_cast<PolygonFeature *>(feature_.data()) ;
+        PolygonOverlay *feature = static_cast<PolygonOverlay *>(feature_.data()) ;
         feature->prepend(pt_) ;;
         view_->update() ;
         break ;
@@ -845,6 +845,6 @@ void FeatureEditUndoCommand::redo()
     }
 
     tool_->current_object_ = feature_ ;
-    view_->setCurrentFeature(feature_);
+    view_->setCurrentOverlay(feature_);
 }
 

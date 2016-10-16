@@ -77,7 +77,7 @@ QByteArray readKmlFile(unzFile zipfile, const QString &fileName)
     return res ;
 }
 
-CollectionTreeNode *importKmz(const QString &fileName, quint64 folder_id, MapFeatureIndex *fidx)
+CollectionTreeNode *importKmz(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     CollectionTreeNode *res = 0 ;
 
@@ -107,7 +107,7 @@ CollectionTreeNode *importKmz(const QString &fileName, quint64 folder_id, MapFea
     return res ;
 }
 
-CollectionTreeNode *importKml(const QString &fileName, quint64 folder_id, MapFeatureIndex *fidx)
+CollectionTreeNode *importKml(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     QFile file(fileName) ;
     if ( !file.open(QIODevice::ReadOnly) ) return 0 ;
@@ -154,7 +154,7 @@ bool KmlPlacemark::parseCoordinates(const QString &coords)
 class KmlHandler : public QXmlDefaultHandler
 {
 public:
-    KmlHandler(MapFeatureIndex *index): index_(index) {
+    KmlHandler(QSharedPointer<MapOverlayManager> index): index_(index) {
         root_node_ = new CollectionTreeNode ;
         nodes_.push_back(root_node_) ;
     }
@@ -186,7 +186,7 @@ private:
 
     QStack<CollectionTreeNode *> nodes_ ;
     QStack<NodeType> types_ ;
-    MapFeatureIndex *index_ ;
+    QSharedPointer<MapOverlayManager> index_ ;
     KmlPlacemark *placemark_ ;
 
 };
@@ -289,21 +289,21 @@ bool KmlHandler::endElement(const QString & /* namespaceURI */,
 
         if ( placemark_->type_ == 0 )
         {
-            MarkerFeature *marker = new MarkerFeature(placemark_->name_) ;
+            MarkerOverlay *marker = new MarkerOverlay(placemark_->name_) ;
 
             marker->setPoint(placemark_->geometry_.at(0)) ;
 
-            current->feature_list_.append(MapFeaturePtr(marker)) ;
+            current->overlay_list_.append(MapOverlayPtr(marker)) ;
 
         }
         else if ( placemark_->type_ == 1 )
         {
-            PolygonFeature *marker = new PolygonFeature(placemark_->name_) ;
+            PolygonOverlay *marker = new PolygonOverlay(placemark_->name_) ;
 
             Q_FOREACH(const QPointF &pt, placemark_->geometry_)
                 marker->addPoint(pt) ;
 
-            current->feature_list_.append(MapFeaturePtr(marker)) ;
+            current->overlay_list_.append(MapOverlayPtr(marker)) ;
         }
 
         delete placemark_ ;
@@ -328,7 +328,7 @@ bool KmlHandler::fatalError(const QXmlParseException &exception)
 }
 
 
-static void createFoldersRecursive(CollectionTreeNode *node, quint64 parent_id, MapFeatureIndex *fidx)
+static void createFoldersRecursive(CollectionTreeNode *node, quint64 parent_id, QSharedPointer<MapOverlayManager> fidx)
 {
     QString unique_name ;
     quint64 item_id ;
@@ -338,7 +338,7 @@ static void createFoldersRecursive(CollectionTreeNode *node, quint64 parent_id, 
     node->name_ = unique_name ;
     node->folder_id_ = item_id ;
 
-    if ( !node->feature_list_.isEmpty() )
+    if ( !node->overlay_list_.isEmpty() )
     {
         CollectionData *col = new CollectionData ;
 
@@ -354,14 +354,14 @@ static void createFoldersRecursive(CollectionTreeNode *node, quint64 parent_id, 
         col->id_ = collection_id ;
         col->folder_ = item_id ;
 
-        fidx->write(node->feature_list_, col->id_ )  ;
+        fidx->write(node->overlay_list_, col->id_ )  ;
     }
 
     Q_FOREACH(CollectionTreeNode *child, node->children_)
         createFoldersRecursive(child, item_id, fidx) ;
 }
 
-CollectionTreeNode *importKml(QIODevice *data, quint64 folder_id, MapFeatureIndex *fidx)
+CollectionTreeNode *importKml(QIODevice *data, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     KmlHandler handler(fidx) ;
     if ( !handler.parse(data) ) return 0 ;

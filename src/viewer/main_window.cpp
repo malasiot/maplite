@@ -41,16 +41,13 @@ MainWindow::MainWindow(int &argc, char *argv[])
 
     parseArguments(argc, argv) ;
 
-    feature_index_ = new MapFeatureIndex(this) ;
+    overlay_manager_ = QSharedPointer<MapOverlayManager>(new MapOverlayManager) ;
 
-    QString feature_index_path = QDesktopServices::storageLocation(QDesktopServices::DataLocation)  ;
-    QDir(feature_index_path).mkpath(".") ;
+    QString overlay_manager_path = QDesktopServices::storageLocation(QDesktopServices::DataLocation)  ;
+    QDir(overlay_manager_path).mkpath(".") ;
 
-    if ( !feature_index_->open(feature_index_path + "/features") )
-    {
-        delete feature_index_ ;
-        feature_index_ = 0 ;
-    }
+    if ( !overlay_manager_->open(overlay_manager_path + "/features") )
+        overlay_manager_.clear() ;
 
     current_folder_id_ = 1 ;
     current_collection_id_ = 0 ;
@@ -107,8 +104,8 @@ void MainWindow::createDocks()
     splitter->setOrientation(Qt::Vertical) ;
     splitter->setHandleWidth(2);
 
-    feature_library_view_ = new FeatureLibraryView(feature_index_, feature_library_dock_);
-    feature_list_view_ = new FeatureListView(feature_index_, feature_library_dock_);
+    feature_library_view_ = new FeatureLibraryView(overlay_manager_, feature_library_dock_);
+    feature_list_view_ = new FeatureListView(overlay_manager_, feature_library_dock_);
     splitter->addWidget(feature_library_view_);
     splitter->addWidget(feature_list_view_);
 
@@ -130,7 +127,7 @@ void MainWindow::createDocks()
 void MainWindow::createWidgets()
 {
     map_widget_ = new MapWidget(this) ;
-    map_widget_->setFeatureIndex(feature_index_) ;
+    map_widget_->setOverlayManager(overlay_manager_) ;
     setCentralWidget(map_widget_);
 
     map_widget_->setTool(pan_tool_) ;
@@ -149,7 +146,7 @@ void MainWindow::createWidgets()
         map_widget_->setCenter(default_center_.x(), default_center_.y(), default_zoom_) ;
     }
 
-    connect(map_widget_, SIGNAL(newFeature(MapFeaturePtr)), this, SLOT(onNewFeature(MapFeaturePtr))) ;
+    connect(map_widget_, SIGNAL(newOverlay(MapOverlayPtr)), this, SLOT(onNewOverlay(MapOverlayPtr))) ;
 
     undo_group_->addStack(map_widget_->undo_stack_) ;
     map_widget_->undo_stack_->setActive() ;
@@ -667,7 +664,7 @@ void MainWindow::importFiles()
     }
 
 
-    FileImportDialog dlg(file_names, current_folder_id_, feature_index_, 0) ;
+    FileImportDialog dlg(file_names, current_folder_id_, overlay_manager_, 0) ;
     dlg.exec() ;
 
     Q_FOREACH(CollectionData *col, dlg.collections_)
@@ -684,11 +681,11 @@ void MainWindow::importFiles()
 
 }
 
-void MainWindow::onNewFeature(const MapFeaturePtr &o)
+void MainWindow::onNewOverlay(const MapOverlayPtr &o)
 {
-    QVector<MapFeaturePtr> features ;
+    QVector<MapOverlayPtr> features ;
     features.append(o) ;
-    feature_index_->write(features, current_collection_id_) ;
+    overlay_manager_->write(features, current_collection_id_) ;
     feature_list_view_->populate(current_collection_id_) ;
 }
 

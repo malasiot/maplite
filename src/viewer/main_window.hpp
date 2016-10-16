@@ -19,7 +19,7 @@ class QUndoGroup ;
 class QUndoStack ;
 class FeatureLibraryView ;
 class FeatureListView ;
-class MapFeatureIndex ;
+class MapOverlayManager ;
 class QDir ;
 
 #include "map_overlay.hpp"
@@ -64,7 +64,7 @@ public Q_SLOTS:
     void updateMenus();
     void toolChanged();
     void importFiles() ;
-    void onNewFeature(const MapFeaturePtr &) ;
+    void onNewOverlay(const MapOverlayPtr &) ;
     void onCollectionSelected(quint64 collection_id, quint64 feature_id = 0) ;
     void onFolderSelected(quint64 folder_id) ;
     void displayCoords(const QPointF &coords) ;
@@ -119,7 +119,7 @@ protected:
     QString default_map_ ;
     int default_zoom_ ;
 
-    MapFeatureIndex *feature_index_ ;
+    QSharedPointer<MapOverlayManager> overlay_manager_ ;
 
     quint64 current_folder_id_, current_collection_id_ ;
 

@@ -102,7 +102,7 @@ void FeatureLibraryModel::populate(LibraryNode *parent)
     QVector<QString> names ;
     QVector<bool> states ;
 
-    feature_index_->getSubFolders(ids, names, states, parent->id_) ;
+    overlay_manager_->getSubFolders(ids, names, states, parent->id_) ;
 
     for(int i=0 ; i<ids.size() ; i++)
     {
@@ -113,7 +113,7 @@ void FeatureLibraryModel::populate(LibraryNode *parent)
         populate(node) ;
     }
 
-    parent->pending_ = feature_index_->getNumCollections(parent->id_) ;
+    parent->pending_ = overlay_manager_->getNumCollections(parent->id_) ;
 
 }
 
@@ -125,7 +125,7 @@ void FeatureLibraryModel::loadPending(LibraryNode *parent)
     QVector<QString> names ;
     QVector<bool> states ;
 
-    feature_index_->getFolderCollections(ids, names, states, parent->id_) ;
+    overlay_manager_->getFolderCollections(ids, names, states, parent->id_) ;
 
     for(int i=0 ; i<ids.size() ; i++)
     {
@@ -160,12 +160,12 @@ QModelIndex FeatureLibraryModel::addItem(const QModelIndex &parent, const QStrin
     LibraryNode *item = 0;
 
     if ( folder )  {
-        if ( feature_index_->addNewFolder(name, parent_folder_id, unique_name, item_id) )
+        if ( overlay_manager_->addNewFolder(name, parent_folder_id, unique_name, item_id) )
             item = new LibraryNode(unique_name, item_id, true, parentNode) ;
     }
     else {
         QMap<QString, QVariant> attr ;
-        if ( feature_index_->addNewCollection(name, parent_folder_id, attr, unique_name, item_id) )
+        if ( overlay_manager_->addNewCollection(name, parent_folder_id, attr, unique_name, item_id) )
             item = new LibraryNode(unique_name, item_id, false, parentNode) ;
     }
 
@@ -258,11 +258,11 @@ QModelIndex FeatureLibraryModel::moveItem(const QModelIndex &from, const QModelI
     LibraryNode *item = 0;
 
     if ( folder )  {
-        if ( feature_index_->moveFolder(id, parent_folder_id) )
+        if ( overlay_manager_->moveFolder(id, parent_folder_id) )
             item = new LibraryNode(name, id, true, parentNode) ;
     }
     else {
-        if ( feature_index_->moveCollection(id, parent_folder_id) )
+        if ( overlay_manager_->moveCollection(id, parent_folder_id) )
             item = new LibraryNode(name, id, false, parentNode) ;
     }
 
@@ -312,9 +312,9 @@ bool FeatureLibraryModel::deleteItem(const QModelIndex &index)
     success = parentItem->removeChildren(position, 1);
 
     if ( item->is_folder_ )
-        feature_index_->deleteFolder(item->id_) ;
+        overlay_manager_->deleteFolder(item->id_) ;
     else
-        feature_index_->deleteCollection(item->id_) ;
+        overlay_manager_->deleteCollection(item->id_) ;
 
     endRemoveRows();
 
@@ -367,17 +367,17 @@ bool FeatureLibraryModel::setData(const QModelIndex &index, const QVariant &valu
         item->changeCheckedState( value == Qt::Checked ) ;
 
         if ( !item->is_folder_ )
-            feature_index_->setCollectionVisibility(item->id_, value == Qt::Checked) ;
+            overlay_manager_->setCollectionVisibility(item->id_, value == Qt::Checked) ;
         else
-            feature_index_->setFolderVisibility(item->id_, value == Qt::Checked) ;
+            overlay_manager_->setFolderVisibility(item->id_, value == Qt::Checked) ;
 
         emit dataChanged(this->index(0, 0), this->index(item->children_.size(), index.column(), index));
 
         return true ;
     }
     else if ( role == Qt::EditRole ) {
-        if ( item->is_folder_ && !feature_index_->renameFolder(item->id_, newName) ) return false ;
-        else if ( !item->is_folder_ && !feature_index_->renameCollection(item->id_, newName) ) return false ;
+        if ( item->is_folder_ && !overlay_manager_->renameFolder(item->id_, newName) ) return false ;
+        else if ( !item->is_folder_ && !overlay_manager_->renameCollection(item->id_, newName) ) return false ;
         else {
             item->name_ = newName ;
             emit dataChanged(index, index);
@@ -465,7 +465,7 @@ bool FeatureLibraryModel::dropMimeData(const QMimeData *data, Qt::DropAction act
                 file_list.append(file_name) ;
         }
 
-        FileImportDialog dlg(file_list, parentNode->id_, feature_index_, 0) ;
+        FileImportDialog dlg(file_list, parentNode->id_, overlay_manager_, 0) ;
         dlg.exec() ;
 
         for(int i=0 ; i<dlg.collections_.size() ; i++ )
@@ -572,7 +572,7 @@ bool FeatureLibraryModel::canFetchMore ( const QModelIndex & parent ) const
 }
 
 
-FeatureLibraryModel::FeatureLibraryModel(MapFeatureIndex *index): feature_index_(index)
+FeatureLibraryModel::FeatureLibraryModel(QSharedPointer<MapOverlayManager> index): overlay_manager_(index)
 {
 
     icon_provider_ = new QFileIconProvider() ;
@@ -669,7 +669,7 @@ void FeatureLibraryView::onPaste()
 
     LibraryNode *node = model_.node(index) ;
 
-    feature_index_->addFeaturesInCollection(node->id_, ids) ;
+    overlay_manager_->addFeaturesInCollection(node->id_, ids) ;
 
     emit collectionClicked(node->id_, -1) ;
 }
@@ -717,7 +717,7 @@ void FeatureLibraryView::deleteItem()
 
 }
 
-FeatureLibraryView::FeatureLibraryView(MapFeatureIndex *index, QWidget *parent): QTreeView(parent), model_(index), feature_index_(index)
+FeatureLibraryView::FeatureLibraryView(QSharedPointer<MapOverlayManager> mgr, QWidget *parent): QTreeView(parent), model_(mgr), overlay_manager_(mgr)
 {
     setModel(&model_) ;
     setHeaderHidden(true);
@@ -891,7 +891,7 @@ void FeatureLibraryView::onZoom()
 
     LibraryNode *item = model_.node(index) ;
 
-    QRectF bbox = feature_index_->getCollectionBBox(item->id_) ;
+    QRectF bbox = overlay_manager_->getCollectionBBox(item->id_) ;
 
     emit zoomOnRect(bbox) ;
 }
@@ -924,7 +924,7 @@ void FeatureLibraryView::selectCollection(quint64 collection_id)
 void FeatureLibraryView::onFeatureClicked(quint64 id)
 {
     quint64 collection_id, folder_id ;
-    if ( feature_index_->getFeatureCollectionAndFolder(id, collection_id, folder_id) )
+    if ( overlay_manager_->getFeatureCollectionAndFolder(id, collection_id, folder_id) )
     {
         expandFolder(folder_id) ;
         emit collectionClicked(collection_id, id);
@@ -934,7 +934,7 @@ void FeatureLibraryView::onFeatureClicked(quint64 id)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FeatureListView::FeatureListView(MapFeatureIndex *index, QWidget *parent): QListView(parent), feature_index_(index)
+FeatureListView::FeatureListView(QSharedPointer<MapOverlayManager> mgr, QWidget *parent): QListView(parent), overlay_manager_(mgr)
 {
     setModel(&model_) ;
     setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -1012,11 +1012,11 @@ void FeatureListView::populate(quint64 collection_id, quint64 feature_id)
 
     model_.clear() ;
 
-    QVector<MapFeaturePtr> features ;
+    QVector<MapOverlayPtr> features ;
 
-    feature_index_->getAllFeaturesInCollection(collection_id, features) ;
+    overlay_manager_->getAllFeaturesInCollection(collection_id, features) ;
 
-    Q_FOREACH(MapFeaturePtr feature, features)
+    Q_FOREACH(MapOverlayPtr feature, features)
     {
         QStandardItem *item = new QStandardItem() ;
 
@@ -1080,7 +1080,7 @@ void FeatureListView::onZoom()
     QVector<quint64> ids ;
     getSelected(selectionModel()->selectedIndexes(), ids) ;
 
-    QRectF box = feature_index_->getFeatureBBox(ids) ;
+    QRectF box = overlay_manager_->getFeatureBBox(ids) ;
 
     emit zoomOnRect(box) ;
 }
@@ -1092,7 +1092,7 @@ void FeatureListView::deleteItem()
     QVector<quint64> ids ;
     getSelected(indices, ids) ;
 
-    feature_index_->deleteFeaturesFromCollection(collection_id_, ids) ;
+    overlay_manager_->deleteFeaturesFromCollection(collection_id_, ids) ;
 
     QList<int> rows;
     Q_FOREACH( const QModelIndex & index, indices ) {
@@ -1142,21 +1142,21 @@ void FeatureListView::onDuplicate()
     QVector<quint64> ids ;
     getSelected(selectionModel()->selectedIndexes(), ids) ;
 
-    QVector<MapFeaturePtr> features ;
-    feature_index_->getAllFeatures(ids, features) ;
+    QVector<MapOverlayPtr> features ;
+    overlay_manager_->getAllFeatures(ids, features) ;
 
-    Q_FOREACH(MapFeaturePtr feature, features)
+    Q_FOREACH(MapOverlayPtr feature, features)
     {
         int counter = 1 ;
 
         QString name = feature->name() ;
 
-        QString unique_name = feature_index_->uniqueFeatureName(name + " (%1)", collection_id_, counter) ;
+        QString unique_name = overlay_manager_->uniqueFeatureName(name + " (%1)", collection_id_, counter) ;
 
         feature->setName(unique_name) ;
     }
 
-    feature_index_->write(features, collection_id_) ;
+    overlay_manager_->write(features, collection_id_) ;
 
     populate(collection_id_) ;
 

@@ -17,7 +17,7 @@
 #include <memory>
 
 class MapTool ;
-class MapFeatureIndex ;
+class MapOverlayManager ;
 
 class MapWidget: public QWidget {
     Q_OBJECT
@@ -69,13 +69,13 @@ public:
 
     int getZoom() const { return zoom_ ; }
 
-    void setCurrentFeature(const MapFeaturePtr &o) ;
+    void setCurrentOverlay(const MapOverlayPtr &o) ;
 
-    void saveFeature(const MapFeaturePtr &o, bool updateOnly=false);
+    void saveOverlay(const MapOverlayPtr &o, bool updateOnly=false);
 
-    void updateFeature(const MapFeaturePtr &o) ;
+    void updateOverlay(const MapOverlayPtr &o) ;
 
-    MapFeatureIndex *getIndex() const { return feature_index_ ; }
+    QSharedPointer<MapOverlayManager> getOverlayManager() const { return overlay_manager_ ; }
 
     quint64 currentCollection() const {
         return current_collection_ ;
@@ -102,8 +102,8 @@ protected:
     void drawBaseMap(QPainter &painter, const QRegion &region) ;
     void drawOverlays(QPainter &painter, const QRegion &region) ;
 
-    void setFeatureIndex(MapFeatureIndex *idx) {
-        feature_index_ = idx ;
+    void setOverlayManager(QSharedPointer<MapOverlayManager> mgr) {
+        overlay_manager_ = mgr ;
     }
 
     friend class TileFetcher ;
@@ -132,9 +132,9 @@ protected:
     QDir cache_dir_ ;
     QImage base_map_image_ ;
     MapTool *current_tool_ ;
-    QCache<quint64, MapFeature> feature_cache_ ; // cached overlays
-    MapFeatureIndex *feature_index_ ;
-    MapFeaturePtr current_feature_ ;
+    QCache<quint64, MapOverlay> overlay_cache_ ; // cached overlays
+    QSharedPointer<MapOverlayManager> overlay_manager_ ;
+    MapOverlayPtr current_overlay_ ;
     QSet<quint64> selected_ ;
     quint64 current_collection_ ;
     QUndoStack *undo_stack_ ;
@@ -147,7 +147,7 @@ public Q_SLOTS:
 
 Q_SIGNALS:
 
-    void newFeature(MapFeaturePtr) ;
+    void newOverlay(MapOverlayPtr) ;
 };
 
 class TileFetcher: public QObject, public QRunnable {

@@ -58,7 +58,7 @@ protected:
     friend class FeatureEditUndoCommand ;
 
     MapWidget *view_ ;
-    MapFeaturePtr current_object_ ;
+    MapOverlayPtr current_object_ ;
 } ;
 
 // Map panning
@@ -278,7 +278,7 @@ public:
 
     FeatureEditCommand cmd_ ;
     QPointF pt_, new_pt_ ;
-    MapFeaturePtr feature_, old_feature_ ;
+    MapOverlayPtr feature_, old_feature_ ;
     MapWidget *view_ ;
     MapTool *tool_ ;
     int node_ ;

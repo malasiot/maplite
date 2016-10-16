@@ -17,33 +17,32 @@ namespace SpatialIndex {
     }
 }
 
-class MapFeature ;
+class MapOverlay ;
 class MapWidget ;
 
-class MapFeatureIndex: public QObject {
+class MapOverlayManager {
 
-    Q_OBJECT
 
 public:
 
-    MapFeatureIndex(QObject *parent) ;
-    ~MapFeatureIndex();
+    MapOverlayManager() ;
+    ~MapOverlayManager();
 
     // open or create spatial index with given prefix
     bool open(const QString &storage) ;
 
 
     // find feature under click coordinates
-    MapFeaturePtr findNearest(const QByteArray &searchType, const QPoint &coord, MapWidget *view, double thresh);
+    MapOverlayPtr findNearest(const QByteArray &searchType, const QPoint &coord, MapWidget *view, double thresh);
 
     // load and create an object with this id from database
-    MapFeaturePtr load(quint64 id) ;
+    MapOverlayPtr load(quint64 id) ;
 
     // update feature
-    bool update(const MapFeaturePtr &feature) ;
+    bool update(const MapOverlayPtr &feature) ;
 
     // write object(s) to database and spatial index
-    bool write(const QVector<MapFeaturePtr> &objects, quint64 collection_id = 0) ;
+    bool write(const QVector<MapOverlayPtr> &objects, quint64 collection_id = 0) ;
 
     // query objects within the collection of rectangles
     void query(QVector<quint64> &ovr, QVector<QRectF> &boxes) ;
@@ -59,9 +58,9 @@ public:
     int getNumCollections(quint64 folder_id);
     bool getFeatureCollectionAndFolder(quint64 feature_id, quint64 &collection_id, quint64 &folder_id) ;
 
-    bool getAllFeaturesInCollection(quint64 collection_id, QVector<MapFeaturePtr> &features) ;
-    bool getAllFeatures(const QVector<quint64> feature_ids, QVector<MapFeaturePtr> &features);
-    bool getAllFeaturesInFolder(quint64 folder_id, QVector<MapFeaturePtr> &features) ;
+    bool getAllFeaturesInCollection(quint64 collection_id, QVector<MapOverlayPtr> &features) ;
+    bool getAllFeatures(const QVector<quint64> feature_ids, QVector<MapOverlayPtr> &features);
+    bool getAllFeaturesInFolder(quint64 folder_id, QVector<MapOverlayPtr> &features) ;
 
     bool deleteFolder(quint64 id) ;
     bool deleteCollection(quint64 id) ;

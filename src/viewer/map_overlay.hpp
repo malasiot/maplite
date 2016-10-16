@@ -13,19 +13,19 @@ class MapWidget ;
 
 enum Touch { TOUCH_NOTHING = 0x1, TOUCH_EDGE = 0x2, TOUCH_NODE = 0x4, TOUCH_END_POINT = 0x8, TOUCH_BEGIN_POINT = 0x10 } ;
 
-class MapFeature ;
-typedef QSharedPointer<MapFeature> MapFeaturePtr ;
+class MapOverlay ;
+typedef QSharedPointer<MapOverlay> MapOverlayPtr ;
 
 // This is an overlay object drawn above the base map
 // The map may contains several such objects
 // It consists of geometry, attributes and style information
 
-class MapFeature
+class MapOverlay
 {
 
 public:
 
-    MapFeature(const QString &name): name_(name), storage_id_(-1), active_(false), selected_(false), visible_(true) {}
+    MapOverlay(const QString &name): name_(name), storage_id_(-1), active_(false), selected_(false), visible_(true) {}
 
     virtual void draw(QPainter &p, MapWidget *view) = 0;
     virtual QRectF boundingBox() const = 0;
@@ -59,9 +59,9 @@ public:
 
     bool isVisible() const { return visible_ ; }
 
-    static MapFeaturePtr create(const std::string &type_name, const QString &name) ; // factory
+    static MapOverlayPtr create(const std::string &type_name, const QString &name) ; // factory
 
-    virtual MapFeaturePtr clone() const = 0;
+    virtual MapOverlayPtr clone() const = 0;
 
     QMap<QString, QVariant> attributes_ ;
     QString name_ ;
@@ -76,8 +76,8 @@ protected:
         ds >> attributes_ ;
     }
 
-    friend class MapFeatureIndex ;
-    friend class MapFeatureCollection ;
+    friend class MapOverlayManager ;
+    friend class MapOverlayCollection ;
 
     qint64 storage_id_ ;
     bool selected_, active_, visible_ ;
@@ -85,11 +85,11 @@ protected:
 
 
 
-class PolygonFeature: public MapFeature
+class PolygonOverlay: public MapOverlay
 {
 public:
 
-    PolygonFeature(const QString &name) ;
+    PolygonOverlay(const QString &name) ;
 
     virtual void draw(QPainter &p, MapWidget *w) ;
 
@@ -132,7 +132,7 @@ public:
     void insertNode(int nodeAfter, const QPointF &pt) ;
     int numNodes() const { return poly_.size() ; }
 
-    MapFeaturePtr clone() const ;
+    MapOverlayPtr clone() const ;
 
     QByteArray serialize() const {
         QByteArray ba ;
@@ -174,13 +174,13 @@ private:
 
 // displays an icon with a label over a point
 
-class MarkerFeature: public MapFeature
+class MarkerOverlay: public MapOverlay
 {
 
 public:
 
-    MarkerFeature(const QString &name) ;
-    ~MarkerFeature();
+    MarkerOverlay(const QString &name) ;
+    ~MarkerOverlay();
 
     virtual void draw(QPainter &p, MapWidget *parent) ;
 
@@ -214,7 +214,7 @@ public:
     void insertNode(int nodeAfter, const QPointF &pt) {}
     int numNodes() const { return 1 ; }
 
-    MapFeaturePtr clone() const ;
+    MapOverlayPtr clone() const ;
 
     QByteArray serialize() const {
         QByteArray ba ;

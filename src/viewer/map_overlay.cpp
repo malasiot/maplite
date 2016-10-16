@@ -8,17 +8,17 @@
 #include <math.h>
 #include <float.h>
 
-MapFeaturePtr MapFeature::create(const std::string &type_name, const QString &name)
+MapOverlayPtr MapOverlay::create(const std::string &type_name, const QString &name)
 {
     if ( type_name == "polygon" )
-        return MapFeaturePtr(new PolygonFeature(name)) ;
+        return MapOverlayPtr(new PolygonOverlay(name)) ;
     else if ( type_name == "marker" )
-        return MapFeaturePtr(new MarkerFeature(name)) ;
-    else return MapFeaturePtr() ;
+        return MapOverlayPtr(new MarkerOverlay(name)) ;
+    else return MapOverlayPtr() ;
 }
 
 
-PolygonFeature::PolygonFeature(const QString &name): MapFeature(name)
+PolygonOverlay::PolygonOverlay(const QString &name): MapOverlay(name)
 {
     pen_.setColor(QColor(0x8b, 0x8b, 0xc2)) ;
     pen_.setWidth(3) ;
@@ -33,7 +33,7 @@ PolygonFeature::PolygonFeature(const QString &name): MapFeature(name)
     edit_pen_.setJoinStyle(Qt::RoundJoin);
 }
 
-void PolygonFeature::draw(QPainter &painter, MapWidget *view)
+void PolygonOverlay::draw(QPainter &painter, MapWidget *view)
 {
     painter.save() ;
 
@@ -47,7 +47,7 @@ void PolygonFeature::draw(QPainter &painter, MapWidget *view)
     painter.restore() ;
 }
 
-void PolygonFeature::drawSimple(QPainter &painter, MapWidget *view)
+void PolygonOverlay::drawSimple(QPainter &painter, MapWidget *view)
 {
     QPoint cp ;
 
@@ -66,7 +66,7 @@ void PolygonFeature::drawSimple(QPainter &painter, MapWidget *view)
     }
 }
 
-void PolygonFeature::drawSelected(QPainter &painter, MapWidget *view)
+void PolygonOverlay::drawSelected(QPainter &painter, MapWidget *view)
 {
     // draw polyline
 
@@ -105,7 +105,7 @@ void PolygonFeature::drawSelected(QPainter &painter, MapWidget *view)
     drawArrows(painter, view) ;
 }
 
-void PolygonFeature::drawActive(QPainter &painter, MapWidget *view)
+void PolygonOverlay::drawActive(QPainter &painter, MapWidget *view)
 {
     // draw polyline
 
@@ -144,7 +144,7 @@ void PolygonFeature::drawActive(QPainter &painter, MapWidget *view)
     drawArrows(painter, view) ;
 }
 
-void PolygonFeature::drawArrows(QPainter &painter, MapWidget *view)
+void PolygonOverlay::drawArrows(QPainter &painter, MapWidget *view)
 {
     painter.setBrush(Qt::red) ;
     painter.setPen(Qt::white) ;
@@ -195,12 +195,12 @@ void PolygonFeature::drawArrows(QPainter &painter, MapWidget *view)
     }
 }
 
-QRect PolygonFeature::displayRect(MapWidget *view) const
+QRect PolygonOverlay::displayRect(MapWidget *view) const
 {
     return view->coordsToWindow(poly_.boundingRect()) ;
 }
 
-double PolygonFeature::distanceToPt(const QPoint &coords, int &segment, MapWidget *view) const
+double PolygonOverlay::distanceToPt(const QPoint &coords, int &segment, MapWidget *view) const
 {
     double min_dist = DBL_MAX ;
 
@@ -242,7 +242,7 @@ double PolygonFeature::distanceToPt(const QPoint &coords, int &segment, MapWidge
 
 }
 
-int PolygonFeature::touches(const QPoint &coords, MapWidget *view, int &node) const
+int PolygonOverlay::touches(const QPoint &coords, MapWidget *view, int &node) const
 {
     for(int i=0 ; i<poly_.size() ; i++)
     {
@@ -267,27 +267,27 @@ int PolygonFeature::touches(const QPoint &coords, MapWidget *view, int &node) co
     else return TOUCH_NOTHING ;
 }
 
-void PolygonFeature::moveNode(int node, const QPointF &delta)
+void PolygonOverlay::moveNode(int node, const QPointF &delta)
 {
     poly_[node] += delta ;
 }
 
-void PolygonFeature::moveEdge(const QPointF &delta)
+void PolygonOverlay::moveEdge(const QPointF &delta)
 {
     poly_.translate(delta) ;
 }
 
-MapFeaturePtr PolygonFeature::clone() const
+MapOverlayPtr PolygonOverlay::clone() const
 {
-    return MapFeaturePtr(new PolygonFeature(*this)) ;
+    return MapOverlayPtr(new PolygonOverlay(*this)) ;
 }
 
-void PolygonFeature::deleteNode(int node)
+void PolygonOverlay::deleteNode(int node)
 {
     poly_.remove(node);
 }
 
-void PolygonFeature::insertNode(int nodeAfter, const QPointF &pt)
+void PolygonOverlay::insertNode(int nodeAfter, const QPointF &pt)
 {
     const QPointF &p1 = poly_.at(nodeAfter) ;
     const QPointF &p2 = poly_.at(nodeAfter+1) ;
@@ -302,20 +302,20 @@ void PolygonFeature::insertNode(int nodeAfter, const QPointF &pt)
 ////////////////////////////////////////////////////////////////////////////////////
 
 
-MarkerFeature::MarkerFeature(const QString &name): MapFeature(name)
+MarkerOverlay::MarkerOverlay(const QString &name): MapOverlay(name)
 {
     pixmap_ = QImage(":/images/flag.png") ;
     font_ = QFont("Arial", 10) ;
     updateDisplayRect();
 }
 
-MarkerFeature::~MarkerFeature()
+MarkerOverlay::~MarkerOverlay()
 {
 
 }
 
 
-void MarkerFeature::draw(QPainter &painter, MapWidget *view)
+void MarkerOverlay::draw(QPainter &painter, MapWidget *view)
 {
     // draw pixmap
 
@@ -377,7 +377,7 @@ void MarkerFeature::draw(QPainter &painter, MapWidget *view)
     }
 }
 
-QRect MarkerFeature::displayRect(MapWidget *view) const
+QRect MarkerOverlay::displayRect(MapWidget *view) const
 {
     QPoint p0 = view->displayToPosition(view->coordsToDisplay(point_)) ;
 
@@ -386,7 +386,7 @@ QRect MarkerFeature::displayRect(MapWidget *view) const
     return r ;
 }
 
-void MarkerFeature::updateDisplayRect()
+void MarkerOverlay::updateDisplayRect()
 {
     QSize pxs = pixmap_.size() ;
 
@@ -401,7 +401,7 @@ void MarkerFeature::updateDisplayRect()
     rect_ = ra.united(tra) ;
 }
 
-double MarkerFeature::distanceToPt(const QPoint &coords, int &seg, MapWidget *view) const
+double MarkerOverlay::distanceToPt(const QPoint &coords, int &seg, MapWidget *view) const
 {
     QSize pxs = pixmap_.size() ;
 
@@ -411,7 +411,7 @@ double MarkerFeature::distanceToPt(const QPoint &coords, int &seg, MapWidget *vi
     return QVector2D(coords - view->coordsToDisplay(point_) - r.center()).length() ;
 }
 
-int MarkerFeature::touches(const QPoint &coords, MapWidget *widget, int &node) const
+int MarkerOverlay::touches(const QPoint &coords, MapWidget *widget, int &node) const
 {
     if ( distanceToPt(coords, node, widget) < 5 ) {
         node = 0 ;
@@ -420,21 +420,21 @@ int MarkerFeature::touches(const QPoint &coords, MapWidget *widget, int &node) c
     else return TOUCH_NOTHING ;
 }
 
-void MarkerFeature::moveNode(int node, const QPointF &coords)
+void MarkerOverlay::moveNode(int node, const QPointF &coords)
 {
     point_ += coords ;
 }
 
-void MarkerFeature::moveEdge(const QPointF &delta)
+void MarkerOverlay::moveEdge(const QPointF &delta)
 {
     point_ += delta ;
 }
 
-MapFeaturePtr MarkerFeature::clone() const
+MapOverlayPtr MarkerOverlay::clone() const
 {
-    return MapFeaturePtr(new MarkerFeature(*this)) ;
+    return MapOverlayPtr(new MarkerOverlay(*this)) ;
 }
 
-void MarkerFeature::deleteNode(int node) {
+void MarkerOverlay::deleteNode(int node) {
 
 }
