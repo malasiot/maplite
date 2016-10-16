@@ -8,7 +8,8 @@
 #include <memory>
 #include <functional>
 #include <unordered_map>
-
+#include <boost/thread/mutex.hpp>
+#include <iostream>
 
 #include "tuple_hash.hpp"
 
@@ -29,15 +30,19 @@ public:
     }
 
     // Obtain value of the cached function for k
-    bool fetch(const key_type &key, value_type &val)
+    bool fetch(const key_type &key, std::function<uint64_t(const key_type &, value_type &)> loader, value_type &val)
     {
-
+        boost::mutex::scoped_lock lock(mutex_);
 
         // Attempt to find existing record
 
         typename key_to_value_type::const_iterator it = key_to_value_.find(key) ;
 
-        if ( it == key_to_value_.end() )  return false ;
+        if ( it == key_to_value_.end() )  {
+            uint64_t data_sz = loader(key, val) ;
+            insert(key, val, data_sz) ;
+            return true ;
+        }
         else {
 
             key_tracker_.splice( key_tracker_.end(), key_tracker_,  std::get<1>((*it).second) ) ;
@@ -48,13 +53,10 @@ public:
         }
     }
 
-
-
-
     // Record a fresh key-value pair in the cache
     value_type insert(const key_type& k,const value_type& v, uint64_t cost) {
 
-        // Method is only called on cache misses
+
         assert( key_to_value_.find(k) == key_to_value_.end() );
 
         uint64_t sz = cost ;
@@ -80,8 +82,10 @@ private:
     // Purge the least-recently-used element in the cache
     void evict() {
 
+        boost::mutex::scoped_lock lock(mutex_);
+
         // Assert method is never called when cache is empty
-        //assert(!key_tracker_.empty());
+        assert(!key_tracker_.empty());
 
         if ( key_tracker_.empty() ) return ;
 
@@ -95,6 +99,8 @@ private:
         key_to_value_.erase(it);
         key_tracker_.pop_front();
 
+        std::cout << "evicting" << std::endl ;
+
     }
 
 
@@ -105,6 +111,7 @@ private:
     size_t size_ ;
     key_tracker_type key_tracker_;
     key_to_value_type key_to_value_ ;
+    boost::mutex mutex_ ;
 
 
 };

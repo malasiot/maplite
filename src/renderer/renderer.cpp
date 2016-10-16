@@ -105,6 +105,7 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
         const Way &way = ways[idx] ;
         vector<RenderInstructionPtr> ris ;
 
+
         if ( theme_->match(layer, way.tags_, zoom, way.is_closed_, true, ris)) {
 
             int32_t symbol_id = -1 ;
@@ -535,7 +536,7 @@ void Renderer::drawLine(RenderingContext &ctx, const std::vector<std::vector<Coo
 
     cairo_save(cr) ;
 
-    if ( line.src_.empty() ) {
+    if ( line.src_.empty()  ) {
         cairo_save(cr) ;
         cairo_transform(cr, &ctx.cmm_) ;
 
@@ -553,8 +554,10 @@ void Renderer::drawLine(RenderingContext &ctx, const std::vector<std::vector<Coo
 
         cairo_restore(cr) ;
 
+
         float stroke_width = ( line.scale_ != RenderInstruction::None ) ? line.stroke_width_ * ctx.scale_ : line.stroke_width_ ;
         vector<float> stroke_dash_array(line.stroke_dash_array_) ;
+
 
         if ( line.scale_ == RenderInstruction::All ) {
             for( auto &v: stroke_dash_array )
@@ -667,6 +670,7 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
         rect.height = height ;
 
         cairo_surface_t *rs = cairo_recording_surface_create( CAIRO_CONTENT_COLOR_ALPHA, &rect) ;
+       // cairo_surface_t *rs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height) ;
 
         cairo_t *ctx = cairo_create(rs) ;
 
@@ -674,7 +678,7 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
 
         cairo_destroy(ctx) ;
 
- //     cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
+ //       cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
 
         return rs ;
 

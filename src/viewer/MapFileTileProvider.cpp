@@ -20,13 +20,12 @@ QImage MapFileTileProvider::getTile(int x, int y, int z)
 {
     TileKey key(x, y, z, true) ;
 
+
     VectorTile tile = reader_->readTile(key, 1);
 
     ImageBuffer buf(256, 256) ;
 
-    Renderer rdr(theme_, "el") ;
-    rdr.render(key, buf, tile, layer_) ;
-    //renderer_->render(key, buf, tile, layer_ ) ;
+    renderer_->render(key, buf, tile, layer_ ) ;
 
     string data ;
     buf.saveToPNGBuffer(data);

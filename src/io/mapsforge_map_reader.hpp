@@ -6,7 +6,6 @@
 #include <fstream>
 #include <map>
 #include <vector>
-#include <mutex>
 
 #include "dictionary.hpp"
 #include "cache.hpp"
@@ -15,6 +14,7 @@
 #include "mapsforge_map_info.hpp"
 
 #include <boost/optional.hpp>
+#include <boost/thread/mutex.hpp>
 
 struct POI {
     double lat_, lon_ ;
@@ -38,7 +38,8 @@ struct VectorTile {
 struct TileData;
 class MapFileReader ;
 typedef std::tuple<uint32_t, uint32_t, uint8_t, MapFileReader *> cache_key_type; // the tile is encoded by its index and a dataset id
-typedef Cache<cache_key_type, std::shared_ptr<TileData>> TileIndex ;
+typedef std::shared_ptr<TileData> cache_value_type;
+typedef Cache<cache_key_type, cache_value_type> TileIndex ;
 
 class MapFileReader
 {
@@ -117,7 +118,7 @@ private:
     std::vector<std::string> poi_tags_ ;
     std::vector<SubFileInfo> sub_files_ ;
     bool has_debug_info_ ;
-    std::mutex mtx_ ;
+    boost::mutex mtx_ ;
 
 
 };

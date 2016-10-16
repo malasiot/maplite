@@ -8,9 +8,8 @@
 #include <boost/format.hpp>
 #include <boost/tokenizer.hpp>
 
+
 using namespace std ;
-
-
 
 void MapFileReader::open(const std::string &file_path)
 {
@@ -41,8 +40,6 @@ struct TileData {
 
             }
         }
-
-
     }
 };
 
@@ -145,6 +142,7 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
             int64_t tile_offset = si.index_[idx] ;
 
             bool is_sea_tile = ( tile_offset & 0x8000000000LL ) != 0 ;
+            tile_offset = tile_offset & 0x7FFFFFFFFFLL ;
 
             if ( !is_sea_tile ) {
 
@@ -152,16 +150,21 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
 
                 cache_key_type key(btx, bty, si.base_zoom_, this) ;
 
-                if ( !g_tile_index_ || !g_tile_index_->fetch(key, data) ) { // if not in cache load from disk
+                if ( g_tile_index_ ) {
+                     g_tile_index_->fetch(key,
+                       [this, is_sea_tile, si, tile_offset] ( const cache_key_type &key, cache_value_type  &val ) -> uint64_t {
+                         // if not in cache load from disk
 
-                    std::lock_guard<std::mutex> guard(mtx_) ; // TODO: this effectively serializes request, make better syncronization
-
-                    tile_offset = tile_offset & 0x7FFFFFFFFFLL ;
-
-                    data.reset(new TileData(btx, bty, si.base_zoom_, is_sea_tile)) ;
-                    uint64_t payload = readTileData(si, tile_offset, data) ;
-
-                    if ( g_tile_index_ ) g_tile_index_->insert(key, data, payload) ;
+                         uint32_t tx = std::get<0>(key) ;
+                         uint32_t ty = std::get<1>(key) ;
+                         uint32_t tz = std::get<2>(key) ;
+                         val.reset(new TileData(tx, ty, tz, is_sea_tile)) ;
+                         return readTileData(si, tile_offset, val) ;
+                     },
+                     data) ;
+                }
+                else {
+                    cout << "fetched from cache" << endl ;
                 }
 
                 // copy all ways and pois at zoom level equal or lower the requested zoom level

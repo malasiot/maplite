@@ -61,8 +61,9 @@ MainWindow::MainWindow(int &argc, char *argv[])
 
 
     initThemes() ;
-
     initBasemaps();
+
+    MapFileReader::initTileCache(1000000) ;
 
     readAppSettings() ;
 

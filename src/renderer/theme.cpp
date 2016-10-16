@@ -7,6 +7,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <clocale>
+
 using namespace std ;
 
 static uint parse_enum(const string &name, const std::initializer_list<string> &list) {
@@ -155,6 +157,8 @@ LayerPtr RenderTheme::get_safe_layer(const string &id) const {
 bool RenderTheme::read(const std::string &file_name, const string &resource_dir)
 {
 
+    std::setlocale(LC_ALL, "C");
+
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(file_name.c_str());
 
@@ -299,15 +303,18 @@ bool RenderTheme::match(const string &layer_id, const Dictionary &tags, uint8_t 
     LayerPtr layer = get_safe_layer(layer_id) ;
     get_categories(layer, categories) ;
 
-//    string key = make_match_key(tags, layer_id, zoom, is_closed, is_way) ;
- //   auto it = rule_match_cache_.find(key) ;
- //   if ( it != rule_match_cache_.end() )
-//        ris = it->second ;
- //   else
+    string key = make_match_key(tags, layer_id, zoom, is_closed, is_way) ;
+
+    // TODO: make this thread safe
+
+    auto it = rule_match_cache_.find(key) ;
+    if ( it != rule_match_cache_.end() )
+        ris = it->second ;
+    else
     {
         for( const RulePtr &r: rules_ ) {
             if ( r->match(categories, tags, zoom, is_closed, is_way, ris) ) {
-              //  rule_match_cache_.insert(std::make_pair(key, ris)) ;
+                rule_match_cache_.insert(std::make_pair(key, ris)) ;
                 return true ;
             }
         }
