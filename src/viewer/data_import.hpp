@@ -5,7 +5,6 @@
 #include <QVariant>
 
 #include "map_overlay_manager.hpp"
-#include "map_overlay.hpp"
 
 struct CollectionData
 {

@@ -8,7 +8,7 @@
 #include <QLabel>
 #include <QPixmap>
 
-#include "DataImport.h"
+#include "data_import.hpp"
 
 class MainWindow ;
 class MapFeatureIndex ;

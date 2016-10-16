@@ -72,8 +72,7 @@ SET(MAPLITE_VIEWER_HEADERS
     map_tool.hpp
     overlay_library_panel.hpp
     file_import_dialog.hpp
-
-#	DataImport.h
+    data_import.hpp
 
 
 )
