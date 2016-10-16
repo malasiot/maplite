@@ -1,5 +1,5 @@
 #include "MapFeature.h"
-#include "MapWidget.h"
+#include "map_widget.hpp"
 
 #include <QPainter>
 #include <QVector2D>

@@ -1,8 +1,8 @@
-#include "MapWidget.h"
+#include "map_widget.hpp"
 #include "MapTool.h"
 #include "MapFeature.h"
 #include "MapFeatureIndex.h"
-#include "MainWindow.h"
+#include "main_window.hpp"
 
 
 #include <QDebug>

@@ -30,6 +30,8 @@ public:
     }
 
     // Obtain value of the cached function for k
+    // if not exists then it calls the loader function that should load data with the given key and return also data size
+
     bool fetch(const key_type &key, std::function<uint64_t(const key_type &, value_type &)> loader, value_type &val)
     {
         boost::mutex::scoped_lock lock(mutex_);
@@ -82,8 +84,6 @@ private:
     // Purge the least-recently-used element in the cache
     void evict() {
 
-        boost::mutex::scoped_lock lock(mutex_);
-
         // Assert method is never called when cache is empty
         assert(!key_tracker_.empty());
 
@@ -98,9 +98,6 @@ private:
         // Erase both elements to completely purge record
         key_to_value_.erase(it);
         key_tracker_.pop_front();
-
-        std::cout << "evicting" << std::endl ;
-
     }
 
 

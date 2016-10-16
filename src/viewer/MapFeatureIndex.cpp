@@ -1,6 +1,6 @@
 #include "MapFeatureIndex.h"
 #include "MapFeature.h"
-#include "MapWidget.h"
+#include "map_widget.hpp"
 
 #include "spatialindex/SpatialIndex.h"
 

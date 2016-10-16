@@ -1,4 +1,4 @@
-#include "TileProvider.h"
+#include "tile_provider.hpp"
 
 #include <QDebug>
 

@@ -11,7 +11,7 @@
 #include <QCache>
 #include <QUndoGroup>
 
-#include "TileProvider.h"
+#include "tile_provider.hpp"
 #include "MapFeature.h"
 
 #include <memory>

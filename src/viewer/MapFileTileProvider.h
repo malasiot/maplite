@@ -1,7 +1,7 @@
 #ifndef __MAP_FILE_TILE_PROVIDER_H__
 #define __MAP_FILE_TILE_PROVIDER_H__
 
-#include "TileProvider.h"
+#include "tile_provider.hpp"
 
 #include <QSharedPointer>
 #include "mapsforge_map_reader.hpp"

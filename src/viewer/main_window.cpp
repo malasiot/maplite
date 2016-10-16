@@ -16,18 +16,16 @@
 #include <fstream>
 #include <sstream>
 
-#include "MainWindow.h"
-#include "MapWidget.h"
+#include "main_window.hpp"
+#include "map_widget.hpp"
 
 #include "MapFileTileProvider.h"
-#include "XYZTileProvider.h"
+#include "xyz_tile_provider.hpp"
 #include "MapTool.h"
 #include "MapFeatureCollection.h"
 #include "FeatureLibraryPanel.h"
 #include "MapFeatureIndex.h"
 #include "FileImportDialog.h"
-
-#include "XmlDocument.h"
 
 #include "mapsforge_map_reader.hpp"
 

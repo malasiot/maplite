@@ -1,7 +1,7 @@
 #ifndef __NETWORK_TILE_PROVIDER_H__
 #define __NETWORK_TILE_PROVIDER_H__
 
-#include "TileProvider.h"
+#include "tile_provider.hpp"
 
 #include <QNetworkAccessManager>
 #include <QEventLoop>
