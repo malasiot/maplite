@@ -19,13 +19,13 @@
 #include "main_window.hpp"
 #include "map_widget.hpp"
 
-#include "MapFileTileProvider.h"
+#include "map_file_tile_provider.hpp"
 #include "xyz_tile_provider.hpp"
-#include "MapTool.h"
-#include "MapFeatureCollection.h"
-#include "FeatureLibraryPanel.h"
-#include "MapFeatureIndex.h"
-#include "FileImportDialog.h"
+#include "map_tool.hpp"
+#include "map_overlay_collection.hpp"
+#include "overlay_library_panel.hpp"
+#include "map_overlay_manager.hpp"
+#include "file_import_dialog.hpp"
 
 #include "mapsforge_map_reader.hpp"
 

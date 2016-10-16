@@ -34,37 +34,27 @@ SET(MAPLITE_VIEWER_SOURCES
     main_window.cpp
     map_widget.cpp
     tile_provider.cpp
-    xyz_tile_provider.cpp
+    map_file_tile_provider.cpp
+    network_tile_provider.cpp
+    map_overlay.cpp
+    map_overlay_manager.cpp
+#    map_overlay_collection.cpp
+    map_tool.cpp
+    overlay_library_panel.cpp
+    file_import_dialog.cpp
+    kml_reader.cpp
+    gpx_reader.cpp
 
+    ${SRC_ROOT}/io/mapsforge_map_reader.cpp
+    ${SRC_ROOT}/io/serializer.cpp
+    ${SRC_ROOT}/util/dictionary.cpp
+    ${SRC_ROOT}/util/xml_reader.cpp
+    ${SRC_ROOT}/util/database.cpp
+    ${SRC_ROOT}/util/zfstream.cpp
+    ${SRC_ROOT}/util/base64.cpp
 
-	MapFileTileProvider.cpp
-	NetworkTileProvider.cpp
-
-	MapTool.cpp
-	MapFeature.cpp
-	MapFeatureIndex.cpp
-	KMLReader.cpp
-	GPXReader.cpp
-	FeatureLibraryPanel.cpp
-	FileImportDialog.cpp
-
-
-
-
-	Projection.cpp
-
-	Value.cpp
-
-        ${SRC_ROOT}/io/mapsforge_map_reader.cpp
-        ${SRC_ROOT}/io/serializer.cpp
-        ${SRC_ROOT}/util/dictionary.cpp
-        ${SRC_ROOT}/util/xml_reader.cpp
-        ${SRC_ROOT}/util/database.cpp
-        ${SRC_ROOT}/util/zfstream.cpp
-        ${SRC_ROOT}/util/base64.cpp
-
-        minizip/unzip.c
-        minizip/ioapi.c
+    minizip/unzip.c
+    minizip/ioapi.c
 
 )
 
@@ -74,18 +64,16 @@ SET(MAPLITE_VIEWER_HEADERS
     map_widget.hpp
     tile_provider.hpp
     xyz_tile_provider.hpp
+    map_file_tile_provider.hpp
+    network_tile_provider.hpp
+    map_overlay.hpp
+    map_overlay_manager.hpp
+ #   map_overlay_collection.hpp
+    map_tool.hpp
+    overlay_library_panel.hpp
+    file_import_dialog.hpp
 
-
-	MapFileTileProvider.h
-	NetworkTileProvider.h
-
-	MapTool.h
-	MapFeatureIndex.h
-	MapFeatureCollection.h
-	FeatureLibraryPanel.h
-	FileImportDialog.h
-
-	DataImport.h
+#	DataImport.h
 
 
 )

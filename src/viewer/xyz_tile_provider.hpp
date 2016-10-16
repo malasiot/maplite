@@ -1,7 +1,7 @@
 #ifndef __XYZ_TILE_PROVIDER_H__
 #define __XYZ_TILE_PROVIDER_H__
 
-#include "NetworkTileProvider.h"
+#include "network_tile_provider.hpp"
 
 class XYZTileProvider: public NetworkTileProvider
 {

@@ -1,7 +1,7 @@
 #include "map_widget.hpp"
-#include "MapTool.h"
-#include "MapFeature.h"
-#include "MapFeatureIndex.h"
+#include "map_tool.hpp"
+#include "map_overlay.hpp"
+#include "map_overlay_manager.hpp"
 #include "main_window.hpp"
 
 

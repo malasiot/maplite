@@ -22,7 +22,7 @@ class FeatureListView ;
 class MapFeatureIndex ;
 class QDir ;
 
-#include "MapFeature.h"
+#include "map_overlay.hpp"
 
 #include "theme.hpp"
 #include "geometry.hpp"

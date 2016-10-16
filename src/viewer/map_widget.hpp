@@ -12,7 +12,7 @@
 #include <QUndoGroup>
 
 #include "tile_provider.hpp"
-#include "MapFeature.h"
+#include "map_overlay.hpp"
 
 #include <memory>
 

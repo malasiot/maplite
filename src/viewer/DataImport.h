@@ -4,8 +4,8 @@
 #include <QMap>
 #include <QVariant>
 
-#include "MapFeatureIndex.h"
-#include "MapFeature.h"
+#include "map_overlay_manager.hpp"
+#include "map_overlay.hpp"
 
 struct CollectionData
 {
