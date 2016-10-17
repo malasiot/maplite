@@ -29,11 +29,18 @@ struct Way {
     bool is_closed_ ;
 };
 
-struct VectorTile {
+
+struct BaseTile {
+    BaseTile(const TileKey &key): key_(key), is_sea_(false) {}
+    TileKey key_ ;
     bool is_sea_ ;
     std::vector<POI> pois_ ;
     std::vector<Way> ways_ ;
 };
+
+struct VectorTile {
+    std::vector<BaseTile> base_tiles_ ;
+} ;
 
 struct TileData;
 class MapFileReader ;

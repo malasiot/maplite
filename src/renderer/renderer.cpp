@@ -25,14 +25,14 @@ struct RenderingContext {
 extern void latlon_to_tms(const std::vector<std::vector<LatLon>> &latlon,  std::vector<std::vector<Coord>> &coords) ;
 
 extern void sample_linear_geometry(
-                    const std::vector< std::vector<Coord>> geom,
-                    const cairo_matrix_t &cmm,
-                    float gap,
-                    float initial_gap,
-                    float box_len,
-                    bool fix_angle,
-                    std::vector<Coord> &samples,
-                    std::vector<double> &angles) ;
+        const std::vector< std::vector<Coord>> geom,
+        const cairo_matrix_t &cmm,
+        float gap,
+        float initial_gap,
+        float box_len,
+        bool fix_angle,
+        std::vector<Coord> &samples,
+        std::vector<double> &angles) ;
 
 void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<vector<Coord>> &res) ;
 
@@ -126,8 +126,8 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
 
                     double mx, my ;
                     if ( way.label_pos_ ) {
-                       LatLon lp = way.label_pos_.get() ;
-                       tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
+                        LatLon lp = way.label_pos_.get() ;
+                        tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
                     }
                     else get_poi_from_area(way, coords[0], mx, my) ;
 
@@ -140,8 +140,8 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
                 {
                     double mx, my ;
                     if ( way.label_pos_ ) {
-                       LatLon lp = way.label_pos_.get() ;
-                       tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
+                        LatLon lp = way.label_pos_.get() ;
+                        tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
                     }
                     else get_poi_from_area(way, coords[0], mx, my) ;
 
@@ -152,8 +152,8 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
                 {
                     double mx, my ;
                     if ( way.label_pos_ ) {
-                       LatLon lp = way.label_pos_.get() ;
-                       tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
+                        LatLon lp = way.label_pos_.get() ;
+                        tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
                     }
                     else get_poi_from_area(way, coords[0], mx, my) ;
 
@@ -264,8 +264,6 @@ bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile 
 
     const double scale = target_extents.width()/target.width() ;
 
-    // inflate target box with buffer to avoid rendering artifacts of labels accross tiles
-
     double extra_width = ((2 * query_buffer + target.width()) * scale - target_extents.width())/2 ;
     double extra_height = ((2 * query_buffer + target.height()) * scale - target_extents.height())/2 ;
 
@@ -294,79 +292,104 @@ bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile 
     ctx.scale_ = scale ;
     ctx.extents_ = target_extents ;
 
-    // set map background here
-
-    cairo_save(cr) ;
-    cairo_transform(cr, &cmm) ;
-
-    cairo_rectangle(cr, target_extents.minx_, target_extents.miny_, target_extents.width(), target_extents.height()) ;
-    cairo_restore(cr) ;
-
-    double a, r, g, b;
-    get_argb_color(theme_->backgroundColor(), a, r, g, b) ;
-
-    if ( a == 1 ) cairo_set_source_rgb(cr, r, g, b);
-    else cairo_set_source_rgba(cr, r, g, b, a) ;
-
-    cairo_fill_preserve(cr) ;
-    cairo_clip(cr) ;
-
-    // initialize context
-
     ctx.scale_ = ( zoom > 12 ) ? pow(1.5, zoom - 12 ) : 1.0 ;
 
     // set global parameters
 
     cairo_set_antialias (cr, CAIRO_ANTIALIAS_SUBPIXEL); //?
 
-    // sort ways based on layer attribute
 
-    vector<WayInstruction> way_instructions ;
+    for( const BaseTile &bt: tile.base_tiles_ ) {
 
-    vector<POIInstruction> poi_instructions ;
+        cairo_save(cr) ;
 
-    int32_t count = 0 ;
-    filterWays(layer, zoom, query_extents, cmm, tile.ways_, way_instructions, poi_instructions, count) ;
-    filterPOIs(layer, zoom, query_extents, tile.pois_, poi_instructions, count ) ;
+        BBox lbox ;
+        tms::tileLatLonBounds(bt.key_.x(), bt.key_.y(), bt.key_.z(), lbox.miny_, lbox.minx_, lbox.maxy_, lbox.maxx_) ;
 
-    for( auto &ip: way_instructions ) {
+        BBox tile_extents, buffered_extents ;
 
-        RenderInstructionPtr ri = ip.ri_ ;
+        tms::latlonToMeters(lbox.miny_, lbox.minx_, tile_extents.minx_, tile_extents.miny_) ;
+        tms::latlonToMeters(lbox.maxy_, lbox.maxx_, tile_extents.maxx_, tile_extents.maxy_) ;
 
-        const vector<vector<Coord>> &coords = ip.coords_ ;
+        double extra_width = query_buffer * tms::resolution(zoom) ;
+        double extra_height = query_buffer * tms::resolution(zoom) ;
 
-        if ( ri->type() == RenderInstruction::Area ) {
-            drawArea(ctx, coords, *ri.get()) ;
+        buffered_extents = tile_extents.intersection(query_extents) ;
+
+        // inflate target box with buffer to avoid rendering artifacts of labels accross tiles
+
+        buffered_extents.minx_ -= extra_width ;
+        buffered_extents.miny_ -= extra_height ;
+        buffered_extents.maxx_ += extra_width ;
+        buffered_extents.maxy_ += extra_height ;
+
+        // set map background here
+
+        cairo_save(cr) ;
+        cairo_transform(cr, &cmm) ;
+
+        cairo_rectangle(cr, tile_extents.minx_, tile_extents.miny_, tile_extents.width(), tile_extents.height()) ;
+        cairo_restore(cr) ;
+
+        double a, r, g, b;
+        get_argb_color(theme_->backgroundColor(), a, r, g, b) ;
+
+        if ( a == 1 ) cairo_set_source_rgb(cr, r, g, b);
+        else cairo_set_source_rgba(cr, r, g, b, a) ;
+
+        cairo_fill_preserve(cr) ;
+        cairo_clip(cr) ;
+
+        // sort ways based on layer attribute
+        int32_t count = 0 ;
+
+        vector<WayInstruction> way_instructions ;
+        vector<POIInstruction> poi_instructions ;
+
+        filterWays(layer, zoom, buffered_extents, cmm, bt.ways_, way_instructions, poi_instructions, count) ;
+        filterPOIs(layer, zoom, buffered_extents, bt.pois_, poi_instructions, count ) ;
+
+        for( auto &ip: way_instructions ) {
+
+            RenderInstructionPtr ri = ip.ri_ ;
+
+            const vector<vector<Coord>> &coords = ip.coords_ ;
+
+            if ( ri->type() == RenderInstruction::Area ) {
+                drawArea(ctx, coords, *ri.get()) ;
+            }
+            else if ( ri->type() == RenderInstruction::Line ) {
+                drawLine(ctx, coords, *ri.get()) ;
+            }
         }
-        else if ( ri->type() == RenderInstruction::Line ) {
-            drawLine(ctx, coords, *ri.get()) ;
+
+        for( auto &ip: poi_instructions  ) {
+
+            RenderInstructionPtr ri = ip.ri_ ;
+            double mx = ip.x_, my = ip.y_ ;
+            double angle = ip.angle_ ;
+            string label = ip.label_ ;
+
+            switch ( ri->type() ) {
+            case RenderInstruction::Circle:
+                drawCircle(ctx, mx, my, *ri.get()) ;
+                break ;
+            case RenderInstruction::Symbol:
+                drawSymbol(ctx, mx, my, 0.0, *ri.get(), ip.poi_idx_) ;
+                break ;
+            case RenderInstruction::LineSymbol:
+                drawSymbol(ctx, mx, my, angle, *ri.get(), ip.poi_idx_) ;
+                break ;
+            case RenderInstruction::Caption:
+                drawCaption(ctx, mx, my, 0.0, label, *ri.get(), ip.poi_idx_ ) ;
+                break ;
+            case RenderInstruction::PathText:
+                drawCaption(ctx, mx, my, angle, label, *ri.get(), ip.poi_idx_ ) ;
+                break ;
+            }
         }
-    }
 
-    for( auto &ip: poi_instructions  ) {
-
-        RenderInstructionPtr ri = ip.ri_ ;
-        double mx = ip.x_, my = ip.y_ ;
-        double angle = ip.angle_ ;
-        string label = ip.label_ ;
-
-        switch ( ri->type() ) {
-        case RenderInstruction::Circle:
-            drawCircle(ctx, mx, my, *ri.get()) ;
-            break ;
-        case RenderInstruction::Symbol:
-            drawSymbol(ctx, mx, my, 0.0, *ri.get(), ip.poi_idx_) ;
-            break ;
-        case RenderInstruction::LineSymbol:
-            drawSymbol(ctx, mx, my, angle, *ri.get(), ip.poi_idx_) ;
-            break ;
-        case RenderInstruction::Caption:
-            drawCaption(ctx, mx, my, 0.0, label, *ri.get(), ip.poi_idx_ ) ;
-            break ;
-        case RenderInstruction::PathText:
-            drawCaption(ctx, mx, my, angle, label, *ri.get(), ip.poi_idx_ ) ;
-            break ;
-        }
+        cairo_restore(cr) ;
     }
 
     if ( debug_ ) {
@@ -382,8 +405,8 @@ bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile 
         string label = str.str() ;
 
         cairo_select_font_face(cr, "Arial",
-              CAIRO_FONT_SLANT_NORMAL,
-              CAIRO_FONT_WEIGHT_BOLD);
+                               CAIRO_FONT_SLANT_NORMAL,
+                               CAIRO_FONT_WEIGHT_BOLD);
 
         cairo_set_font_size(cr, 12);
 
@@ -496,7 +519,7 @@ void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double an
 
         cairo_set_source_surface (cr, surface, 0, 0);
         cairo_paint(cr) ;
-/*
+        /*
         cairo_rectangle(cr, 0, 0, extents.width, extents.height);
         cairo_set_source_rgb(cr, 0, 0, 0);
         cairo_stroke(cr) ;
@@ -544,8 +567,9 @@ void Renderer::drawLine(RenderingContext &ctx, const std::vector<std::vector<Coo
 
         cairo_device_to_user_distance(cr, &offset, &offset) ;
 
-        if ( line.dy_ == 0 )
-           cairo_path_from_geometry(cr, coords, false) ;
+        if ( line.dy_ == 0 ) {
+            cairo_path_from_geometry(cr, coords, false) ;
+        }
         else {
             vector<vector<Coord>> offset_coords ;
             offset_geometry(coords,  offset, offset_coords) ;
@@ -670,7 +694,7 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
         rect.height = height ;
 
         cairo_surface_t *rs = cairo_recording_surface_create( CAIRO_CONTENT_COLOR_ALPHA, &rect) ;
-       // cairo_surface_t *rs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height) ;
+        // cairo_surface_t *rs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height) ;
 
         cairo_t *ctx = cairo_create(rs) ;
 
@@ -678,7 +702,7 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
 
         cairo_destroy(ctx) ;
 
- //       cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
+        //       cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
 
         return rs ;
 
@@ -861,7 +885,7 @@ void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double a
 
         applySimpleFill(cr, caption.fill_) ;
         cairo_fill(cr) ;
-/*
+        /*
         cairo_rectangle(cr, 0, 0, width, height) ;
         cairo_set_source_rgb(cr, 1, 0, 0) ;
         cairo_stroke(cr) ;

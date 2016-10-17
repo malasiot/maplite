@@ -113,7 +113,7 @@ void MainWindow::createDocks()
     connect(feature_library_view_, SIGNAL(folderClicked(quint64)), this, SLOT(onFolderSelected(quint64))) ;
     connect(feature_library_view_, SIGNAL(collectionClicked(quint64, quint64)), feature_list_view_, SLOT(populate(quint64, quint64))) ;
     connect(feature_library_view_, SIGNAL(zoomOnRect(QRectF)), map_widget_, SLOT(zoomToRect(QRectF))) ;
-    connect(feature_list_view_, SIGNAL(featuresSelected(QVector<quint64>)), map_widget_, SLOT(selectFeatures(QVector<quint64>))) ;
+    connect(feature_list_view_, SIGNAL(featuresSelected(QVector<quint64>)), map_widget_, SLOT(selectOverlays(QVector<quint64>))) ;
     connect(feature_list_view_, SIGNAL(zoomOnRect(QRectF)), map_widget_, SLOT(zoomToRect(QRectF))) ;
     connect(select_tool_, SIGNAL(featureClicked(quint64)), feature_library_view_, SLOT(onFeatureClicked(quint64))) ;
     connect(feature_library_view_->model(), SIGNAL(dataChanged(QModelIndex,QModelIndex)), map_widget_, SLOT(invalidateOverlay())) ;
@@ -273,6 +273,20 @@ void MainWindow::createToolBars()
 
 }
 
+static QString get_absolute_path(const QDir &folder, const QString orig_path) {
+
+    if ( orig_path.isEmpty() ) return orig_path ;
+
+    QString full_path ;
+    if ( QFileInfo(orig_path).isRelative() ) {
+        full_path = folder.filePath(orig_path) ;
+    }
+    else full_path = orig_path ;
+
+    if ( QFileInfo(full_path).exists() ) return full_path ;
+    else return QString() ;
+}
+
 void MainWindow::scanThemes(const QDir &folder) {
 
     QDirIterator dit(folder, QDirIterator::Subdirectories);
@@ -318,9 +332,10 @@ void MainWindow::scanThemes(const QDir &folder) {
                     e = n.firstChildElement("attribution") ;
                     if ( !e.isNull() ) attribution = e.text() ;
 
-                    if ( path.isEmpty() ) continue ;
+                    path = get_absolute_path(folder, path) ;
+                    resource_dir = get_absolute_path(folder, resource_dir) ;
 
-                    if ( !QFileInfo(path).exists() ) continue ;
+                    if ( path.isEmpty() ) continue ;
 
                     std::shared_ptr<RenderTheme> theme(new RenderTheme()) ;
 
@@ -420,9 +435,9 @@ void MainWindow::scanMaps(const QDir &folder) {
                         }
                     }
 
-                    if ( path.isEmpty() ) continue ;
+                    path = get_absolute_path(folder, path) ;
 
-                    if ( !QFileInfo(path).exists() ) continue ;
+                    if ( path.isEmpty() ) continue ;
 
                     std::shared_ptr<MapFileReader> reader(new MapFileReader()) ;
 
@@ -546,6 +561,19 @@ void MainWindow::readAppSettings()
         default_map_ = base_maps_.begin()->first ;
     }
 
+    default_theme_ = settings.value("map/theme", default_theme_).toString() ;
+
+    if ( default_theme_.isEmpty() ) {
+        default_theme_ = themes_.begin()->first ;
+    }
+
+    default_layer_ = (const char *)settings.value("map/layer", default_layer_.c_str()).toByteArray() ;
+
+    if ( default_layer_.empty()) {
+        default_layer_ = themes_[default_theme_].theme_->defaultLayer();
+    }
+
+
     auto base_map = base_maps_[default_map_] ;
 
     if ( settings.contains("map/zoom") )
@@ -556,31 +584,12 @@ void MainWindow::readAppSettings()
         else default_zoom_ = z ;
     }
 
-
     if ( settings.contains("map/center") )
         default_center_ = settings.value("map/center").toPointF() ;
     else if ( base_map->hasStartPosition() )
         default_center_ = base_map->getStartPosition() ;
     else
         default_center_ = QPointF(23.0, 43.0) ; //?
-/*
-    settings.beginGroup("map/bindings/themes");
-    QStringList keys = settings.childKeys();
-    foreach (QString key, keys) {
-        QString theme_id = settings.value(key) ;
-         theme_bindings_[key].theme_ = themes_[theme_id] ;
-    }
-    settings.endGroup();
-
-    settings.beginGroup("map/bindings/layers");
-    QStringList keys = settings.childKeys();
-    foreach (QString key, keys) {
-        QString theme_id = settings.value(key) ;
-         theme_bindings_[key].theme_ = themes_[theme_id] ;
-    }
-    settings.endGroup();
-    */
-
 }
 
 void MainWindow::writeAppSettings()
@@ -590,6 +599,8 @@ void MainWindow::writeAppSettings()
     settings.setValue("map/zoom", map_widget_->getZoom()) ;
     settings.setValue("map/center", map_widget_->getCenter()) ;
     settings.setValue("map/name", default_map_) ;
+    settings.setValue("map/theme", default_theme_) ;
+    settings.setValue("map/layer", default_layer_.c_str()) ;
 }
 
 void MainWindow::closeBasemaps()

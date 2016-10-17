@@ -48,6 +48,10 @@ struct BBox {
         return (minx_ < other.maxx_ && maxx_ > other.minx_ && miny_ < other.maxy_ && maxy_ > other.miny_) ;
     }
 
+    BBox intersection(const BBox &other) const {
+        return BBox(std::max(minx_, other.minx_), std::max(miny_, other.miny_), std::min(maxx_, other.maxx_), std::max(maxy_, other.maxy_)) ;
+    }
+
     double minx_, miny_, maxx_, maxy_ ;
 };
 

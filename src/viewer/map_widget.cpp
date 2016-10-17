@@ -74,7 +74,7 @@ void MapWidget::setBasemap(const std::shared_ptr<TileProvider> &tiles)
 }
 
 
-void MapWidget::selectFeatures(const QVector<quint64> &ids)
+void MapWidget::selectOverlays(const QVector<quint64> &ids)
 {
     selected_.clear() ;
 
@@ -438,8 +438,7 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
     QVector<QRectF> bboxes ;
     QVector<QRect> rects = region.rects() ;
 
-    Q_FOREACH( QRect rect, rects)
-    {
+    Q_FOREACH( QRect rect, rects) {
         bboxes.append(windowToCoords(rect)) ;
     }
 
@@ -453,7 +452,6 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
 
     Q_FOREACH( quint64 id, ovr )
     {
-
         MapOverlayPtr obj ;
 
         if ( current_overlay_ && current_overlay_->id() == id ) continue ;

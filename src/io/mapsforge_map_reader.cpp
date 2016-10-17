@@ -144,44 +144,71 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
             bool is_sea_tile = ( tile_offset & 0x8000000000LL ) != 0 ;
             tile_offset = tile_offset & 0x7FFFFFFFFFLL ;
 
-            if ( !is_sea_tile ) {
-
-                std::shared_ptr<TileData> data ;
-
-                cache_key_type key(btx, bty, si.base_zoom_, this) ;
-
-                if ( g_tile_index_ ) {
-                     g_tile_index_->fetch(key,
-                       [this, is_sea_tile, si, tile_offset] ( const cache_key_type &key, cache_value_type  &val ) -> uint64_t {
-                         // if not in cache load from disk
-
-                         uint32_t tx = std::get<0>(key) ;
-                         uint32_t ty = std::get<1>(key) ;
-                         uint32_t tz = std::get<2>(key) ;
-                         val.reset(new TileData(tx, ty, tz, is_sea_tile)) ;
-                         return readTileData(si, tile_offset, val) ;
-                     },
-                     data) ;
-                }
-                else {
-                    cout << "fetched from cache" << endl ;
-                }
-
-                // copy all ways and pois at zoom level equal or lower the requested zoom level
+            BaseTile base_tile(TileKey(btx, bty, si.base_zoom_, true)) ;
 
 
-                for(int z=zoom ; z>=si.min_zoom_ ; z-- ) {
-                    int idx = z - (int)si.min_zoom_ ;
 
-                    std::copy(data->pois_per_level_[idx].begin(), data->pois_per_level_[idx].end(),
-                              std::back_inserter(tile.pois_)) ;
-                    if ( !ignore_ways )
-                        std::copy(data->ways_per_level_[idx].begin(), data->ways_per_level_[idx].end(),
-                              std::back_inserter(tile.ways_)) ;
+            std::shared_ptr<TileData> data ;
 
-                }
+            cache_key_type key(btx, bty, si.base_zoom_, this) ;
+
+            if ( g_tile_index_ ) {
+                g_tile_index_->fetch(key,
+                                     [this, is_sea_tile, si, tile_offset] ( const cache_key_type &key, cache_value_type  &val ) -> uint64_t {
+                    // if not in cache load from disk
+
+                    uint32_t tx = std::get<0>(key) ;
+                    uint32_t ty = std::get<1>(key) ;
+                    uint32_t tz = std::get<2>(key) ;
+                    val.reset(new TileData(tx, ty, tz, is_sea_tile)) ;
+                    return readTileData(si, tile_offset, val) ;
+                },
+                data) ;
+            }
+            else {
+                data.reset(new TileData(btx, bty, si.base_zoom_, is_sea_tile)) ;
+                readTileData(si, tile_offset, data) ;
+            }
+
+
+            // copy all ways and pois at zoom level equal or lower the requested zoom level
+
+            if ( !data ) continue ;
+
+            for(int z=zoom ; z>=si.min_zoom_ ; z-- ) {
+                int idx = z - (int)si.min_zoom_ ;
+
+                std::copy(data->pois_per_level_[idx].begin(), data->pois_per_level_[idx].end(),
+                          std::back_inserter(base_tile.pois_)) ;
+                if ( !ignore_ways )
+                    std::copy(data->ways_per_level_[idx].begin(), data->ways_per_level_[idx].end(),
+                              std::back_inserter(base_tile.ways_)) ;
 
             }
+
+
+            if ( is_sea_tile ) {
+                base_tile.is_sea_ = true ;
+                BBox lbox ;
+                tms::tileLatLonBounds(bt.x(), bt.y(), bt.z(), lbox.miny_, lbox.minx_, lbox.maxy_, lbox.maxx_) ;
+
+                Way sea ;
+                sea.tags_.add("natural", "sea") ;
+                sea.tags_.add("area", "yes") ;
+                sea.coords_.resize(1) ;
+                sea.coords_[0].emplace_back(lbox.miny_, lbox.minx_) ;
+                sea.coords_[0].emplace_back(lbox.maxy_, lbox.minx_) ;
+                sea.coords_[0].emplace_back(lbox.maxy_, lbox.maxx_) ;
+                sea.coords_[0].emplace_back(lbox.miny_, lbox.maxx_) ;
+                sea.coords_[0].emplace_back(lbox.miny_, lbox.minx_) ;
+
+                base_tile.ways_.emplace_back(sea) ;
+            }
+
+
+
+            tile.base_tiles_.emplace_back(base_tile) ;
+
         }
 
     exportTileDataOSM(tile, "/tmp/oo.osm");
@@ -687,25 +714,27 @@ void MapFileReader::exportTileDataOSM(const VectorTile &data, const string &file
 
     int64_t count = -10000000 ;
 
-    for(int i=0 ; i<data.pois_.size() ; i++ ) {
-        const POI &poi = data.pois_[i] ;
+    for( const BaseTile &bt: data.base_tiles_ ) {
+        for(int i=0 ; i<bt.pois_.size() ; i++ ) {
+            const POI &poi = bt.pois_[i] ;
 
-        strm << "<node id='" << count++ << "' visible='true' lat='" << setprecision(12) << poi.lat_ <<
-                "' lon='" << setprecision(12) << poi.lon_  ;
+            strm << "<node id='" << count++ << "' visible='true' lat='" << setprecision(12) << poi.lat_ <<
+                    "' lon='" << setprecision(12) << poi.lon_  ;
 
-        if ( poi.tags_.empty() ) strm <<  "' />\n" ;
-        else
-        {
-            strm << "' >\n" ;
+            if ( poi.tags_.empty() ) strm <<  "' />\n" ;
+            else
+            {
+                strm << "' >\n" ;
 
-            DictionaryIterator it(poi.tags_) ;
+                DictionaryIterator it(poi.tags_) ;
 
-            while ( it ) {
-                strm << "<tag k='" << it.key() << "' v='" << escape_xml_string(it.value()) << "' />\n" ;
-                ++it ;
+                while ( it ) {
+                    strm << "<tag k='" << it.key() << "' v='" << escape_xml_string(it.value()) << "' />\n" ;
+                    ++it ;
+                }
+
+                strm << "</node>\n" ;
             }
-
-            strm << "</node>\n" ;
         }
     }
 
@@ -713,55 +742,59 @@ void MapFileReader::exportTileDataOSM(const VectorTile &data, const string &file
 
     int64_t count0 = count ;
 
-    for(int i=0 ; i<data.ways_.size() ; i++ )
-    {
-        const Way &way = data.ways_[i] ;
+    for( const BaseTile &bt: data.base_tiles_ ) {
+        for(int i=0 ; i<bt.ways_.size() ; i++ )
+        {
+            const Way &way = bt.ways_[i] ;
 
-        for ( uint k = 0 ; k<way.coords_.size() ; k++ ) {
+            for ( uint k = 0 ; k<way.coords_.size() ; k++ ) {
 
-            const vector<LatLon> &coords = way.coords_[k] ;
+                const vector<LatLon> &coords = way.coords_[k] ;
 
-            for( uint j=0 ; j<coords.size() ; j++ ) {
-                strm << "<node id='" << count + j << "' visible='true' lat='" << setprecision(12) << coords[j].lat_ <<
-                        "' lon='" << setprecision(12) << coords[j].lon_  <<  "' />\n" ;
+                for( uint j=0 ; j<coords.size() ; j++ ) {
+                    strm << "<node id='" << count + j << "' visible='true' lat='" << setprecision(12) << coords[j].lat_ <<
+                            "' lon='" << setprecision(12) << coords[j].lon_  <<  "' />\n" ;
+                }
+
+                count += coords.size() ;
             }
 
-            count += coords.size() ;
         }
-
     }
 
     count = count0 ;
 
-    for(int i=0 ; i<data.ways_.size() ; i++ )
-    {
-        const Way &way = data.ways_[i] ;
+    for( const BaseTile &bt: data.base_tiles_ ) {
+        for(int i=0 ; i<bt.ways_.size() ; i++ )
+        {
+            const Way &way = bt.ways_[i] ;
 
-        for ( uint k = 0 ; k<way.coords_.size() ; k++ ) {
+            for ( uint k = 0 ; k<way.coords_.size() ; k++ ) {
 
-            const vector<LatLon> &coords = way.coords_[k] ;
+                const vector<LatLon> &coords = way.coords_[k] ;
 
-            strm << "<way id='" << -100000000 + wcount++ << "' action='modify' visible='true'>\n" ;
+                strm << "<way id='" << -100000000 + wcount++ << "' action='modify' visible='true'>\n" ;
 
-            DictionaryIterator it(way.tags_) ;
+                DictionaryIterator it(way.tags_) ;
 
-            while ( it ) {
-                strm << "<tag k='" << it.key() << "' v='" << escape_xml_string(it.value()) << "' />\n" ;
-                ++it ;
+                while ( it ) {
+                    strm << "<tag k='" << it.key() << "' v='" << escape_xml_string(it.value()) << "' />\n" ;
+                    ++it ;
+                }
+
+                for( uint j=0 ; j<coords.size() ; j++ ) {
+                    strm << "<nd ref='" << count + j << "'/>\n" ;
+                }
+
+                strm << "</way>\n" ;
+
+                count += coords.size() ;
+            }
+            if ( way.coords_.size() > 1 ) {
+
             }
 
-            for( uint j=0 ; j<coords.size() ; j++ ) {
-                strm << "<nd ref='" << count + j << "'/>\n" ;
-            }
-
-            strm << "</way>\n" ;
-
-            count += coords.size() ;
         }
-        if ( way.coords_.size() > 1 ) {
-
-        }
-
     }
 
 

@@ -355,8 +355,6 @@ void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &opti
         const uint chunk_size = 512 ;
         uint chunk_left = chunk_size ;
 
-        omp_set_num_threads(12);
-
         for( uint j=0 ; j<tile_count ; j+= chunk_size ) {
 
             if (j + chunk_size > tile_count ) chunk_left = tile_count - j ;

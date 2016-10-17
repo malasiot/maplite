@@ -143,7 +143,7 @@ protected:
 public Q_SLOTS:
 
     void onFetchFinished(const QString &, const QImage &img) ;
-    void selectFeatures(const QVector<quint64> &ids);
+    void selectOverlays(const QVector<quint64> &ids);
 
 Q_SIGNALS:
 

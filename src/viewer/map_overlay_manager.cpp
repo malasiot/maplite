@@ -22,17 +22,37 @@ const size_t MapOverlayManager::index_buffer_capacity_ = 256 ;
 
 bool MapOverlayManager::open(const QString &storage)
 {
-    // Create a new storage manager with the provided base name and a 4K page size.
+    // this is the sqlite database that contains all overlay data indexed by ID.
+
+    QString db_path = storage + ".sqlite" ;
+
+
+    bool populate_db = !QFileInfo(db_path).exists() ;
+    db_ = new SQLite::Database((const char *)db_path.toUtf8()) ;
+
+    if ( populate_db ) { // create database for the first time
+
+        SQLite::Session session(db_) ;
+        SQLite::Connection &con = session.handle() ;
+
+        con.exec("CREATE TABLE features (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, content BLOB NOT NULL);\
+CREATE TABLE collections (id INTEGER PRIMARY KEY AUTOINCREMENT, folder_id INTEGER NOT NULL, is_visible INTEGER DEFAULT 1, name TEXT, attributes BLOB);\
+CREATE TABLE memberships (feature_id INTEGER, collection_id INTEGER);\
+CREATE INDEX membership_idx ON memberships (collection_id);\
+CREATE UNIQUE INDEX membership_unique_idx ON memberships(feature_id, collection_id); \
+CREATE TABLE folders (id INTEGER PRIMARY KEY AUTOINCREMENT, is_visible INTEGER DEFAULT 1, name TEXT NOT NULL, parent_id INTEGER NOT NULL);\
+INSERT INTO folders (name, parent_id) VALUES ('Library', 0);\
+PRAGMA journal_mode=WAL;PRAGMA synchronous=0") ;
+    }
+
+    // Now create the spatial index that uses a paged memory file
 
     id_type indexIdentifier;
+    string index_path_prefix((const char *)storage.toUtf8()) ;
 
-    string index_path_prefix = (const char *)storage.toUtf8() ;
-
-    db_ = new SQLite::Database(index_path_prefix + ".sqlite") ;
-
-    try {
-        if ( QFileInfo(storage + ".idx").exists() )
-        {
+    if ( QFileInfo(storage + ".idx").exists() ) // load existing a spatial index saved on disk
+    {
+        try {
             storage_ = StorageManager::loadDiskStorageManager(index_path_prefix);
             buffer_ = StorageManager::createNewRandomEvictionsBuffer(*storage_, index_buffer_capacity_, false);
 
@@ -41,39 +61,22 @@ bool MapOverlayManager::open(const QString &storage)
 
             index_ = RTree::loadRTree(*storage_, indexIdentifier);
 
-
-
+            return true ;
         }
-        else {
-            storage_ = StorageManager::createNewDiskStorageManager(index_path_prefix, index_page_size_);
-            buffer_ = StorageManager::createNewRandomEvictionsBuffer(*storage_, index_buffer_capacity_, false);
-            index_ = RTree::createNewRTree(*buffer_, 0.7, 100, 100, 2, SpatialIndex::RTree::RV_RSTAR, indexIdentifier);
-
-            QSettings sts ;
-            sts.setValue("features/spatial_index_id", QVariant::fromValue<quint64>(indexIdentifier)) ;
-
-
-            SQLite::Session session(db_) ;
-            SQLite::Connection &con = session.handle() ;
-
-            con.exec("CREATE TABLE features (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, content BLOB NOT NULL);\
-CREATE TABLE collections (id INTEGER PRIMARY KEY AUTOINCREMENT, folder_id INTEGER NOT NULL, is_visible INTEGER DEFAULT 1, name TEXT, attributes BLOB);\
-CREATE TABLE memberships (feature_id INTEGER, collection_id INTEGER);\
-CREATE INDEX membership_idx ON memberships (collection_id);\
-CREATE UNIQUE INDEX membership_unique_idx ON memberships(feature_id, collection_id); \
-CREATE TABLE folders (id INTEGER PRIMARY KEY AUTOINCREMENT, is_visible INTEGER DEFAULT 1, name TEXT NOT NULL, parent_id INTEGER NOT NULL);\
-INSERT INTO folders (name, parent_id) VALUES ('Library', 0);\
-PRAGMA journal_mode=WAL;PRAGMA synchronous=0") ;
+        catch (Tools::IllegalStateException &e )
+        {
+            // We probably are here due to corrupted index
         }
+     }
 
-        return true ;
-    }
-    catch (Tools::IllegalArgumentException &e )
-    {
-        qDebug() <<  e.what().c_str() ;
-        return false ;
-    }
+    // index not exists or corrupted, so create a new one
+     storage_ = StorageManager::createNewDiskStorageManager(index_path_prefix, index_page_size_);
+     buffer_ = StorageManager::createNewRandomEvictionsBuffer(*storage_, index_buffer_capacity_, false);
+     index_ = RTree::createNewRTree(*buffer_, 0.7, 100, 100, 2, SpatialIndex::RTree::RV_RSTAR, indexIdentifier);
 
+     QSettings sts ;
+     sts.setValue("features/spatial_index_id", QVariant::fromValue<quint64>(indexIdentifier)) ;
+     return true ;
 }
 
 
@@ -280,7 +283,6 @@ bool MapOverlayManager::write(const QVector<MapOverlayPtr> &objects, quint64 col
                 cmd.clear() ;
             }
 
-
             trans.commit() ;
         }
 
@@ -333,8 +335,6 @@ bool MapOverlayManager::write(const QVector<MapOverlayPtr> &objects, quint64 col
         qDebug() <<  e.what() ;
         return false ;
     }
-
-
 }
 
 

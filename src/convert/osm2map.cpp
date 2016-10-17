@@ -2,7 +2,6 @@
 
 #include "osm_processor.hpp"
 #include "mapsforge_map_writer.hpp"
-#include "program_options.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
@@ -10,7 +9,7 @@
 #include <boost/program_options.hpp>
 
 using namespace std ;
-
+namespace po = boost::program_options ;
 
 int main(int argc, char *argv[])
 {
