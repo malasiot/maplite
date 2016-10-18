@@ -9,9 +9,8 @@ public:
     XYZTileProvider(const QString &name, const QString &url):
         NetworkTileProvider(name, url) {}
 
-    QString makeRequestUrl(int x, int y, int z) {
-        return url_.arg(z).arg(x).arg(y) ;
-    }
+    QString makeRequestUrl(int x, int y, int z) ;
+
 } ;
 
 #endif

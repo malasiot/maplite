@@ -99,6 +99,10 @@ cairo_scaled_font_t *TextEngine::cairo_setup_font(const string &family_name, uin
     return scaled_font ;
 }
 
+const hb_tag_t KernTag = HB_TAG('k', 'e', 'r', 'n'); // kerning operations
+static hb_feature_t KerningOn = { KernTag, 1, 0, std::numeric_limits<unsigned int>::max() };
+
+hb_feature_t hb_features[] = { KerningOn } ;
 
 bool TextEngine::shape_text(const std::string &text, cairo_scaled_font_t *sf, cairo_glyph_t *&cglyphs, int &num_glyphs)
 {
@@ -119,7 +123,7 @@ bool TextEngine::shape_text(const std::string &text, cairo_scaled_font_t *sf, ca
 
     hb_font_t *font = hb_ft_font_create(face, NULL);
 
-    hb_shape(font, buffer, 0 /*features*/, 0 /*num_features*/);
+    hb_shape(font, buffer, hb_features, 1);
 
     hb_font_destroy(font);
 

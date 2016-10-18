@@ -96,8 +96,8 @@ public:
 
 };
 
-void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_extents, cairo_matrix_t &cmm, const std::vector<Way> &ways,
-                          std::vector<WayInstruction> &winstructions, std::vector<POIInstruction> &poi_instructions, int32_t &count)
+void Renderer::filterWays(const string &layer, uint8_t zoom, const std::vector<Way> &ways,
+                          std::vector<WayInstruction> &winstructions)
 {
     assert(theme_) ;
 
@@ -105,12 +105,7 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
         const Way &way = ways[idx] ;
         vector<RenderInstructionPtr> ris ;
 
-
         if ( theme_->match(layer, way.tags_, zoom, way.is_closed_, true, ris)) {
-
-            int32_t symbol_id = -1 ;
-            vector<POIInstruction> instructions ;
-
             vector<vector<Coord>> coords ;
             latlon_to_tms(way.coords_, coords) ;
 
@@ -122,7 +117,36 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
                 else if ( ri->type() == RenderInstruction::Line ) {
                     winstructions.emplace_back(std::move(coords), ri, idx, ri->z_order_) ;
                 }
-                else if ( ri->type() == RenderInstruction::Symbol ) {
+            }
+        }
+    }
+
+    std::sort(winstructions.begin(), winstructions.end(), WayInstructionSorter(ways, winstructions)) ;
+
+}
+
+
+void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, cairo_matrix_t &cmm, const std::vector<Way> &ways, const std::vector<POI> &pois,
+                          std::vector<POIInstruction> &poi_instructions, uint32_t &count)
+{
+    assert(theme_) ;
+
+    const int32_t way_idx_offset = 100000 ;
+
+    for( uint32_t idx = 0 ; idx < ways.size() ; ++idx  ) {
+        const Way &way = ways[idx] ;
+        vector<RenderInstructionPtr> ris ;
+
+        if ( theme_->match(layer, way.tags_, zoom, way.is_closed_, true, ris)) {
+
+            int32_t symbol_id = -1 ;
+            vector<POIInstruction> instructions ;
+
+            vector<vector<Coord>> coords ;
+            latlon_to_tms(way.coords_, coords) ;
+
+            for( const auto &ri: ris ) {
+                if ( ri->type() == RenderInstruction::Symbol ) {
 
                     double mx, my ;
                     if ( way.label_pos_ ) {
@@ -133,8 +157,8 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
 
                     symbol_id = count ;
 
-                    if ( query_extents.contains(mx, my) )
-                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
+                    if ( box.contains(mx, my) )
+                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), way_idx_offset + idx) ;
                 }
                 else if ( ri->type() == RenderInstruction::Caption )
                 {
@@ -145,20 +169,21 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
                     }
                     else get_poi_from_area(way, coords[0], mx, my) ;
 
-                    if ( query_extents.contains(mx, my) )
-                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
+                    if ( box.contains(mx, my) )
+                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), way_idx_offset + idx) ;
                 }
                 else if ( ri->type() == RenderInstruction::Circle )
                 {
                     double mx, my ;
+
                     if ( way.label_pos_ ) {
                         LatLon lp = way.label_pos_.get() ;
                         tms::latlonToMeters(lp.lat_, lp.lon_, mx, my) ;
                     }
                     else get_poi_from_area(way, coords[0], mx, my) ;
 
-                    if ( query_extents.contains(mx, my) )
-                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), count++) ;
+                    if ( box.contains(mx, my) )
+                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), way_idx_offset + idx) ;
                 }
                 else if ( ri->type() == RenderInstruction::LineSymbol ) {
                     RenderInstruction &line = *ri.get() ;
@@ -175,8 +200,8 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
 
                     for( uint i=0 ; i<pts.size() ; i++ ) {
                         const Coord &c = pts[i] ;
-                        if ( query_extents.contains(c.x_, c.y_) )
-                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, string(), count++) ;
+                        if ( box.contains(c.x_, c.y_) )
+                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, string(), way_idx_offset + idx, i) ;
                     }
                 }
                 else if ( ri->type() == RenderInstruction::PathText ) {
@@ -193,15 +218,10 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
 
                     for( uint i=0 ; i<pts.size() ; i++ ) {
                         const Coord &c = pts[i] ;
-                        if ( query_extents.contains(c.x_, c.y_) )
-                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, label, count++) ;
+                        if ( box.contains(c.x_, c.y_) )
+                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, label, way_idx_offset + idx, i) ;
                     }
                 }
-            }
-
-            for( auto &ins: instructions ) {
-                RenderInstructionPtr ri = ins.ri_ ;
-                if ( ri->type_ == RenderInstruction::Caption && ri->symbol_ ) ins.poi_idx_ = symbol_id ;
             }
 
             std::copy( instructions.begin(), instructions.end(), std::back_inserter(poi_instructions)) ;
@@ -209,14 +229,6 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const BBox &query_e
         }
     }
 
-    std::sort(winstructions.begin(), winstructions.end(), WayInstructionSorter(ways, winstructions)) ;
-
-}
-
-void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, const std::vector<POI> &pois,
-                          std::vector<POIInstruction> &instructions, int32_t &count)
-{
-    assert(theme_) ;
 
     for( uint32_t idx = 0 ; idx < pois.size() ; ++idx  ) {
         const POI &poi = pois[idx] ;
@@ -235,24 +247,20 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, co
                     symbol_id = count ;
 
                 if ( box.contains(mx, my))
-                    instr.emplace_back(mx, my, 0, ri, poi.tags_.get(ri->key_), count++) ;
+                    instr.emplace_back(mx, my, 0, ri, poi.tags_.get(ri->key_), idx) ;
             }
 
-            for( auto &ins: instr ) {
-                RenderInstructionPtr ri = ins.ri_ ;
-                if ( ri->type_ == RenderInstruction::Caption && ri->symbol_ ) ins.poi_idx_ = symbol_id ;
-            }
-
-            std::copy( instr.begin(), instr.end(), std::back_inserter(instructions)) ;
+            std::copy( instr.begin(), instr.end(), std::back_inserter(poi_instructions)) ;
         }
     }
 
 
-    std::sort(instructions.begin(), instructions.end(), POIInstructionSorter()) ;
+    std::sort(poi_instructions.begin(), poi_instructions.end(), POIInstructionSorter()) ;
 }
 
 bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile &tile, const string &layer, unsigned int query_buffer)
 {
+
     BBox box ;
     tms::tileLatLonBounds(key.x(), key.y(), key.z(), box.miny_, box.minx_, box.maxy_, box.maxx_) ;
     uint8_t zoom = key.z();
@@ -298,56 +306,43 @@ bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile 
 
     cairo_set_antialias (cr, CAIRO_ANTIALIAS_SUBPIXEL); //?
 
+    // set map background here
+
+    cairo_save(cr) ;
+    cairo_transform(cr, &cmm) ;
+
+    cairo_rectangle(cr, target_extents.minx_, target_extents.miny_, target_extents.width(), target_extents.height()) ;
+    cairo_restore(cr) ;
+
+    double a, r, g, b;
+    get_argb_color(theme_->backgroundColor(), a, r, g, b) ;
+
+    if ( a == 1 ) cairo_set_source_rgb(cr, r, g, b);
+    else cairo_set_source_rgba(cr, r, g, b, a) ;
+
+    cairo_fill(cr) ;
+
+    // ways are rendered for each base tile separately since polygons usually exceed tile dimensions
 
     for( const BaseTile &bt: tile.base_tiles_ ) {
 
         cairo_save(cr) ;
 
-        BBox lbox ;
-        tms::tileLatLonBounds(bt.key_.x(), bt.key_.y(), bt.key_.z(), lbox.miny_, lbox.minx_, lbox.maxy_, lbox.maxx_) ;
-
-        BBox tile_extents, buffered_extents ;
-
-        tms::latlonToMeters(lbox.miny_, lbox.minx_, tile_extents.minx_, tile_extents.miny_) ;
-        tms::latlonToMeters(lbox.maxy_, lbox.maxx_, tile_extents.maxx_, tile_extents.maxy_) ;
-
-        double extra_width = query_buffer * tms::resolution(zoom) ;
-        double extra_height = query_buffer * tms::resolution(zoom) ;
-
-        buffered_extents = tile_extents.intersection(query_extents) ;
-
-        // inflate target box with buffer to avoid rendering artifacts of labels accross tiles
-
-        buffered_extents.minx_ -= extra_width ;
-        buffered_extents.miny_ -= extra_height ;
-        buffered_extents.maxx_ += extra_width ;
-        buffered_extents.maxy_ += extra_height ;
+        BBox tile_extents  ;
+        tms::tileBounds(bt.key_.x(), bt.key_.y(), bt.key_.z(), tile_extents.minx_, tile_extents.miny_, tile_extents.maxx_, tile_extents.maxy_) ;
 
         // set map background here
 
         cairo_save(cr) ;
         cairo_transform(cr, &cmm) ;
-
         cairo_rectangle(cr, tile_extents.minx_, tile_extents.miny_, tile_extents.width(), tile_extents.height()) ;
         cairo_restore(cr) ;
-
-        double a, r, g, b;
-        get_argb_color(theme_->backgroundColor(), a, r, g, b) ;
-
-        if ( a == 1 ) cairo_set_source_rgb(cr, r, g, b);
-        else cairo_set_source_rgba(cr, r, g, b, a) ;
-
-        cairo_fill_preserve(cr) ;
         cairo_clip(cr) ;
 
         // sort ways based on layer attribute
-        int32_t count = 0 ;
-
         vector<WayInstruction> way_instructions ;
-        vector<POIInstruction> poi_instructions ;
 
-        filterWays(layer, zoom, buffered_extents, cmm, bt.ways_, way_instructions, poi_instructions, count) ;
-        filterPOIs(layer, zoom, buffered_extents, bt.pois_, poi_instructions, count ) ;
+        filterWays(layer, zoom, bt.ways_, way_instructions) ;
 
         for( auto &ip: way_instructions ) {
 
@@ -363,32 +358,51 @@ bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile 
             }
         }
 
-        for( auto &ip: poi_instructions  ) {
+        cairo_restore(cr) ;
+    }
 
-            RenderInstructionPtr ri = ip.ri_ ;
-            double mx = ip.x_, my = ip.y_ ;
-            double angle = ip.angle_ ;
-            string label = ip.label_ ;
+    // collect POIs from all base tiles within the query extents and sort them
 
-            switch ( ri->type() ) {
-            case RenderInstruction::Circle:
-                drawCircle(ctx, mx, my, *ri.get()) ;
-                break ;
-            case RenderInstruction::Symbol:
-                drawSymbol(ctx, mx, my, 0.0, *ri.get(), ip.poi_idx_) ;
-                break ;
-            case RenderInstruction::LineSymbol:
-                drawSymbol(ctx, mx, my, angle, *ri.get(), ip.poi_idx_) ;
-                break ;
-            case RenderInstruction::Caption:
-                drawCaption(ctx, mx, my, 0.0, label, *ri.get(), ip.poi_idx_ ) ;
-                break ;
-            case RenderInstruction::PathText:
-                drawCaption(ctx, mx, my, angle, label, *ri.get(), ip.poi_idx_ ) ;
-                break ;
-            }
+    vector<POIInstruction> poi_instructions ;
+
+    uint32_t count = 0 ;
+    for( const BaseTile &bt: tile.base_tiles_)
+        filterPOIs(layer, zoom, query_extents, cmm, bt.ways_, bt.pois_, poi_instructions, count ) ;
+
+    // render POIs
+
+    cairo_save(cr) ;
+    cairo_transform(cr, &cmm) ;
+
+    cairo_rectangle(cr, target_extents.minx_, target_extents.miny_, target_extents.width(), target_extents.height()) ;
+    cairo_restore(cr) ;
+    cairo_clip(cr) ;
+
+
+    for( auto &ip: poi_instructions  ) {
+        cairo_save(cr) ;
+        RenderInstructionPtr ri = ip.ri_ ;
+        double mx = ip.x_, my = ip.y_ ;
+        double angle = ip.angle_ ;
+        string label = ip.label_ ;
+
+        switch ( ri->type() ) {
+        case RenderInstruction::Circle:
+            drawCircle(ctx, mx, my, *ri.get()) ;
+            break ;
+        case RenderInstruction::Symbol:
+            drawSymbol(ctx, mx, my, 0.0, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
+            break ;
+        case RenderInstruction::LineSymbol:
+            drawSymbol(ctx, mx, my, angle, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
+            break ;
+        case RenderInstruction::Caption:
+            drawCaption(ctx, mx, my, 0.0, label, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
+            break ;
+        case RenderInstruction::PathText:
+            drawCaption(ctx, mx, my, angle, label, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
+            break ;
         }
-
         cairo_restore(cr) ;
     }
 
@@ -489,7 +503,7 @@ void Renderer::drawCircle(RenderingContext &ctx, double px, double py, const Ren
 
 
 
-void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &symbol, int32_t poi_idx)
+void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &symbol, int32_t poi_idx, int32_t item_idx)
 {
     cairo_t *cr = ctx.cr_ ;
 
@@ -509,7 +523,8 @@ void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double an
     cairo_matrix_transform_point(&ctx.cmm_, &px, &py) ;
 
     if ( symbol.display_ == RenderInstruction::Allways ||
-         symbol.display_ == RenderInstruction::IfSpace && ctx.colc_.addLabelBox(px, py, angle, extents.width + collision_extra, extents.height + collision_extra, poi_idx)  )
+         ( symbol.display_ == RenderInstruction::IfSpace &&
+           ctx.colc_.addLabelBox(px, py, angle, extents.width + collision_extra, extents.height + collision_extra, poi_idx, item_idx) )  )
     {
         cairo_save(cr) ;
 
@@ -519,7 +534,7 @@ void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double an
 
         cairo_set_source_surface (cr, surface, 0, 0);
         cairo_paint(cr) ;
-        /*
+/*
         cairo_rectangle(cr, 0, 0, extents.width, extents.height);
         cairo_set_source_rgb(cr, 0, 0, 0);
         cairo_stroke(cr) ;
@@ -698,11 +713,12 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
 
         cairo_t *ctx = cairo_create(rs) ;
 
+
         doc->renderToTarget(ctx, 0, 0, width, height, 96) ;
 
         cairo_destroy(ctx) ;
 
-        //       cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
+        //              cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
 
         return rs ;
 
@@ -769,7 +785,8 @@ void Renderer::drawArea(RenderingContext &ctx, const std::vector<std::vector<Coo
 
 // render text for point geometries
 
-void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double angle, const std::string &label, const RenderInstruction &caption, int32_t poi_idx)
+void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double angle, const std::string &label, const RenderInstruction &caption,
+                           int32_t poi_idx, int32_t poi_item)
 {
     cairo_t *cr = ctx.cr_ ;
 
@@ -778,7 +795,7 @@ void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double a
     string family_name ;
 
     if ( caption.font_family_ == RenderInstruction::Default )
-        family_name = "serif" ;
+          family_name = "monospace" ;
     else if (caption.font_family_ == RenderInstruction::Monospace )
         family_name = "monospace" ;
     else if (caption.font_family_ == RenderInstruction::SansSerif )
@@ -867,7 +884,8 @@ void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double a
 
 
     if ( caption.display_ == RenderInstruction::Allways ||
-         caption.display_ == RenderInstruction::IfSpace && ctx.colc_.addLabelBox(px + disp_x, py + disp_y, rotation, width + collision_extra, height + collision_extra, poi_idx)  )
+         ( caption.display_ == RenderInstruction::IfSpace &&
+           ctx.colc_.addLabelBox(px + disp_x, py + disp_y, rotation, width + collision_extra, height + collision_extra, poi_idx, poi_item) )  )
     {
         cairo_save(cr) ;
 

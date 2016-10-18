@@ -58,14 +58,14 @@ public:
 
     // check collision between given OBB and stored labels
 
-    bool addLabelBox(double cx, double cy, double angle, double width, double height, int32_t id = -1) ;
-    bool addLabelBox(const std::vector<OBB> &boxes, int32_t id = -1) ;
+    bool addLabelBox(double cx, double cy, double angle, double width, double height, int32_t id = -1, int32_t item = 0) ;
+    bool addLabelBox(const std::vector<OBB> &boxes, int32_t id = -1, int32_t item = 0) ;
 
 private:
 
     struct Label {
         std::vector<OBB> boxes_ ;
-        int32_t uid_ ;
+        int32_t uid_, item_ ;
     };
 
     std::vector<Label> labels_ ;

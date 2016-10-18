@@ -22,6 +22,7 @@ class FeatureListView ;
 class MapOverlayManager ;
 class QDir ;
 
+#include "map_manager.hpp"
 #include "map_overlay.hpp"
 
 #include "theme.hpp"
@@ -32,14 +33,6 @@ struct ThemeBinding {
     QString layer_ ;
 };
 
-struct ThemeInfo {
-    QString description_ ;
-    QString attribution_ ;
-    QString name_ ;
-    QString path_ ;
-    std::shared_ptr<RenderTheme> theme_ ;
-    bool is_default_ ;
-};
 
 class MainWindow : public QMainWindow
 {
@@ -78,10 +71,7 @@ protected:
 
     void createTools() ;
     void createWidgets() ;
-    void initBasemaps() ;
-    void initThemes() ;
-    void scanThemes(const QDir &folder);
-    void scanMaps(const QDir &folder);
+    void initMaps() ;
     void createActions();
     void createMenus();
     void createToolBars();
@@ -96,11 +86,11 @@ protected:
 
     MapWidget *map_widget_ ;
     MapTool *pan_tool_, *zoom_tool_, *polygon_tool_, *waypoint_tool_, *edit_tool_, *select_tool_;
-    std::map<QString, std::shared_ptr<TileProvider> > base_maps_ ;
-    std::map<QString, ThemeBinding> theme_bindings_ ;
-    std::map<QString, ThemeInfo> themes_ ;
-    QString default_theme_ ;
-    std::string default_layer_ ;
+
+    MapManager maps_ ;
+    std::string default_theme_, default_layer_, default_map_ ;
+    QPointF default_center_ ;
+    int default_zoom_ ;
 
     QMenu *maps_menu_, *file_menu_, *edit_menu_ ;
     QToolBar *map_tool_bar_ ;
@@ -115,9 +105,6 @@ protected:
     QAction *import_files_action_,  *undo_act_, *redo_act_ ;
     QUndoGroup *undo_group_ ;
 
-    QPointF default_center_ ;
-    QString default_map_ ;
-    int default_zoom_ ;
 
     QSharedPointer<MapOverlayManager> overlay_manager_ ;
 

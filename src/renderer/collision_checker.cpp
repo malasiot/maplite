@@ -89,7 +89,7 @@ bool OBB::overlaps(const OBB& other) const {
 }
 
 
-bool CollisionChecker::addLabelBox(double cx, double cy, double angle, double w, double h, int32_t id)
+bool CollisionChecker::addLabelBox(double cx, double cy, double angle, double w, double h, int32_t id, int32_t item)
 {
     OBB box(cx, cy, angle, w, h) ;
 
@@ -97,19 +97,22 @@ bool CollisionChecker::addLabelBox(double cx, double cy, double angle, double w,
     {
         const Label &l = labels_[i] ;
 
-        for(int j=0 ; j<l.boxes_.size() ; j++ )
-            if ((l.uid_ != id) && box.overlaps(l.boxes_[j])) return false ;
+        for(int j=0 ; j<l.boxes_.size() ; j++ ) {
+            if ( l.uid_ == id && l.item_ == item ) continue ;
+            if ( box.overlaps(l.boxes_[j])) return false ;
+        }
     }
 
     Label label ;
     label.boxes_.push_back(box) ;
     label.uid_ = id ;
+    label.item_ = item ;
     labels_.push_back(label) ;
 
     return true ;
 }
 
-bool CollisionChecker::addLabelBox(const std::vector<OBB> &boxes, int32_t id)
+bool CollisionChecker::addLabelBox(const std::vector<OBB> &boxes, int32_t id, int32_t item)
 {
     for(int i=0 ; i<labels_.size() ; i++ )
     {
@@ -117,12 +120,13 @@ bool CollisionChecker::addLabelBox(const std::vector<OBB> &boxes, int32_t id)
 
         for(int j=0 ; j<boxes.size() ; j++ )
                 for(int k=0 ; k<l.boxes_.size() ; k++ )
-            if ( l.uid_ != id && boxes[j].overlaps(l.boxes_[k])) return false ;
+            if ( l.uid_ != id && l.item_ != item && boxes[j].overlaps(l.boxes_[k])) return false ;
     }
 
     Label label ;
     label.boxes_ = boxes ;
     label.uid_ = id ;
+    label.item_ = item ;
     labels_.push_back(label) ;
 
     return true ;

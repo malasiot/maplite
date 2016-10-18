@@ -45,12 +45,12 @@ private:
 
     struct POIInstruction {
 
-        POIInstruction(double x, double y, double angle, const RenderInstructionPtr &ri, const std::string &label = std::string(), int32_t idx = -1):
-            x_(x), y_(y), angle_(angle), ri_(ri), label_(label), poi_idx_(idx) {}
+        POIInstruction(double x, double y, double angle, const RenderInstructionPtr &ri, const std::string &label = std::string(), int32_t poi_idx = -1, int32_t item_idx = 0):
+            x_(x), y_(y), angle_(angle), ri_(ri), label_(label), poi_idx_(poi_idx), item_idx_(item_idx) {}
 
         double x_, y_, angle_ ;
         RenderInstructionPtr ri_ ;
-        int32_t poi_idx_ ;
+        int32_t poi_idx_, item_idx_ ;
         std::string label_ ;
     };
 
@@ -66,15 +66,14 @@ private:
     friend class POIInstructionSorter ;
     friend class WayInstructionSorter ;
 
-    void filterWays(const std::string &layer, uint8_t zoom, const BBox &box, cairo_matrix_t &cmm, const std::vector<Way> &ways,
-                    std::vector<WayInstruction> &winstructions,
-                    std::vector<POIInstruction> &poi_instructions, int32_t &count) ;
-    void filterPOIs(const string &layer, uint8_t zoom, const BBox &box, const std::vector<POI> &pois,
-                     std::vector<POIInstruction> &instructions, int32_t &count) ;
+    void filterWays(const string &layer, uint8_t zoom, const std::vector<Way> &ways, std::vector<WayInstruction> &winstructions);
+
+    void filterPOIs(const string &layer, uint8_t zoom, const BBox &box, cairo_matrix_t &cmm, const std::vector<Way> &ways, const std::vector<POI> &pois,
+                     std::vector<POIInstruction> &instructions, uint32_t &count) ;
 
     void drawCircle(RenderingContext &ctx, double px, double py, const RenderInstruction &) ;
-    void drawSymbol(RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &, int32_t) ;
-    void drawCaption(RenderingContext &ctx, double px, double py, double angle, const std::string &label, const RenderInstruction &, int32_t) ;
+    void drawSymbol(RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &, int32_t, int32_t) ;
+    void drawCaption(RenderingContext &ctx, double px, double py, double angle, const std::string &label, const RenderInstruction &, int32_t, int32_t) ;
 
     void drawLine(RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &line);
     void drawSymbolsAlongLine(RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &line);
@@ -88,6 +87,7 @@ private:
     const double collision_extra = 10 ;
 
     bool debug_ ;
+
 
 };
 

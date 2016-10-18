@@ -54,9 +54,7 @@ MainWindow::MainWindow(int &argc, char *argv[])
 
     undo_group_ = new QUndoGroup(this) ;
 
-
-    initThemes() ;
-    initBasemaps();
+    initMaps() ;
 
     MapFileReader::initTileCache(1000000) ;
 
@@ -133,13 +131,13 @@ void MainWindow::createWidgets()
     map_widget_->setTool(pan_tool_) ;
     map_widget_->setCacheDir(QDesktopServices::storageLocation(QDesktopServices::CacheLocation)) ;
 
-    if ( !default_map_.isEmpty() && base_maps_.count(default_map_) )
+    if ( !default_map_.empty() && maps_.hasMap(default_map_) )
     {
-        std::shared_ptr<TileProvider> bmap = base_maps_[default_map_] ;
+        std::shared_ptr<TileProvider> bmap = maps_.getMap(default_map_) ;
         if ( !bmap->isAsync() ) {
             auto provider = std::dynamic_pointer_cast<MapFileTileProvider>(bmap) ;
-            auto it = themes_.find(default_theme_) ;
-            provider->setTheme(it->second.theme_) ;
+            auto theme = maps_.getTheme(default_theme_) ;
+            provider->setTheme(theme) ;
             provider->setLayer(default_layer_) ;
         }
         map_widget_->setBasemap(bmap) ;
@@ -176,14 +174,14 @@ void MainWindow::createActions()
     // maps
     maps_actions_ = new QActionGroup(this) ;
 
-    for( auto lp: base_maps_)
+    for( auto lp: maps_.maps_ )
     {
         std::shared_ptr<TileProvider> p = lp.second ;
 
         QAction *mapAct = new QAction(p->name(), this);
         connect(mapAct, SIGNAL(triggered()), this, SLOT(baseMapChanged()));
         mapAct->setCheckable(true);
-        mapAct->setProperty("id", lp.first) ;
+        mapAct->setProperty("id", lp.first.c_str()) ;
 
         if ( lp.first == default_map_ )
             mapAct->setChecked(true) ;
@@ -273,258 +271,12 @@ void MainWindow::createToolBars()
 
 }
 
-static QString get_absolute_path(const QDir &folder, const QString orig_path) {
-
-    if ( orig_path.isEmpty() ) return orig_path ;
-
-    QString full_path ;
-    if ( QFileInfo(orig_path).isRelative() ) {
-        full_path = folder.filePath(orig_path) ;
-    }
-    else full_path = orig_path ;
-
-    if ( QFileInfo(full_path).exists() ) return full_path ;
-    else return QString() ;
-}
-
-void MainWindow::scanThemes(const QDir &folder) {
-
-    QDirIterator dit(folder, QDirIterator::Subdirectories);
-
-    while (dit.hasNext()) {
-        dit.next();
-
-        if ( !dit.fileInfo().isDir() ) {
-
-            QString filename = dit.fileName();
-
-            if ( filename.endsWith(".xml") )
-            {
-                QDomDocument doc("mydocument");
-                QFile file(dit.filePath());
-
-                if ( !file.open(QIODevice::ReadOnly) ) continue ;
-
-                if ( !doc.setContent(&file) ) {
-                    file.close();
-                    continue ;
-                }
-
-                file.close();
-
-                QDomElement docElem = doc.documentElement();
-
-                if ( docElem.tagName() != "themes" ) continue ;
-
-                uint counter = 0 ;
-
-                for( QDomElement n = docElem.firstChildElement("theme") ; !n.isNull() ; n = n.nextSiblingElement("theme") ) {
-
-                    QString name = n.attribute("name") ;
-                    QString path = n.attribute("path") ;
-                    QString is_default = n.attribute("default", "false") ;
-                    QString resource_dir = n.attribute("resources") ;
-                    QString attribution, description ;
-
-                    QDomElement e = n.firstChildElement("description") ;
-                    if ( !e.isNull() ) description = e.text() ;
-
-                    e = n.firstChildElement("attribution") ;
-                    if ( !e.isNull() ) attribution = e.text() ;
-
-                    path = get_absolute_path(folder, path) ;
-                    resource_dir = get_absolute_path(folder, resource_dir) ;
-
-                    if ( path.isEmpty() ) continue ;
-
-                    std::shared_ptr<RenderTheme> theme(new RenderTheme()) ;
-
-                    if ( !theme->read((const char *)path.toUtf8(), (const char *)resource_dir.toUtf8()) ) continue ;
-
-                    ThemeInfo info ;
-                    info.theme_ = theme ;
-                    info.attribution_ = attribution ;
-                    info.description_ = description ;
-                    info.is_default_ = ( is_default == "true" ) ;
-                    info.name_ = name ;
-                    info.path_ = path ;
-
-                    QString unique_id = dit.filePath() + QString("_%1").arg(counter++) ;
-
-                    if ( default_theme_.isEmpty() && info.is_default_ ) {
-                        default_theme_ = unique_id ;
-                        default_layer_ = theme->defaultLayer() ;
-                    }
-
-                    themes_.emplace(unique_id, info) ;
-
-                }
-            }
-        }
-        else {
-            scanThemes(dit.filePath()) ;
-        }
-    }
-}
-
-
-void MainWindow::scanMaps(const QDir &folder) {
-
-    QDirIterator dit(folder, QDirIterator::Subdirectories);
-
-    while (dit.hasNext()) {
-        dit.next();
-
-        if ( !dit.fileInfo().isDir() ) {
-
-            QString filename = dit.fileName();
-
-            if ( filename.endsWith(".xml") )
-            {
-                QDomDocument doc("mydocument");
-                QFile file(dit.filePath());
-
-                if ( !file.open(QIODevice::ReadOnly) ) continue ;
-
-                if ( !doc.setContent(&file) ) {
-                    file.close();
-                    continue ;
-                }
-
-                file.close();
-
-                QDomElement docElem = doc.documentElement();
-
-                if ( docElem.tagName() != "maps" ) continue ;
-
-                uint counter = 0 ;
-
-                for( QDomElement n = docElem.firstChildElement("map") ; !n.isNull() ; n = n.nextSiblingElement("map") ) {
-                    QString name = n.attribute("name") ;
-                    QString path = n.attribute("path") ;
-                    QString attribution, description ;
-                    int start_zoom = -1 ;
-                    LatLon start_position ;
-                    bool has_start_position = false ;
-
-                    QDomElement e = n.firstChildElement("description") ;
-                    if ( !e.isNull() ) description = e.text() ;
-
-                    e = n.firstChildElement("attribution") ;
-                    if ( !e.isNull() ) attribution = e.text() ;
-
-                    e = n.firstChildElement("start_zoom") ;
-                    if ( !e.isNull() ) {
-                        bool ok ;
-                        start_zoom = e.text().toInt(&ok) ;
-                        if ( !ok ) start_zoom = -1 ;
-                    }
-
-                    e = n.firstChildElement("start_position") ;
-                    if ( !e.isNull() ) {
-                        bool ok_lat, ok_lon ;
-                        QString s = e.text() ;
-                        QStringList sl = s.split(' ');
-                        if ( sl.size() == 2 ) {
-                            float lat = sl.at(0).toFloat(&ok_lat) ;
-                            float lon = sl.at(1).toFloat(&ok_lon) ;
-                            if ( ok_lat && ok_lon ) {
-                                start_position = LatLon(lat, lon) ;
-                                has_start_position = true ;
-                            }
-                        }
-                    }
-
-                    path = get_absolute_path(folder, path) ;
-
-                    if ( path.isEmpty() ) continue ;
-
-                    std::shared_ptr<MapFileReader> reader(new MapFileReader()) ;
-
-                    try {
-                        reader->open((const char *)path.toUtf8()) ;
-
-                        QString id = dit.filePath() + QString("_%1").arg(counter++) ;
-
-                        std::shared_ptr<MapFileTileProvider> provider(new MapFileTileProvider(name, reader)) ;
-
-                        if ( !description.isEmpty() ) provider->setDescription(description);
-                        if ( !attribution.isEmpty() ) provider->setAttribution(attribution);
-                        if ( has_start_position ) provider->setStartPosition(start_position) ;
-                        if ( start_zoom >= 0 ) provider->setStartZoom(start_zoom) ;
-
-                        base_maps_.emplace(id, provider) ;
-                    }
-                    catch ( std::runtime_error &e ) {
-                        cerr << e.what() << endl ;
-                        continue ;
-                    }
-                }
-
-                for( QDomElement n = docElem.firstChildElement("tiles") ; !n.isNull() ; n = n.nextSiblingElement("tiles") ) {
-                    QString name = n.attribute("name") ;
-                    QString url = n.attribute("url") ;
-                    QString description, attribution, image_format = n.attribute("format", "png") ;
-                    int minz = 0, maxz = 20;
-
-                    QDomElement e = n.firstChildElement("description") ;
-                    if ( !e.isNull() ) description = e.text() ;
-
-                    e = n.firstChildElement("attribution") ;
-                    if ( !e.isNull() ) attribution = e.text() ;
-
-                    e = n.firstChildElement("minz") ;
-                    if ( !e.isNull() ) minz = e.text().toInt() ;
-
-                    e = n.firstChildElement("maxz") ;
-                    if ( !e.isNull() ) maxz = e.text().toInt() ;
-
-                    if ( url.isEmpty() ) continue ;
-
-                    std::shared_ptr<XYZTileProvider> provider(new XYZTileProvider(name, url)) ;
-                    if ( !description.isEmpty() ) provider->setDescription(description);
-                    if ( !attribution.isEmpty() ) provider->setAttribution(attribution);
-
-                    provider->setZoomRange(minz, maxz) ;
-                    provider->setTileFormat(image_format.toUtf8()) ;
-
-                    QString id = dit.filePath() + QString("_%1").arg(counter++) ;
-
-                    base_maps_.emplace(id, provider) ;
-                }
-            }
-        }
-        else {
-            scanMaps(dit.filePath()) ;
-        }
-    }
-}
-
-void MainWindow::initBasemaps()
-{
-
-    Q_FOREACH(QString folder, application_data_dirs_) {
-        QDir dir(folder);
-        dir.setFilter(QDir::Files | QDir::Dirs | QDir::NoDot | QDir::NoDotDot);
-        QStringList qsl;
-        qsl.append("*.xml");
-        dir.setNameFilters(qsl);
-        scanMaps(dir) ;
-    }
-
-}
-
-void MainWindow::initThemes()
+void MainWindow::initMaps()
 {
     Q_FOREACH(QString folder, application_data_dirs_) {
-        QDir dir(folder);
-        dir.setFilter(QDir::Files | QDir::Dirs | QDir::NoDot | QDir::NoDotDot);
-        QStringList qsl;
-        qsl.append("*.xml");
-        dir.setNameFilters(qsl);
-        scanThemes(dir) ;
+        QString cfg = folder + "/config.xml" ;
+        if ( maps_.parseConfig((const char *)cfg.toUtf8()) ) break ;
     }
-
 }
 
 void MainWindow::readGuiSettings()
@@ -555,26 +307,25 @@ void MainWindow::readAppSettings()
 {
     QSettings settings ;
 
-    default_map_ = settings.value("map/name", default_map_).toString() ;
+    default_map_ = (const char *)settings.value("map/name", default_map_.c_str()).toByteArray() ;
 
-    if ( default_map_.isEmpty() ) {
-        default_map_ = base_maps_.begin()->first ;
-    }
+    if ( default_map_.empty() )
+        default_map_ = maps_.getDefaultMap() ;
 
-    default_theme_ = settings.value("map/theme", default_theme_).toString() ;
+    default_theme_ = (const char *)settings.value("map/theme").toByteArray() ;
 
-    if ( default_theme_.isEmpty() ) {
-        default_theme_ = themes_.begin()->first ;
-    }
+    if ( default_theme_.empty() )
+        default_theme_ = maps_.getDefaultTheme() ;
 
-    default_layer_ = (const char *)settings.value("map/layer", default_layer_.c_str()).toByteArray() ;
+    if ( default_map_.empty() || default_theme_.empty() )
+        QCoreApplication::quit() ;
 
-    if ( default_layer_.empty()) {
-        default_layer_ = themes_[default_theme_].theme_->defaultLayer();
-    }
+    default_layer_ = (const char *)settings.value("map/layer").toByteArray() ;
 
+    if ( default_layer_.empty())
+        default_layer_ = maps_.getTheme(default_theme_)->defaultLayer() ;
 
-    auto base_map = base_maps_[default_map_] ;
+    auto base_map = maps_.getMap(default_map_) ;
 
     if ( settings.contains("map/zoom") )
         default_zoom_ = settings.value("map/zoom").toInt() ;
@@ -598,8 +349,8 @@ void MainWindow::writeAppSettings()
 
     settings.setValue("map/zoom", map_widget_->getZoom()) ;
     settings.setValue("map/center", map_widget_->getCenter()) ;
-    settings.setValue("map/name", default_map_) ;
-    settings.setValue("map/theme", default_theme_) ;
+    settings.setValue("map/name", default_map_.c_str()) ;
+    settings.setValue("map/theme", default_theme_.c_str()) ;
     settings.setValue("map/layer", default_layer_.c_str()) ;
 }
 
@@ -632,14 +383,14 @@ void MainWindow::baseMapChanged()
 {
     QAction *act =  dynamic_cast<QAction *>(sender());
 
-    QString id = act->property("id").toString() ;
+    string id = (const char *)act->property("id").toByteArray() ;
 
-    std::shared_ptr<TileProvider> bmap = base_maps_[id] ;
+    std::shared_ptr<TileProvider> bmap = maps_.getMap(id) ;
 
     if ( !bmap->isAsync() ) {
         auto provider = std::dynamic_pointer_cast<MapFileTileProvider>(bmap) ;
-        auto it = themes_.find(default_theme_) ;
-        provider->setTheme(it->second.theme_) ;
+        auto theme = maps_.getTheme(default_theme_) ;
+        provider->setTheme(theme) ;
         provider->setLayer(default_layer_) ;
     }
     map_widget_->setBasemap(bmap) ;

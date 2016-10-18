@@ -146,8 +146,6 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
 
             BaseTile base_tile(TileKey(btx, bty, si.base_zoom_, true)) ;
 
-
-
             std::shared_ptr<TileData> data ;
 
             cache_key_type key(btx, bty, si.base_zoom_, this) ;
@@ -170,7 +168,6 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
                 readTileData(si, tile_offset, data) ;
             }
 
-
             // copy all ways and pois at zoom level equal or lower the requested zoom level
 
             if ( !data ) continue ;
@@ -183,7 +180,6 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
                 if ( !ignore_ways )
                     std::copy(data->ways_per_level_[idx].begin(), data->ways_per_level_[idx].end(),
                               std::back_inserter(base_tile.ways_)) ;
-
             }
 
 
@@ -205,13 +201,11 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
                 base_tile.ways_.emplace_back(sea) ;
             }
 
-
-
             tile.base_tiles_.emplace_back(base_tile) ;
 
         }
 
-    exportTileDataOSM(tile, "/tmp/oo.osm");
+//    exportTileDataOSM(tile, "/tmp/oo.osm");
 
     return tile ;
 }

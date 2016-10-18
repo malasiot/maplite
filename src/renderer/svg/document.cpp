@@ -180,10 +180,10 @@ bool FitToViewBox::parseAttributes(const pugi::xml_node &pNode)
     {
         string key = attr.name(), val = attr.as_string() ;
 
-        if ( key == "ViewBox" )  {
+        if ( key == "viewBox" )  {
            if ( !view_box_.fromString(val) ) return false ;
         }
-        else if ( key == "PreserveAspectRatio" ) {
+        else if ( key == "preserveAspectRatio" ) {
            if ( !preserve_aspect_ratio_.fromString(val) ) return false ;
         }
     }

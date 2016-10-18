@@ -36,6 +36,7 @@ SET(MAPLITE_VIEWER_SOURCES
     tile_provider.cpp
     map_file_tile_provider.cpp
     network_tile_provider.cpp
+	xyz_tile_provider.cpp
     map_overlay.cpp
     map_overlay_manager.cpp
 #    map_overlay_collection.cpp
@@ -44,6 +45,7 @@ SET(MAPLITE_VIEWER_SOURCES
     file_import_dialog.cpp
     kml_reader.cpp
     gpx_reader.cpp
+	map_manager.cpp
 
     ${SRC_ROOT}/io/mapsforge_map_reader.cpp
     ${SRC_ROOT}/io/serializer.cpp
@@ -52,6 +54,8 @@ SET(MAPLITE_VIEWER_SOURCES
     ${SRC_ROOT}/util/database.cpp
     ${SRC_ROOT}/util/zfstream.cpp
     ${SRC_ROOT}/util/base64.cpp
+	${SRC_ROOT}/util/logger.cpp
+
 
     minizip/unzip.c
     minizip/ioapi.c
@@ -73,6 +77,7 @@ SET(MAPLITE_VIEWER_HEADERS
     overlay_library_panel.hpp
     file_import_dialog.hpp
     data_import.hpp
+	map_manager.hpp
 
 
 )
