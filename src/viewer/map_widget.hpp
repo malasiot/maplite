@@ -13,6 +13,7 @@
 
 #include "tile_provider.hpp"
 #include "map_overlay.hpp"
+#include "popup.hpp"
 
 #include <memory>
 
@@ -81,6 +82,9 @@ public:
         return current_collection_ ;
     }
 
+    void showPopup(const QString &txt, const QPoint &click) ;
+    void hidePopup() ;
+
 public Q_SLOTS:
     void zoomToRect(const QRectF &rect) ;
     void invalidateOverlay() ;
@@ -138,6 +142,7 @@ protected:
     QSet<quint64> selected_ ;
     quint64 current_collection_ ;
     QUndoStack *undo_stack_ ;
+    Popup *popup_ ;
 
 
 public Q_SLOTS:

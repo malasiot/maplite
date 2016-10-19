@@ -86,20 +86,6 @@ void PolygonOverlay::drawSelected(QPainter &painter, MapWidget *view)
        cp = s1 ;
     }
 
-    // draw handles
-/*
-    painter.setBrush(Qt::white) ;
-    painter.setPen(Qt::black) ;
-
-    for(int i=0 ; i<poly_.size() ; i++)
-    {
-        const QPointF &p1 = poly_.at(i) ;
-        QPoint s1 = view->coordsToDisplay(p1) ;
-
-        painter.drawEllipse(s1, 2, 2) ;
-    }
-*/
-
     // draw arrows
 
     drawArrows(painter, view) ;
@@ -146,52 +132,64 @@ void PolygonOverlay::drawActive(QPainter &painter, MapWidget *view)
 
 void PolygonOverlay::drawArrows(QPainter &painter, MapWidget *view)
 {
+
     painter.setBrush(Qt::red) ;
     painter.setPen(Qt::white) ;
 
-    const float arrow_size = 24 ;
-    const float arrow_gap = 300 ;
+    const float arrow_size = 10 ;
+    const float arrow_gap = 100 ;
 
     int n = poly_.size() ;
     QPoint p0 = view->coordsToDisplay(poly_.at(0)) ;
     float x0, y0, x1 = p0.x(), y1 = p0.y() ;
-    float sl = 0, tl = 0, ptl = 0, cl = arrow_gap ;
+    float sl = 0, tl = 0, ptl = 0, sp = 0 ;
+    x0 = x1 ; y0 = y1 ;
 
-    for( int j = 1 ; j < n  ; j++ )
+    int j = 1 ;
+    while ( j < n )
     {
-        x0 = x1 ; y0 = y1 ;
+        double dx, dy ;
 
-        const QPointF &cp = poly_.at(j) ;
-        QPoint cps = view->coordsToDisplay(cp) ;
+        if ( sp > tl ) {
+            x0 = x1 ; y0 = y1 ;
 
-        x1 = cps.x() ;
-        y1 = cps.y() ;
+            const QPointF &cp = poly_.at(j) ;
+            QPoint cps = view->coordsToDisplay(cp) ;
 
-        double dx = x1 - x0, dy = y1 - y0 ;
+            x1 = cps.x() ;
+            y1 = cps.y() ;
 
-        sl = sqrt( dx * dx + dy * dy ) ;
-        ptl = tl ;
-        tl += sl ;
+            dx = x1 - x0 ;
+            dy = y1 - y0 ;
 
-        if ( tl > cl )
-        {
-            float h = std::max(cl - ptl, arrow_size)/(tl - ptl) ;
+            sl = sqrt( dx * dx + dy * dy ) ; // segment length
+            ptl = tl ;
+            tl += sl ;
+
+            ++j ;
+        }
+        else  {
+            float h = (sp - ptl)/sl ;
 
             float x = ( 1 - h ) * x0 + h * x1 ;
             float y = ( 1 - h ) * y0 + h * y1 ;
-            float angle = atan2(dy, dx) + M_PI;
+            float angle = atan2(dy, dx);
 
-            QPointF p(x, y) ;
+            QPointF dir( cos(angle), sin(angle) ) ;
+            double a2 = arrow_size/2 ;
 
-            QPointF arrowP1 = p + QPointF(cos(angle + M_PI / 20) * arrow_size,  sin(angle  + M_PI / 20) * arrow_size);
-            QPointF arrowP2 = p + QPointF(cos(angle - M_PI / 20) * arrow_size, sin(angle  - M_PI / 20) * arrow_size);
+            QPainterPath arrow ;
+            arrow.moveTo(x, y) ;
+            arrow.lineTo(x - a2*dir.y(), y + a2*dir.x()) ;
+            arrow.lineTo(x + arrow_size * dir.x(), y + arrow_size * dir.y()) ;
+            arrow.lineTo(x + a2*dir.y(), y - a2*dir.x()) ;
+            arrow.closeSubpath() ;
 
-            QPolygonF arrow ;
+            painter.drawPath(arrow) ;
 
-            painter.drawPolygon(arrow);
-
-            cl += arrow_gap ;
+            sp += arrow_gap ;
         }
+
     }
 }
 

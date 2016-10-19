@@ -46,6 +46,7 @@ SET(MAPLITE_VIEWER_SOURCES
     kml_reader.cpp
     gpx_reader.cpp
 	map_manager.cpp
+	popup.cpp
 
     ${SRC_ROOT}/io/mapsforge_map_reader.cpp
     ${SRC_ROOT}/io/serializer.cpp
@@ -78,8 +79,7 @@ SET(MAPLITE_VIEWER_HEADERS
     file_import_dialog.hpp
     data_import.hpp
 	map_manager.hpp
-
-
+	popup.hpp
 )
 
 SET(MAPLITE_VIEWER_FORMS )

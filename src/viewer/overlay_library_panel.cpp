@@ -669,7 +669,7 @@ void FeatureLibraryView::onPaste()
 
     LibraryNode *node = model_.node(index) ;
 
-    overlay_manager_->addFeaturesInCollection(node->id_, ids) ;
+    overlay_manager_->addOverlayInCollection(node->id_, ids) ;
 
     emit collectionClicked(node->id_, -1) ;
 }
@@ -924,7 +924,7 @@ void FeatureLibraryView::selectCollection(quint64 collection_id)
 void FeatureLibraryView::onFeatureClicked(quint64 id)
 {
     quint64 collection_id, folder_id ;
-    if ( overlay_manager_->getFeatureCollectionAndFolder(id, collection_id, folder_id) )
+    if ( overlay_manager_->getOverlayCollectionAndFolder(id, collection_id, folder_id) )
     {
         expandFolder(folder_id) ;
         emit collectionClicked(collection_id, id);
@@ -1014,7 +1014,7 @@ void FeatureListView::populate(quint64 collection_id, quint64 feature_id)
 
     QVector<MapOverlayPtr> features ;
 
-    overlay_manager_->getAllFeaturesInCollection(collection_id, features) ;
+    overlay_manager_->getAllOverlaysInCollection(collection_id, features) ;
 
     Q_FOREACH(MapOverlayPtr feature, features)
     {
@@ -1080,7 +1080,7 @@ void FeatureListView::onZoom()
     QVector<quint64> ids ;
     getSelected(selectionModel()->selectedIndexes(), ids) ;
 
-    QRectF box = overlay_manager_->getFeatureBBox(ids) ;
+    QRectF box = overlay_manager_->getOverlayBBox(ids) ;
 
     emit zoomOnRect(box) ;
 }
@@ -1092,7 +1092,7 @@ void FeatureListView::deleteItem()
     QVector<quint64> ids ;
     getSelected(indices, ids) ;
 
-    overlay_manager_->deleteFeaturesFromCollection(collection_id_, ids) ;
+    overlay_manager_->deleteOverlaysFromCollection(collection_id_, ids) ;
 
     QList<int> rows;
     Q_FOREACH( const QModelIndex & index, indices ) {
@@ -1143,7 +1143,7 @@ void FeatureListView::onDuplicate()
     getSelected(selectionModel()->selectedIndexes(), ids) ;
 
     QVector<MapOverlayPtr> features ;
-    overlay_manager_->getAllFeatures(ids, features) ;
+    overlay_manager_->getAllOverlays(ids, features) ;
 
     Q_FOREACH(MapOverlayPtr feature, features)
     {
@@ -1151,7 +1151,7 @@ void FeatureListView::onDuplicate()
 
         QString name = feature->name() ;
 
-        QString unique_name = overlay_manager_->uniqueFeatureName(name + " (%1)", collection_id_, counter) ;
+        QString unique_name = overlay_manager_->uniqueOverlayName(name + " (%1)", collection_id_, counter) ;
 
         feature->setName(unique_name) ;
     }

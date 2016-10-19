@@ -21,8 +21,19 @@ PanTool::PanTool(QObject *p): MapTool(p)
 
 void PanTool::mousePressed(QMouseEvent *evnt)
 {
-    panning_ = true;
     start_point_ = QPoint(evnt->x(), evnt->y());
+
+    view_->hidePopup();
+
+    if ( current_object_ ) {
+        view_->showPopup(current_object_->description(), start_point_) ;
+        qDebug() << current_object_->id() ;
+    }
+    else {
+        panning_ = true ;
+        view_->setCursor(QCursor(Qt::ClosedHandCursor)) ;
+    }
+
 }
 
 void PanTool::mouseMoved(QMouseEvent *evnt)
@@ -31,18 +42,39 @@ void PanTool::mouseMoved(QMouseEvent *evnt)
 
     if ( panning_ )
     {
-
         QPoint offset = start_point_ - current_ ;
 
         view_->scroll(offset) ;
 
         start_point_ = current_ ;
     }
+    else {
+
+        QPoint p = view_->positionToDisplay(current_) ;
+
+        QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
+
+        current_object_ = mgr->findNearest("*", p, view_, 10) ;
+
+        if ( current_object_ ) {
+            view_->setCursor(QCursor(Qt::ArrowCursor)) ;
+            current_object_->setSelected(true) ;
+            view_->setCurrentOverlay(current_object_) ;
+        }
+        else {
+            view_->setCurrentOverlay(MapOverlayPtr()) ;
+            view_->setCursor(QCursor(Qt::OpenHandCursor)) ;
+        }
+
+        view_->update() ;
+    }
+
 }
 
 void PanTool::mouseReleased(QMouseEvent *mouseEvent)
 {
     panning_ = false ;
+    view_->setCursor(QCursor(Qt::OpenHandCursor)) ;
 }
 
 PanTool::~PanTool() {}
@@ -52,6 +84,7 @@ void PanTool::init(MapWidget *v)
     MapTool::init(v) ;
     panning_ = false ;
     view_->setMouseTracking(true) ;
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -278,7 +311,7 @@ void PolygonTool::mouseReleased(QMouseEvent *mouseEvent)
         if ( current_object_ == 0  )
         {
             QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
-            QString name = mgr->uniqueFeatureName("Track %1", view_->currentCollection(), track_counter_) ;
+            QString name = mgr->uniqueOverlayName("Track %1", view_->currentCollection(), track_counter_) ;
 
             current_object_ = MapOverlayPtr(new PolygonOverlay(name)) ;
             current_object_->setSelected(true) ;
@@ -365,7 +398,7 @@ void PointTool::mouseReleased(QMouseEvent *mouseEvent)
         }
 
         QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
-        QString name = mgr->uniqueFeatureName("%1", view_->currentCollection(), point_counter_) ;
+        QString name = mgr->uniqueOverlayName("%1", view_->currentCollection(), point_counter_) ;
 
         MarkerOverlay *mf = new MarkerOverlay(name) ;
         mf->setPoint(view_->displayToCoords(p)) ;

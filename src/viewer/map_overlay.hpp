@@ -31,11 +31,18 @@ public:
     virtual QRectF boundingBox() const = 0;
     virtual QRect displayRect(MapWidget *) const = 0;
 
+    // serialize attributes and geometry
     virtual QByteArray serialize() const = 0 ;
     virtual void deserialize(QByteArray &data) = 0 ;
 
+    // a unique type identifier for the overlay class
     virtual QByteArray type() const = 0 ;
+
+    // computes distance of geometry to point
     virtual double distanceToPt(const QPoint &coords, int &seg, MapWidget *widget) const = 0 ;
+
+    // determine if the geometry is touched by the cursor. we assume that the geometry may be controlled by a set of handles or nodes
+    // (e.g. polygon vertices or rectangle vertices).
     virtual int touches(const QPoint &coords, MapWidget *widget, int &node) const = 0 ;
 
     virtual void moveNode(int node, const QPointF &coords) = 0 ;
@@ -44,13 +51,25 @@ public:
     virtual void insertNode(int nodeAfter, const QPointF &pt) = 0 ;
     virtual int numNodes() const = 0 ;
 
+    // override to provide custom description that appears in a popup window when an overlay is clicked
+    virtual QString description() const { return QString("<p>%1</p>").arg(name_) ; }
+
+    // type of geometry of the overlay
+    enum MapOverlayGeometryType { PointGeometry = 0, LinestringGeometry = 1, PolygonGeometry = 2 } ;
+
+    virtual MapOverlayGeometryType geomType() const = 0 ;
+
+    // used to determine cost of storage in cache memory
     virtual int cost() const { return 1 ; }
 
+    // the overlay id stored in the database
     qint64 id() const { return storage_id_; }
 
+    // the name of the overlay that is displayed in the list view
     QString name() const { return name_ ; }
     void setName(const QString &name) { name_ = name ; }
 
+    // overlays may be selected/highlight and active/edited
     bool isSelected() const { return selected_ ; }
     void setSelected(bool selected) { selected_ = selected ; }
 
@@ -59,9 +78,12 @@ public:
 
     bool isVisible() const { return visible_ ; }
 
+    // overlay factory that creates an instance of the overlay from the type name
     static MapOverlayPtr create(const std::string &type_name, const QString &name) ; // factory
 
     virtual MapOverlayPtr clone() const = 0;
+
+    // list of all attributes
 
     QMap<QString, QVariant> attributes_ ;
     QString name_ ;
@@ -84,6 +106,7 @@ protected:
 };
 
 
+// overlays with geometry associated with polygon
 
 class PolygonOverlay: public MapOverlay
 {
@@ -92,6 +115,8 @@ public:
     PolygonOverlay(const QString &name) ;
 
     virtual void draw(QPainter &p, MapWidget *w) ;
+
+    virtual MapOverlayGeometryType geomType() const { return PolygonGeometry ; }
 
     QRectF boundingBox() const {
         return poly_.boundingRect() ;
@@ -183,6 +208,8 @@ public:
     ~MarkerOverlay();
 
     virtual void draw(QPainter &p, MapWidget *parent) ;
+
+    virtual MapOverlayGeometryType geomType() const { return PointGeometry ; }
 
     virtual QByteArray type() const {
         return "marker" ;

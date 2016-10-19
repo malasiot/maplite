@@ -35,11 +35,11 @@ bool MapOverlayManager::open(const QString &storage)
         SQLite::Session session(db_) ;
         SQLite::Connection &con = session.handle() ;
 
-        con.exec("CREATE TABLE features (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, content BLOB NOT NULL);\
+        con.exec("CREATE TABLE overlays (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, content BLOB NOT NULL);\
 CREATE TABLE collections (id INTEGER PRIMARY KEY AUTOINCREMENT, folder_id INTEGER NOT NULL, is_visible INTEGER DEFAULT 1, name TEXT, attributes BLOB);\
-CREATE TABLE memberships (feature_id INTEGER, collection_id INTEGER);\
-CREATE INDEX membership_idx ON memberships (collection_id);\
-CREATE UNIQUE INDEX membership_unique_idx ON memberships(feature_id, collection_id); \
+CREATE TABLE memberships (overlay_id INTEGER, collection_id INTEGER);\
+CREATE INDEX membership_idx ON memberships (overlay_id);\
+CREATE UNIQUE INDEX membership_unique_idx ON memberships(overlay_id, collection_id); \
 CREATE TABLE folders (id INTEGER PRIMARY KEY AUTOINCREMENT, is_visible INTEGER DEFAULT 1, name TEXT NOT NULL, parent_id INTEGER NOT NULL);\
 INSERT INTO folders (name, parent_id) VALUES ('Library', 0);\
 PRAGMA journal_mode=WAL;PRAGMA synchronous=0") ;
@@ -57,7 +57,7 @@ PRAGMA journal_mode=WAL;PRAGMA synchronous=0") ;
             buffer_ = StorageManager::createNewRandomEvictionsBuffer(*storage_, index_buffer_capacity_, false);
 
             QSettings sts ;
-            indexIdentifier = sts.value("features/spatial_index_id", 1).toInt() ;
+            indexIdentifier = sts.value("overlays/spatial_index_id", 1).toInt() ;
 
             index_ = RTree::loadRTree(*storage_, indexIdentifier);
 
@@ -66,6 +66,7 @@ PRAGMA journal_mode=WAL;PRAGMA synchronous=0") ;
         catch (Tools::IllegalStateException &e )
         {
             // We probably are here due to corrupted index
+            cout << "ok here" << endl ;
         }
      }
 
@@ -75,7 +76,7 @@ PRAGMA journal_mode=WAL;PRAGMA synchronous=0") ;
      index_ = RTree::createNewRTree(*buffer_, 0.7, 100, 100, 2, SpatialIndex::RTree::RV_RSTAR, indexIdentifier);
 
      QSettings sts ;
-     sts.setValue("features/spatial_index_id", QVariant::fromValue<quint64>(indexIdentifier)) ;
+     sts.setValue("overlays/spatial_index_id", QVariant::fromValue<quint64>(indexIdentifier)) ;
      return true ;
 }
 
@@ -116,26 +117,26 @@ MapOverlayPtr MapOverlayManager::findNearest(const QByteArray &searchType, const
 
     if ( ids.isEmpty() ) return MapOverlayPtr() ;
 
-    QVector<MapOverlayPtr> features ;
+    QVector<MapOverlayPtr> overlays ;
 
-    getAllFeatures(ids, features) ;
+    getAllOverlays(ids, overlays) ;
 
     double min_dist = DBL_MAX ;
     MapOverlayPtr best ;
 
-    Q_FOREACH(MapOverlayPtr feature, features)
+    Q_FOREACH(MapOverlayPtr overlay, overlays)
     {
-        if ( feature->type() != searchType )  continue ;
+        if ( searchType != "*" && overlay->type() != searchType )  continue ;
 
         int seg ;
-        double dist = feature->distanceToPt(click, seg, view) ;
+        double dist = overlay->distanceToPt(click, seg, view) ;
 
-   //     qDebug() << feature->id() << dist ;
+   //     qDebug() << overlay->id() << dist ;
 
         if ( dist < min_dist )
         {
             min_dist = dist ;
-            best = feature ;
+            best = overlay ;
         }
     }
 
@@ -151,7 +152,7 @@ MapOverlayPtr MapOverlayManager::load(quint64 id)
 
     try {
 
-        SQLite::Query q(con, "select f.id as id, f.type as type, f.name as name, f.content as content, c.is_visible as is_visible from features as f join memberships as m on m.feature_id = f.id join collections as c on c.id = collection_id where f.id = ?;") ;
+        SQLite::Query q(con, "select f.id as id, f.type as type, f.name as name, f.content as content, c.is_visible as is_visible from overlays as f join memberships as m on m.overlay_id = f.id join collections as c on c.id = collection_id where f.id = ?;") ;
 
         q.bind((long long int)id) ;
 
@@ -187,25 +188,25 @@ MapOverlayPtr MapOverlayManager::load(quint64 id)
     }
 }
 
-bool MapOverlayManager::update(const MapOverlayPtr &feature)
+bool MapOverlayManager::update(const MapOverlayPtr &overlay)
 {
-    // we need to load the old feature to get its MBR
-    MapOverlayPtr old_feature = load(feature->id()) ;
+    // we need to load the old overlay to get its MBR
+    MapOverlayPtr old_overlay = load(overlay->id()) ;
 
-    if (!old_feature ) return false ;
+    if (!old_overlay ) return false ;
 
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
 
     try {
 
-        SQLite::Command q(con, "UPDATE features SET name=?, content=? WHERE id=?;") ;
+        SQLite::Command q(con, "UPDATE overlays SET name=?, content=? WHERE id=?;") ;
 
-        q.bind(feature->name().toUtf8().data()) ;
+        q.bind(overlay->name().toUtf8().data()) ;
 
-        QByteArray ba = feature->serialize() ;
+        QByteArray ba = overlay->serialize() ;
         q.bind(ba.data(), ba.size()) ;
-        q.bind((long long int)feature->id()) ;
+        q.bind((long long int)overlay->id()) ;
 
         q.exec() ;
 
@@ -213,7 +214,7 @@ bool MapOverlayManager::update(const MapOverlayPtr &feature)
 
         double plow[2], phigh[2];
 
-        QRectF mbr = old_feature->boundingBox().normalized() ;
+        QRectF mbr = old_overlay->boundingBox().normalized() ;
 
         plow[0] = std::min(mbr.left(), mbr.right());
         plow[1] = std::min(mbr.top(), mbr.bottom());
@@ -222,9 +223,9 @@ bool MapOverlayManager::update(const MapOverlayPtr &feature)
 
         SpatialIndex::Region r_old(plow, phigh, 2);
 
-        index_->deleteData(r_old, feature->id()) ;
+        index_->deleteData(r_old, overlay->id()) ;
 
-        mbr = feature->boundingBox().normalized() ;
+        mbr = overlay->boundingBox().normalized() ;
 
         plow[0] = std::min(mbr.left(), mbr.right());
         plow[1] = std::min(mbr.top(), mbr.bottom());
@@ -237,7 +238,7 @@ bool MapOverlayManager::update(const MapOverlayPtr &feature)
         os << r_new;
         std::string idata = os.str();
 
-        index_->insertData(idata.size() + 1, reinterpret_cast<const byte*>(idata.c_str()), r_new, feature->id()) ;
+        index_->insertData(idata.size() + 1, reinterpret_cast<const byte*>(idata.c_str()), r_new, overlay->id()) ;
 
         return true ;
 
@@ -258,11 +259,11 @@ bool MapOverlayManager::write(const QVector<MapOverlayPtr> &objects, quint64 col
 
     try {
         {
-            // write feature table
+            // write overlay table
 
             SQLite::Transaction trans(con) ;
 
-            SQLite::Command cmd(con, "INSERT INTO features (type, name, content) VALUES (?, ?, ?);") ;
+            SQLite::Command cmd(con, "INSERT INTO overlays (type, name, content) VALUES (?, ?, ?);") ;
 
             for(int i=0 ; i<objects.size() ; i++)
             {
@@ -291,7 +292,7 @@ bool MapOverlayManager::write(const QVector<MapOverlayPtr> &objects, quint64 col
             // write membership table
 
             SQLite::Transaction trans(con) ;
-            SQLite::Command cmd(con, "INSERT INTO memberships (feature_id, collection_id) VALUES (?, ?)") ;
+            SQLite::Command cmd(con, "INSERT INTO memberships (overlay_id, collection_id) VALUES (?, ?)") ;
 
             for(int i=0 ; i<objects.size() ; i++)
             {
@@ -459,7 +460,7 @@ bool MapOverlayManager::addNewCollection(const QString &name, quint64 folder_id,
 
 }
 
-bool MapOverlayManager::addFeaturesInCollection(quint64 collection_id, const QVector<quint64> &features)
+bool MapOverlayManager::addOverlayInCollection(quint64 collection_id, const QVector<quint64> &overlays)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -468,9 +469,9 @@ bool MapOverlayManager::addFeaturesInCollection(quint64 collection_id, const QVe
 
         SQLite::Transaction trans(con) ;
 
-        SQLite::Command cmd(con, "REPLACE INTO memberships (feature_id, collection_id) VALUES (?, ?);") ;
+        SQLite::Command cmd(con, "REPLACE INTO memberships (overlay_id, collection_id) VALUES (?, ?);") ;
 
-        Q_FOREACH(quint64 id, features)
+        Q_FOREACH(quint64 id, overlays)
         {
             cmd.bind(1, (long long)id) ;
             cmd.bind(2, (long long)collection_id) ;
@@ -489,11 +490,9 @@ bool MapOverlayManager::addFeaturesInCollection(quint64 collection_id, const QVe
         qDebug() <<  e.what() ;
         return false ;
     }
-
-
 }
 
-bool MapOverlayManager::deleteFeaturesFromCollection(quint64 collection_id, const QVector<quint64> &features)
+bool MapOverlayManager::deleteOverlaysFromCollection(quint64 collection_id, const QVector<quint64> &overlays)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -502,9 +501,9 @@ bool MapOverlayManager::deleteFeaturesFromCollection(quint64 collection_id, cons
 
         SQLite::Transaction trans(con) ;
 
-        SQLite::Command cmd(con, "DELETE FROM memberships WHERE feature_id = ? AND collection_id = ?;") ;
+        SQLite::Command cmd(con, "DELETE FROM memberships WHERE overlay_id = ? AND collection_id = ?;") ;
 
-        Q_FOREACH(quint64 id, features)
+        Q_FOREACH(quint64 id, overlays)
         {
             cmd.bind(1, (long long)id) ;
             cmd.bind(2, (long long)collection_id) ;
@@ -529,16 +528,8 @@ bool MapOverlayManager::deleteFeaturesFromCollection(quint64 collection_id, cons
 MapOverlayManager::MapOverlayManager(): index_(0), db_(0) {
 }
 
-MapOverlayManager::~MapOverlayManager()
-{
-    if ( index_ )
-    {
-        delete index_;
-        delete buffer_;
-        delete storage_;
-    }
-
-    delete db_ ;
+MapOverlayManager::~MapOverlayManager() {
+   cleanup() ;
 }
 
 
@@ -633,21 +624,21 @@ int MapOverlayManager::getNumCollections(quint64 folder_id)
 
 }
 
-bool MapOverlayManager::getAllFeatures(const QVector<quint64> feature_ids, QVector<MapOverlayPtr> &features)
+bool MapOverlayManager::getAllOverlays(const QVector<quint64> overlay_ids, QVector<MapOverlayPtr> &overlays)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
 
     QByteArray idlist ;
 
-    Q_FOREACH(quint64 id, feature_ids)
+    Q_FOREACH(quint64 id, overlay_ids)
     {
         if ( !idlist.isEmpty() ) idlist += ',' ;
         idlist += QString("%1").arg(id).toLatin1() ;
     }
 
     try {
-        QByteArray sql = "SELECT * FROM features WHERE id IN (" ;
+        QByteArray sql = "SELECT * FROM overlays WHERE id IN (" ;
         sql += idlist + ')' ;
 
         SQLite::Query q(con, sql.data()) ;
@@ -660,17 +651,17 @@ bool MapOverlayManager::getAllFeatures(const QVector<quint64> feature_ids, QVect
             string type = res.get<string>(1) ;
             string name = res.get<string>(2) ;
 
-            MapOverlayPtr feature = MapOverlay::create(type, QString::fromUtf8(name.c_str())) ;
-            feature->storage_id_ = id ;
+            MapOverlayPtr overlay = MapOverlay::create(type, QString::fromUtf8(name.c_str())) ;
+            overlay->storage_id_ = id ;
 
             int bs ;
             const char *blob = res.getBlob(3, bs) ;
 
             QByteArray ba(blob, bs) ;
 
-            feature->deserialize(ba);
+            overlay->deserialize(ba);
 
-            features.append(feature) ;
+            overlays.append(overlay) ;
 
             res.next() ;
         }
@@ -686,13 +677,13 @@ bool MapOverlayManager::getAllFeatures(const QVector<quint64> feature_ids, QVect
 }
 
 
-bool MapOverlayManager::getAllFeaturesInCollection(quint64 collection_id, QVector<MapOverlayPtr> &features)
+bool MapOverlayManager::getAllOverlaysInCollection(quint64 collection_id, QVector<MapOverlayPtr> &overlays)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
 
     try {
-        SQLite::Query q(con, "SELECT f.id, f.type, f.name, f.content FROM features AS f JOIN memberships AS m ON m.feature_id = f.id WHERE m.collection_id = ?;") ;
+        SQLite::Query q(con, "SELECT f.id, f.type, f.name, f.content FROM overlays AS f JOIN memberships AS m ON m.overlay_id = f.id WHERE m.collection_id = ?;") ;
         long long int id = collection_id ;
         q.bind(id) ;
         SQLite::QueryResult res = q.exec() ;
@@ -703,17 +694,17 @@ bool MapOverlayManager::getAllFeaturesInCollection(quint64 collection_id, QVecto
             string type = res.get<string>(1) ;
             string name = res.get<string>(2) ;
 
-            MapOverlayPtr feature = MapOverlay::create(type, QString::fromUtf8(name.c_str())) ;
-            feature->storage_id_ = id ;
+            MapOverlayPtr overlay = MapOverlay::create(type, QString::fromUtf8(name.c_str())) ;
+            overlay->storage_id_ = id ;
 
             int bs ;
             const char *blob = res.getBlob(3, bs) ;
 
             QByteArray ba(blob, bs) ;
 
-            feature->deserialize(ba);
+            overlay->deserialize(ba);
 
-            features.append(feature) ;
+            overlays.append(overlay) ;
 
             res.next() ;
         }
@@ -801,7 +792,7 @@ bool MapOverlayManager::deleteCollection(quint64 collection_id)
         cmd1.bind(id) ;
         cmd1.exec() ;
 
-        SQLite::Command cmd2(con, "DELETE FROM features where id IN ( SELECT feature_id FROM memberships WHERE collection_id=?);") ;
+        SQLite::Command cmd2(con, "DELETE FROM overlays where id IN ( SELECT overlay_id FROM memberships WHERE collection_id=?);") ;
 
         cmd2.bind(id) ;
         cmd2.exec() ;
@@ -824,7 +815,7 @@ bool MapOverlayManager::deleteCollection(quint64 collection_id)
 }
 
 
-bool MapOverlayManager::getFeatureCollectionAndFolder(quint64 feature_id, quint64 &collection_id, quint64 &folder_id)
+bool MapOverlayManager::getOverlayCollectionAndFolder(quint64 overlay_id, quint64 &collection_id, quint64 &folder_id)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
@@ -832,9 +823,9 @@ bool MapOverlayManager::getFeatureCollectionAndFolder(quint64 feature_id, quint6
     try {
 
         {
-            SQLite::Query cmd(con, "SELECT collection_id from memberships WHERE feature_id=? LIMIT 1;") ;
+            SQLite::Query cmd(con, "SELECT collection_id from memberships WHERE overlay_id=? LIMIT 1;") ;
 
-            cmd.bind(feature_id) ;
+            cmd.bind(overlay_id) ;
             SQLite::QueryResult res = cmd.exec() ;
 
             if ( !res ) return false ;
@@ -1072,14 +1063,31 @@ bool MapOverlayManager::setFolderVisibility(quint64 id, bool state, bool update_
         return false ;
     }
 }
-QString MapOverlayManager::uniqueFeatureName(const QString &pattern, quint64 collection_id, int &counter)
+
+void MapOverlayManager::cleanup()
+{
+    if ( index_ )
+    {
+        delete index_;
+        delete buffer_;
+        delete storage_;
+        index_ = nullptr ;
+    }
+
+    if ( db_ ) {
+        delete db_ ;
+        db_ = nullptr ;
+    }
+}
+
+QString MapOverlayManager::uniqueOverlayName(const QString &pattern, quint64 collection_id, int &counter)
 {
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
 
     try {
 
-        SQLite::Query q(con, "SELECT f.id FROM features AS f JOIN memberships AS m ON m.feature_id = f.id WHERE f.name = ? AND m.collection_id = ? LIMIT 1;") ;
+        SQLite::Query q(con, "SELECT f.id FROM overlays AS f JOIN memberships AS m ON m.overlay_id = f.id WHERE f.name = ? AND m.collection_id = ? LIMIT 1;") ;
 
         QString name_unique = pattern.arg((int)counter, 3, 10, QChar('0')) ;
 
@@ -1108,16 +1116,16 @@ QString MapOverlayManager::uniqueFeatureName(const QString &pattern, quint64 col
 
 }
 
-QRectF MapOverlayManager::getFeatureBBox(const QVector<quint64> &feature_ids)
+QRectF MapOverlayManager::getOverlayBBox(const QVector<quint64> &overlay_ids)
 {
-    QVector<MapOverlayPtr> features ;
+    QVector<MapOverlayPtr> overlays ;
 
-    getAllFeatures(feature_ids, features) ;
+    getAllOverlays(overlay_ids, overlays) ;
 
     QRectF box ;
 
-    Q_FOREACH(MapOverlayPtr feature, features)  {
-        box = box.united(feature->boundingBox()) ;
+    Q_FOREACH(MapOverlayPtr overlay, overlays)  {
+        box = box.united(overlay->boundingBox()) ;
     }
 
     return box ;
@@ -1127,14 +1135,14 @@ QRectF MapOverlayManager::getFeatureBBox(const QVector<quint64> &feature_ids)
 
 QRectF MapOverlayManager::getCollectionBBox(quint64 collection_id)
 {
-    QVector<MapOverlayPtr> features ;
+    QVector<MapOverlayPtr> overlays ;
 
-    getAllFeaturesInCollection(collection_id, features) ;
+    getAllOverlaysInCollection(collection_id, overlays) ;
 
     QRectF box ;
 
-    Q_FOREACH(MapOverlayPtr feature, features) {
-        box = box.united(feature->boundingBox()) ;
+    Q_FOREACH(MapOverlayPtr overlay, overlays) {
+        box = box.united(overlay->boundingBox()) ;
     }
 
     return box ;

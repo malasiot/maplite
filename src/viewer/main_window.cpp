@@ -364,6 +364,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
     writeGuiSettings();
     writeAppSettings();
 
+    overlay_manager_->cleanup() ;
+
     event->accept();
 
     QClipboard *clipboard = QApplication::clipboard() ;

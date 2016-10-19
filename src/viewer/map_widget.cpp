@@ -63,6 +63,7 @@ MapWidget::MapWidget(QWidget *parent): QWidget(parent), overlay_cache_(10000), c
 
     undo_stack_ = new QUndoStack(this) ;
 
+    popup_ = new Popup(QSize(300, 300), this) ;
 }
 
 void MapWidget::setBasemap(const std::shared_ptr<TileProvider> &tiles)
@@ -150,6 +151,10 @@ void MapWidget::paintEvent(QPaintEvent* evnt)
     // tool
     current_tool_->paint(painter) ;
 
+    // popup
+
+
+
     painter.restore() ;
 }
 
@@ -182,7 +187,7 @@ QRect MapWidget::coordsToWindow(const QRectF &coords)
     QPoint p1 = displayToPosition(coordsToDisplay(coords.topLeft())) ;
     QPoint p2 = displayToPosition(coordsToDisplay(coords.bottomRight())) ;
 
-    return QRect(p1, p2) ;
+    return QRect(p1, p2).normalized() ;
 }
 
 QRectF MapWidget::windowToCoords(const QRect &rect)
@@ -190,7 +195,7 @@ QRectF MapWidget::windowToCoords(const QRect &rect)
     QPointF p1 = displayToCoords(positionToDisplay(rect.topLeft())) ;
     QPointF p2 = displayToCoords(positionToDisplay(rect.bottomRight())) ;
 
-    return QRectF(p1, p2) ;
+    return QRectF(p1, p2).normalized() ;
 }
 
 QPoint MapWidget::positionToDisplay(const QPoint &pos)
@@ -418,6 +423,16 @@ void MapWidget::updateOverlay(const MapOverlayPtr &ovr)
     update(rect) ;
 }
 
+void MapWidget::showPopup(const QString &txt, const QPoint &click)
+{
+    popup_->setText(txt) ;
+    popup_->show(click) ;
+}
+
+void MapWidget::hidePopup() {
+    popup_->hide() ;
+}
+
 void MapWidget::zoomToRect(const QRectF &coords)
 {
     QPoint p1 = coordsToDisplay(coords.topLeft()) ;
@@ -450,6 +465,7 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
 
     // search the cache for already available objects otherwise load them from storage
 
+
     Q_FOREACH( quint64 id, ovr )
     {
         MapOverlayPtr obj ;
@@ -463,7 +479,7 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
         }
         else  {
             obj = overlay_manager_->load(id) ;
- //           qDebug() << "loading stored object" << obj->id() << obj->name() ;
+//            qDebug() << "loading stored object" << obj->id() << obj->name() ;
         }
 
         if ( obj == 0 )
@@ -471,6 +487,7 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
         if ( !obj->isVisible() ) continue ;
 
         obj->setSelected(selected_.contains(id)) ;
+
 
         features_to_draw.append(obj) ;
 

@@ -45,6 +45,7 @@ public:
 
     MainWindow(int &argc, char *argv[]);
     ~MainWindow()  {
+
     }
 
 

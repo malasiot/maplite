@@ -50,17 +50,17 @@ public:
     bool addNewFolder(const QString &name, quint64 parent_id, QString &unique_name, quint64 &item_id) ;
     bool addNewCollection(const QString &name, quint64 parent_id, const QMap<QString, QVariant> &attributes, QString &unique_name, quint64 &item_id) ;
 
-    bool addFeaturesInCollection(quint64 collection_id, const QVector<quint64> &features) ;
-    bool deleteFeaturesFromCollection(quint64 collection_id, const QVector<quint64> &features) ;
+    bool addOverlayInCollection(quint64 collection_id, const QVector<quint64> &overlays) ;
+    bool deleteOverlaysFromCollection(quint64 collection_id, const QVector<quint64> &overlays) ;
 
     bool getSubFolders(QVector<quint64> &ids, QVector<QString> &names, QVector<bool> &state, quint64 parent_id);
     bool getFolderCollections(QVector<quint64> &ids, QVector<QString> &names, QVector<bool> &states, quint64 folder_id);
     int getNumCollections(quint64 folder_id);
-    bool getFeatureCollectionAndFolder(quint64 feature_id, quint64 &collection_id, quint64 &folder_id) ;
+    bool getOverlayCollectionAndFolder(quint64 overlay_id, quint64 &collection_id, quint64 &folder_id) ;
 
-    bool getAllFeaturesInCollection(quint64 collection_id, QVector<MapOverlayPtr> &features) ;
-    bool getAllFeatures(const QVector<quint64> feature_ids, QVector<MapOverlayPtr> &features);
-    bool getAllFeaturesInFolder(quint64 folder_id, QVector<MapOverlayPtr> &features) ;
+    bool getAllOverlaysInCollection(quint64 collection_id, QVector<MapOverlayPtr> &overlays) ;
+    bool getAllOverlays(const QVector<quint64> overlay_ids, QVector<MapOverlayPtr> &overlays);
+    bool getAllOverlaysInFolder(quint64 folder_id, QVector<MapOverlayPtr> &features) ;
 
     bool deleteFolder(quint64 id) ;
     bool deleteCollection(quint64 id) ;
@@ -75,13 +75,15 @@ public:
 
     // get a unique feature name for a collection using the specified arg pattern. counter should contain the initial numeric value and is update after the call
 
-    QString uniqueFeatureName(const QString &pattern, quint64 collection_id, int &counter);
+    QString uniqueOverlayName(const QString &pattern, quint64 collection_id, int &counter);
 
-    QRectF getFeatureBBox(const QVector<quint64> &feature_ids) ;
+    QRectF getOverlayBBox(const QVector<quint64> &feature_ids) ;
     QRectF getCollectionBBox(quint64 collection_id);
     QRectF getFolderBBox(quint64 folder_id);
 
     bool setFolderVisibility(quint64 id, bool state, bool update_children = true);
+
+    void cleanup() ;
 
 protected:
 
