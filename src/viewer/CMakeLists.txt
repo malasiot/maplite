@@ -61,6 +61,9 @@ SET(MAPLITE_VIEWER_SOURCES
     minizip/unzip.c
     minizip/ioapi.c
 
+
+    plugins/gps_overlays.cpp
+
 )
 
 SET(MAPLITE_VIEWER_HEADERS
@@ -73,13 +76,13 @@ SET(MAPLITE_VIEWER_HEADERS
     network_tile_provider.hpp
     map_overlay.hpp
     map_overlay_manager.hpp
- #   map_overlay_collection.hpp
     map_tool.hpp
     overlay_library_panel.hpp
     file_import_dialog.hpp
     data_import.hpp
-	map_manager.hpp
-	popup.hpp
+    map_manager.hpp
+    popup.hpp
+    plugins/gps_overlays.hpp
 )
 
 SET(MAPLITE_VIEWER_FORMS )

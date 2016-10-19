@@ -4,6 +4,8 @@
 #include "map_overlay_manager.hpp"
 #include "map_overlay.hpp"
 
+#include "plugins/gps_overlays.hpp"
+
 #include <QDomDocument>
 #include <QFile>
 #include <QFileInfo>
@@ -177,9 +179,8 @@ CollectionData *importGpx(const QString &fileName, quint64 folder_id, QSharedPoi
                 }
                 else trksegName += QString(" Segment %1").arg(cseg) ;
 
-                PolygonOverlay *poly = new PolygonOverlay(trksegName) ;
+                GPSTrackOverlay *poly = new GPSTrackOverlay(trksegName) ;
 
-                qDebug() << j << trksegName ;
                 for(int k=0 ; k<trkptList.count() ; k++ )
                 {
                     QDomElement trkpt = trkptList.item(k).toElement() ;
@@ -188,7 +189,13 @@ CollectionData *importGpx(const QString &fileName, quint64 folder_id, QSharedPoi
                     double lat = trkpt.attribute("lat").toDouble() ;
                     double lon = trkpt.attribute("lon").toDouble() ;
 
+                    double ele = 0 ;
+                    bool ok ;
+                    QDomElement e = trkpt.firstChildElement("ele") ;
+                    if ( !e.isNull() ) ele = e.text().toFloat(&ok) ;
+
                     poly->addPoint(QPointF(lon, lat)) ;
+                    poly->addElevation(ele) ;
                 }
 
                 Q_FOREACH(const QString &key, trkMap.keys())

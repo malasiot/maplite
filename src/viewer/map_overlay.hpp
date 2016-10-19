@@ -32,8 +32,26 @@ public:
     virtual QRect displayRect(MapWidget *) const = 0;
 
     // serialize attributes and geometry
-    virtual QByteArray serialize() const = 0 ;
-    virtual void deserialize(QByteArray &data) = 0 ;
+
+    virtual void serialize(QDataStream &ds) const {
+        serializeAttributes(ds);
+    }
+        ;
+    virtual void deserialize(QDataStream &ds) {
+        deserializeAttributes(ds) ;
+    }
+
+    QByteArray serialize() const {
+        QByteArray ba ;
+        QDataStream ds(&ba, QIODevice::WriteOnly );
+        serialize(ds) ;
+        return ba ;
+    }
+        ;
+    void deserialize(QByteArray &ba) {
+        QDataStream ds(&ba, QIODevice::ReadOnly );
+        deserialize(ds);
+    }
 
     // a unique type identifier for the overlay class
     virtual QByteArray type() const = 0 ;
@@ -105,6 +123,7 @@ protected:
     bool selected_, active_, visible_ ;
 };
 
+Q_DECLARE_INTERFACE(MapOverlay, "maplite.MapOverlay")
 
 // overlays with geometry associated with polygon
 
@@ -159,18 +178,14 @@ public:
 
     MapOverlayPtr clone() const ;
 
-    QByteArray serialize() const {
-        QByteArray ba ;
-        QDataStream ds(&ba, QIODevice::WriteOnly) ;
+    void serialize(QDataStream &ds) const {
+        MapOverlay::serialize(ds) ;
         ds << poly_ ;
-        serializeAttributes(ds) ;
-        return ba ;
     }
 
-    void deserialize(QByteArray &data) {
-        QDataStream ds(data) ;
+    void deserialize(QDataStream &ds) {
+        MapOverlay::deserialize(ds) ;
         ds >> poly_ ;
-        deserializeAttributes(ds) ;
     }
 
     virtual QByteArray type() const {
@@ -192,7 +207,6 @@ private:
 
     void drawSelected(QPainter &painter, MapWidget *parent);
     void drawSimple(QPainter &painter, MapWidget *parent);
-    void drawArrows(QPainter &painter, MapWidget *parent);
     void drawActive(QPainter &painter, MapWidget *parent);
 
 };
@@ -243,18 +257,14 @@ public:
 
     MapOverlayPtr clone() const ;
 
-    QByteArray serialize() const {
-        QByteArray ba ;
-        QDataStream ds(&ba, QIODevice::WriteOnly) ;
+    void serialize(QDataStream &ds) const {
+        MapOverlay::serialize(ds) ;
         ds << point_ ;
-        serializeAttributes(ds) ;
-        return ba ;
     }
 
-    void deserialize(QByteArray &data) {
-        QDataStream ds(data) ;
+    void deserialize(QDataStream &ds) {
+        MapOverlay::deserialize(ds) ;
         ds >> point_ ;
-        deserializeAttributes(ds) ;
     }
 
     virtual int cost() const {
