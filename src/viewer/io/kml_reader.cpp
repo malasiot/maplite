@@ -1,4 +1,4 @@
-#include "data_import.hpp"
+#include "kml_reader.hpp"
 #include "map_overlay.hpp"
 #include "map_overlay_manager.hpp"
 
@@ -10,7 +10,7 @@
 #include <QBuffer>
 #include <QStack>
 
-#include <minizip/unzip.h>
+#include "minizip/unzip.h"
 
 #define dir_delimter '/'
 #define MAX_FILENAME 512
@@ -77,7 +77,7 @@ QByteArray readKmlFile(unzFile zipfile, const QString &fileName)
     return res ;
 }
 
-CollectionTreeNode *importKmz(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
+CollectionTreeNode *KMLReader::importKmz(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     CollectionTreeNode *res = 0 ;
 
@@ -107,7 +107,7 @@ CollectionTreeNode *importKmz(const QString &fileName, quint64 folder_id, QShare
     return res ;
 }
 
-CollectionTreeNode *importKml(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
+CollectionTreeNode *KMLReader::import(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     QFile file(fileName) ;
     if ( !file.open(QIODevice::ReadOnly) ) return 0 ;
@@ -361,7 +361,7 @@ static void createFoldersRecursive(CollectionTreeNode *node, quint64 parent_id, 
         createFoldersRecursive(child, item_id, fidx) ;
 }
 
-CollectionTreeNode *importKml(QIODevice *data, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
+CollectionTreeNode *KMLReader::importKml(QIODevice *data, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     KmlHandler handler(fidx) ;
     if ( !handler.parse(data) ) return 0 ;
@@ -372,3 +372,11 @@ CollectionTreeNode *importKml(QIODevice *data, quint64 folder_id, QSharedPointer
 
     return root ;
 }
+
+
+
+KMLReader::KMLReader() {
+    OverlayImportManager::instance().registerReader(this);
+}
+
+KMLReader KMLReader::instance_ ;

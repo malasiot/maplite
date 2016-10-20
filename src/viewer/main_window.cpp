@@ -42,9 +42,6 @@ MainWindow::MainWindow(int &argc, char *argv[])
 
     parseArguments(argc, argv) ;
 
-    loadOverlayPlugins();
-    loadImporters() ;
-
     overlay_manager_ = QSharedPointer<MapOverlayManager>(new MapOverlayManager) ;
 
     QString overlay_manager_path = QDesktopServices::storageLocation(QDesktopServices::DataLocation)  ;
@@ -359,37 +356,6 @@ void MainWindow::writeAppSettings()
     settings.setValue("map/layer", default_layer_.c_str()) ;
 }
 
-void MainWindow::loadOverlayPlugins()
-{
-    QDir pluginsDir = QDir(qApp->applicationDirPath());
-
-    foreach (QString fileName, pluginsDir.entryList(QDir::Files)) {
-        QPluginLoader loader(pluginsDir.absoluteFilePath(fileName));
-        QObject *plugin = loader.instance();
-
-        if (plugin) {
-            MapOverlayFactory *ifactory = qobject_cast<MapOverlayFactory *>(plugin);
-            if ( ifactory )
-                MapOverlayFactory::registerFactory(ifactory) ;
-        }
-    }
-}
-
-void MainWindow::loadImporters()
-{
-    QDir pluginsDir = QDir(qApp->applicationDirPath());
-
-    foreach (QString fileName, pluginsDir.entryList(QDir::Files)) {
-        QPluginLoader loader(pluginsDir.absoluteFilePath(fileName));
-        QObject *plugin = loader.instance();
-
-        qDebug() << loader.errorString() ;
-        if (plugin) {
-            OverlayImportInterface *imp = qobject_cast<OverlayImportInterface *>(plugin);
-            if ( imp ) importers_.append(imp) ;
-        }
-    }
-}
 
 void MainWindow::closeBasemaps()
 {
@@ -457,26 +423,20 @@ void MainWindow::importFiles()
     QString directory = sts.value("gui/lastImportDir").toString() ;
 
     QStringList file_names = QFileDialog::getOpenFileNames( this, tr("Import Files"), directory,
-                                                            tr("All Supported formats (*.gpx *.kml *.kmz *.jpeg *.jpg*);; GPS Exchange Files (*.gpx) ;; Google Maps Files (*.kml *kmz) ;; Geotagged photos (*.jpeg *jpg)"));
+                                                            OverlayImportManager::instance().filter() ) ;                                                            ;
 
     if ( !file_names.empty() )
-    {
         sts.setValue("gui/lastImportDir", QFileInfo(file_names.at(0)).absolutePath()) ;
-    }
 
 
     FileImportDialog dlg(file_names, current_folder_id_, overlay_manager_, 0) ;
     dlg.exec() ;
 
-    Q_FOREACH(CollectionData *col, dlg.collections_)
-    {
-        if ( col ) feature_library_view_->addCollection(col) ;
-        delete col ;
-    }
-
     Q_FOREACH(CollectionTreeNode *col, dlg.documents_)
     {
-        if ( col ) feature_library_view_->addCollectionTree(col) ;
+        if ( !col->name_.isEmpty() ) feature_library_view_->addCollectionTree(col) ; // single collection
+        else  feature_library_view_->addCollection(col->collection_) ;
+
         delete col ;
     }
 

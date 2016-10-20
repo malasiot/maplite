@@ -3,7 +3,6 @@
 
 #include "map_overlay.hpp"
 
-
 class GPSTrackOverlay: public PolygonOverlay {
 public:
 public:
@@ -47,5 +46,22 @@ private:
     void drawArrows(QPainter &painter, MapWidget *parent);
 
 };
+
+class GPSOverlaysFactory: public MapOverlayFactory {
+public:
+
+    GPSOverlaysFactory() {
+        MapOverlayFactoryManager::instance().registerFactory(&instance_) ;
+    }
+
+    virtual MapOverlayPtr create(const std::string &type_name, const QString &name) override {
+        if ( type_name == "gps_track" ) return MapOverlayPtr(new GPSTrackOverlay(name)) ;
+        else return MapOverlayPtr() ;
+    }
+
+    static GPSOverlaysFactory instance_ ;
+
+};
+
 
 #endif

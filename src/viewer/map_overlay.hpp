@@ -123,15 +123,21 @@ protected:
     bool selected_, active_, visible_ ;
 };
 
+// classes for automatic registration of custom overlays
+
 class MapOverlayFactory {
 public:
     virtual MapOverlayPtr create(const std::string &type_name, const QString &name) = 0 ;
+};
 
-    static void registerFactory(MapOverlayFactory *f) {
+class MapOverlayFactoryManager {
+public:
+
+    void registerFactory(MapOverlayFactory *f) {
         factories_.append(f) ;
     }
 
-    static MapOverlayPtr createFromRegister(const std::string &type_name, const QString &name) {
+    MapOverlayPtr createFromRegister(const std::string &type_name, const QString &name) {
         foreach ( MapOverlayFactory *f, factories_ ) {
             MapOverlayPtr o = f->create(type_name, name) ;
             if ( o ) return o ;
@@ -139,9 +145,13 @@ public:
         return MapOverlayPtr() ;
     }
 
-    static QVector<MapOverlayFactory *> factories_ ;
-};
+    static MapOverlayFactoryManager &instance() {
+        static MapOverlayFactoryManager instance_ ;
+        return instance_ ;
+    }
 
+    QVector<MapOverlayFactory *> factories_ ;
+};
 
 
 // overlays with geometry associated with polygon

@@ -79,3 +79,4 @@ MapOverlayPtr GPSTrackOverlay::clone() const
     return MapOverlayPtr(new GPSTrackOverlay(*this)) ;
 }
 
+GPSOverlaysFactory GPSOverlaysFactory::instance_ ;

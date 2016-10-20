@@ -80,25 +80,11 @@ void FileImportWorker::run()
         if ( stop_flag_ ) break ;
         const QString &file_name = files_[i] ;
         emit importStarted(QFileInfo(file_name).fileName()) ;
-/*
-        if ( QFileInfo(file_name).completeSuffix().toUpper() == "GPX" )  {
-            CollectionData *col = importGpx(file_name, parent_folder_id_, overlay_manager_) ;
 
-            collections_.append(col) ;
-        }
-        else if ( QFileInfo(file_name).completeSuffix().toUpper() == "KMZ"  )
-        {
-            CollectionTreeNode *cl =  importKmz(file_name, parent_folder_id_, overlay_manager_);
+        CollectionTreeNode *node = OverlayImportManager::instance().read(file_name, parent_folder_id_, overlay_manager_) ;
 
-            if ( cl ) documents_.append(cl) ;
-        }
-        else if ( QFileInfo(file_name).completeSuffix().toUpper() == "KML"  )
-        {
-            CollectionTreeNode *cl =  importKml(file_name, parent_folder_id_, overlay_manager_);
+        if ( node ) documents_.append(node) ;
 
-            if ( cl ) documents_.append(cl) ;
-        }
-*/
         emit importFinished(i) ;
     }
 }

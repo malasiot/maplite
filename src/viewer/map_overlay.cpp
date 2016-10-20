@@ -8,7 +8,6 @@
 #include <math.h>
 #include <float.h>
 
-QVector<MapOverlayFactory *> MapOverlayFactory::factories_ ;
 
 MapOverlayPtr MapOverlay::create(const std::string &type_name, const QString &name)
 {
@@ -17,7 +16,7 @@ MapOverlayPtr MapOverlay::create(const std::string &type_name, const QString &na
     else if ( type_name == "marker" )
         return MapOverlayPtr(new MarkerOverlay(name)) ;
     else
-        return MapOverlayFactory::createFromRegister(type_name, name) ;
+        return MapOverlayFactoryManager::instance().createFromRegister(type_name, name) ;
 }
 
 

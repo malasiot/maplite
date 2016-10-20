@@ -4,7 +4,7 @@
 #include "map_overlay_manager.hpp"
 #include "map_overlay.hpp"
 
-#include "plugins/gps_overlays.hpp"
+#include "overlays/gps_overlays.hpp"
 
 #include <QDomDocument>
 #include <QFile>
@@ -233,4 +233,8 @@ CollectionTreeNode *GPXReader::import(const QString &fileName, quint64 folder_id
     }
 }
 
-Q_EXPORT_PLUGIN2(gpx_reader_plugin, GPXReader)
+GPXReader::GPXReader() {
+    OverlayImportManager::instance().registerReader(this);
+}
+
+GPXReader GPXReader::instance_ ;
