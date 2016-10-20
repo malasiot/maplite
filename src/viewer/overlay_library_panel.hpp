@@ -8,7 +8,8 @@
 #include <QLabel>
 #include <QPixmap>
 
-#include "data_import.hpp"
+#include "map_overlay_manager.hpp"
+#include "overlay_import.hpp"
 
 class MainWindow ;
 class MapFeatureIndex ;

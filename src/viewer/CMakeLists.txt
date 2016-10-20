@@ -43,8 +43,6 @@ SET(MAPLITE_VIEWER_SOURCES
     map_tool.cpp
     overlay_library_panel.cpp
     file_import_dialog.cpp
-    kml_reader.cpp
-    gpx_reader.cpp
 	map_manager.cpp
 	popup.cpp
 
@@ -56,14 +54,6 @@ SET(MAPLITE_VIEWER_SOURCES
     ${SRC_ROOT}/util/zfstream.cpp
     ${SRC_ROOT}/util/base64.cpp
 	${SRC_ROOT}/util/logger.cpp
-
-
-    minizip/unzip.c
-    minizip/ioapi.c
-
-
-    plugins/gps_overlays.cpp
-
 )
 
 SET(MAPLITE_VIEWER_HEADERS
@@ -82,7 +72,7 @@ SET(MAPLITE_VIEWER_HEADERS
     data_import.hpp
     map_manager.hpp
     popup.hpp
-    plugins/gps_overlays.hpp
+	overlay_import.hpp
 )
 
 SET(MAPLITE_VIEWER_FORMS )
@@ -106,6 +96,75 @@ TARGET_LINK_LIBRARIES(mapviewer
         ${SQLITE3_LIBRARY} ${PROJ4_LIBRARY} ${SPATIALITE_LIBRARY} ${ZLIB_LIBRARY}
         ${GEOS_LIBRARY}
 	${QT_LIBRARIES})
+
+############################################################################################################
+SET(GPS_OVERLAY_PLUGIN_SOURCES
+	map_overlay.cpp
+	plugins/gps_overlays.cpp
+	plugins/gps_overlays_plugin.cpp
+)
+
+SET(GPS_OVERLAY_PLUGIN_HEADERS
+	map_overlay.hpp
+	plugins/gps_overlays.hpp
+	plugins/gps_overlays_plugin.hpp
+)
+
+QT4_WRAP_CPP(GPS_OVERLAY_PLUGIN_MOC_SOURCES ${GPS_OVERLAY_PLUGIN_HEADERS})
+
+ADD_DEFINITIONS(${QT_DEFINITIONS})
+ADD_DEFINITIONS(-DQT_PLUGIN)
+ADD_DEFINITIONS(-DQT_NO_DEBUG)
+ADD_DEFINITIONS(-DQT_SHARED)
+
+ADD_LIBRARY(
+	gpsoverlay SHARED
+	${GPS_OVERLAY_PLUGIN_SOURCES}
+	${GPS_OVERLAY_PLUGIN_MOC_SOURCES}
+)
+
+############################################################################################################
+SET(GPX_READER_PLUGIN_SOURCES
+
+	${SRC_ROOT}/util/database.cpp
+
+	map_overlay.cpp
+	map_overlay_manager.cpp
+
+	plugins/gps_overlays.cpp
+	plugins/gpx_reader.cpp
+)
+
+SET(GPX_READER_PLUGIN_HEADERS
+
+	map_widget.hpp
+	map_overlay.hpp
+	map_overlay_manager.hpp
+	${SRC_ROOT}/util/database.hpp
+	popup.hpp
+	plugins/gps_overlays.hpp
+	plugins/gpx_reader.hpp
+)
+
+QT4_WRAP_CPP(GPX_READERS_PLUGIN_MOC_SOURCES ${GPX_READER_PLUGIN_HEADERS})
+
+ADD_DEFINITIONS(${QT_DEFINITIONS})
+ADD_DEFINITIONS(-DQT_PLUGIN)
+ADD_DEFINITIONS(-DQT_NO_DEBUG)
+ADD_DEFINITIONS(-DQT_SHARED)
+
+ADD_LIBRARY(
+	gpxreader SHARED
+	${GPX_READER_PLUGIN_SOURCES}
+	${GPX_READER_PLUGIN_MOC_SOURCES}
+)
+
+TARGET_LINK_libraries(gpxreader ${Boost_LIBRARIES} ${SQLITE3_LIBRARY} ${QT_LIBRARIES} ${QT_QTXML_LIBRARY})
+
+ADD_EXECUTABLE(tester plugins/tester.cpp ${GPX_READER_PLUGIN_SOURCES} ${GPX_READERS_PLUGIN_MOC_SOURCES} )
+TARGET_LINK_LIBRARIES(tester ${Boost_LIBRARIES} ${SQLITE3_LIBRARY} ${QT_LIBRARIES} ${QT_QTXML_LIBRARY})
+
+############################################################################################################
 
 INSTALL(TARGETS mapviewer DESTINATION bin)
 

@@ -1,4 +1,4 @@
-#include "data_import.hpp"
+#include "gpx_reader.hpp"
 
 #include "map_overlay_collection.hpp"
 #include "map_overlay_manager.hpp"
@@ -10,8 +10,10 @@
 #include <QFile>
 #include <QFileInfo>
 
+#include <qplugin.h>
 
-CollectionData *importGpx(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
+
+CollectionTreeNode *GPXReader::import(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     // try to load the document from file
 
@@ -208,22 +210,27 @@ CollectionData *importGpx(const QString &fileName, quint64 folder_id, QSharedPoi
 
     }
 
+    CollectionTreeNode *node = new CollectionTreeNode ;
+    node->collection_ = col ;
+
     if ( fidx->addNewCollection(col->name_, col->folder_, col->attributes_, col->name_, col->id_ ) )
     {
         if ( !fidx->write(featureList, col->id_) )
         {
             fidx->deleteCollection(col->id_) ;
 
-            delete col ;
-            return 0 ;
+            delete node ;
+            return nullptr ;
         }
         else {
-            return col ;
+            return node ;
         }
     }
     else
     {
-         delete col ;
-         return 0 ;
+         delete node ;
+         return nullptr ;
     }
 }
+
+Q_EXPORT_PLUGIN2(gpx_reader_plugin, GPXReader)

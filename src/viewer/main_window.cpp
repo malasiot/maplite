@@ -12,6 +12,7 @@
 #include <QDockWidget>
 #include <QStatusBar>
 #include <QDomDocument>
+#include <QPluginLoader>
 
 #include <fstream>
 #include <sstream>
@@ -26,7 +27,7 @@
 #include "overlay_library_panel.hpp"
 #include "map_overlay_manager.hpp"
 #include "file_import_dialog.hpp"
-
+#include "overlay_import.hpp"
 #include "mapsforge_map_reader.hpp"
 
 using namespace std ;
@@ -41,6 +42,9 @@ MainWindow::MainWindow(int &argc, char *argv[])
 
     parseArguments(argc, argv) ;
 
+    loadOverlayPlugins();
+    loadImporters() ;
+
     overlay_manager_ = QSharedPointer<MapOverlayManager>(new MapOverlayManager) ;
 
     QString overlay_manager_path = QDesktopServices::storageLocation(QDesktopServices::DataLocation)  ;
@@ -53,6 +57,7 @@ MainWindow::MainWindow(int &argc, char *argv[])
     current_collection_id_ = 0 ;
 
     undo_group_ = new QUndoGroup(this) ;
+
 
     initMaps() ;
 
@@ -352,6 +357,38 @@ void MainWindow::writeAppSettings()
     settings.setValue("map/name", default_map_.c_str()) ;
     settings.setValue("map/theme", default_theme_.c_str()) ;
     settings.setValue("map/layer", default_layer_.c_str()) ;
+}
+
+void MainWindow::loadOverlayPlugins()
+{
+    QDir pluginsDir = QDir(qApp->applicationDirPath());
+
+    foreach (QString fileName, pluginsDir.entryList(QDir::Files)) {
+        QPluginLoader loader(pluginsDir.absoluteFilePath(fileName));
+        QObject *plugin = loader.instance();
+
+        if (plugin) {
+            MapOverlayFactory *ifactory = qobject_cast<MapOverlayFactory *>(plugin);
+            if ( ifactory )
+                MapOverlayFactory::registerFactory(ifactory) ;
+        }
+    }
+}
+
+void MainWindow::loadImporters()
+{
+    QDir pluginsDir = QDir(qApp->applicationDirPath());
+
+    foreach (QString fileName, pluginsDir.entryList(QDir::Files)) {
+        QPluginLoader loader(pluginsDir.absoluteFilePath(fileName));
+        QObject *plugin = loader.instance();
+
+        qDebug() << loader.errorString() ;
+        if (plugin) {
+            OverlayImportInterface *imp = qobject_cast<OverlayImportInterface *>(plugin);
+            if ( imp ) importers_.append(imp) ;
+        }
+    }
 }
 
 void MainWindow::closeBasemaps()

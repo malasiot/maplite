@@ -1,4 +1,8 @@
+#ifndef __GPS_OVERLAYS_HPP__
+#define __GPS_OVERLAYS_HPP__
+
 #include "map_overlay.hpp"
+
 
 class GPSTrackOverlay: public PolygonOverlay {
 public:
@@ -6,19 +10,19 @@ public:
 
     GPSTrackOverlay(const QString &name): PolygonOverlay(name) {}
 
-    void draw(QPainter &p, MapWidget *w) ;
+    virtual void draw(QPainter &p, MapWidget *w) ;
 
-    MapOverlayGeometryType geomType() const { return PolygonGeometry ; }
+    virtual MapOverlayGeometryType geomType() const { return PolygonGeometry ; }
 
-    MapOverlayPtr clone() const ;
+    virtual MapOverlayPtr clone() const ;
 
-    void serialize(QDataStream &ds) const {
+    virtual void serialize(QDataStream &ds) const {
         PolygonOverlay::serialize(ds) ;
         ds << elevation_ ;
 
     }
 
-    void deserialize(QDataStream &ds) {
+    virtual void deserialize(QDataStream &ds) {
         PolygonOverlay::deserialize(ds) ;
         ds >> elevation_ ;
     }
@@ -43,3 +47,5 @@ private:
     void drawArrows(QPainter &painter, MapWidget *parent);
 
 };
+
+#endif

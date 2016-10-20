@@ -36,7 +36,7 @@ public:
     virtual void serialize(QDataStream &ds) const {
         serializeAttributes(ds);
     }
-        ;
+
     virtual void deserialize(QDataStream &ds) {
         deserializeAttributes(ds) ;
     }
@@ -47,7 +47,7 @@ public:
         serialize(ds) ;
         return ba ;
     }
-        ;
+
     void deserialize(QByteArray &ba) {
         QDataStream ds(&ba, QIODevice::ReadOnly );
         deserialize(ds);
@@ -123,7 +123,26 @@ protected:
     bool selected_, active_, visible_ ;
 };
 
-Q_DECLARE_INTERFACE(MapOverlay, "maplite.MapOverlay")
+class MapOverlayFactory {
+public:
+    virtual MapOverlayPtr create(const std::string &type_name, const QString &name) = 0 ;
+
+    static void registerFactory(MapOverlayFactory *f) {
+        factories_.append(f) ;
+    }
+
+    static MapOverlayPtr createFromRegister(const std::string &type_name, const QString &name) {
+        foreach ( MapOverlayFactory *f, factories_ ) {
+            MapOverlayPtr o = f->create(type_name, name) ;
+            if ( o ) return o ;
+        }
+        return MapOverlayPtr() ;
+    }
+
+    static QVector<MapOverlayFactory *> factories_ ;
+};
+
+
 
 // overlays with geometry associated with polygon
 
@@ -137,11 +156,11 @@ public:
 
     virtual MapOverlayGeometryType geomType() const { return PolygonGeometry ; }
 
-    QRectF boundingBox() const {
+    virtual QRectF boundingBox() const {
         return poly_.boundingRect() ;
     }
 
-    QRect displayRect(MapWidget *w) const;
+    virtual QRect displayRect(MapWidget *w) const;
 
     QPolygonF getPolygon() const {
         return poly_ ;
@@ -167,23 +186,23 @@ public:
         if ( !poly_.empty() ) poly_.pop_front() ;
     }
 
-    double distanceToPt(const QPoint &coords, int &seg, MapWidget *widget) const ;
-    int touches(const QPoint &coords, MapWidget *widget, int &node) const ;
+    virtual double distanceToPt(const QPoint &coords, int &seg, MapWidget *widget) const ;
+    virtual int touches(const QPoint &coords, MapWidget *widget, int &node) const ;
 
-    void moveNode(int node, const QPointF &coords)  ;
-    void moveEdge(const QPointF &delta) ;
-    void deleteNode(int node) ;
-    void insertNode(int nodeAfter, const QPointF &pt) ;
-    int numNodes() const { return poly_.size() ; }
+    virtual void moveNode(int node, const QPointF &coords)  ;
+    virtual void moveEdge(const QPointF &delta) ;
+    virtual void deleteNode(int node) ;
+    virtual void insertNode(int nodeAfter, const QPointF &pt) ;
+    virtual int numNodes() const { return poly_.size() ; }
 
-    MapOverlayPtr clone() const ;
+    virtual MapOverlayPtr clone() const ;
 
-    void serialize(QDataStream &ds) const {
+    virtual void serialize(QDataStream &ds) const {
         MapOverlay::serialize(ds) ;
         ds << poly_ ;
     }
 
-    void deserialize(QDataStream &ds) {
+    virtual void deserialize(QDataStream &ds) {
         MapOverlay::deserialize(ds) ;
         ds >> poly_ ;
     }
@@ -283,6 +302,6 @@ private:
     void updateDisplayRect();
 } ;
 
-
+Q_DECLARE_INTERFACE(MapOverlayFactory, "maplite.MapOverlayFactory")
 
 #endif

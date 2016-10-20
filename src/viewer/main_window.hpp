@@ -27,6 +27,7 @@ class QDir ;
 
 #include "theme.hpp"
 #include "geometry.hpp"
+#include "overlay_import.hpp"
 
 struct ThemeBinding {
     std::shared_ptr<RenderTheme> theme_ ;
@@ -84,6 +85,11 @@ protected:
 
     void readAppSettings() ;
     void writeAppSettings() ;
+
+    void loadOverlayPlugins() ;
+    void loadImporters() ;
+
+    QVector<OverlayImportInterface *> importers_ ;
 
     MapWidget *map_widget_ ;
     MapTool *pan_tool_, *zoom_tool_, *polygon_tool_, *waypoint_tool_, *edit_tool_, *select_tool_;

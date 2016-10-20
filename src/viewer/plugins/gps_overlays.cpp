@@ -1,13 +1,14 @@
 #include "gps_overlays.hpp"
 #include "map_widget.hpp"
 
+#include <qplugin.h>
+
 void GPSTrackOverlay::draw(QPainter &p, MapWidget *w)
 {
     PolygonOverlay::draw(p, w) ;
 
     if ( selected_ )
         drawArrows(p, w) ;
-
 }
 
 void GPSTrackOverlay::drawArrows(QPainter &painter, MapWidget *view)
@@ -77,3 +78,4 @@ MapOverlayPtr GPSTrackOverlay::clone() const
 {
     return MapOverlayPtr(new GPSTrackOverlay(*this)) ;
 }
+

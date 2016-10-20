@@ -5,7 +5,7 @@
 #include <QThread>
 #include <QAtomicInt>
 
-#include "data_import.hpp"
+#include "overlay_import.hpp"
 
 class QPushButton ;
 class QProgressBar ;
