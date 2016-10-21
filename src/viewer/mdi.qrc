@@ -45,5 +45,6 @@
         <file>images/insert-node.png</file>
         <file>images/append-node.png</file>
         <file>images/prepend-node.png</file>
+        <file>images/import.png</file>
     </qresource>
 </RCC>

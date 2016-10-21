@@ -55,13 +55,14 @@ protected:
 
 protected:
 
-    friend class FeatureEditUndoCommand ;
+    friend class OverlayEditUndoCommand ;
 
     MapWidget *view_ ;
     MapOverlayPtr current_object_ ;
 } ;
 
-// Map panning
+// Map panning and overlay selection
+
 class PanTool: public MapTool
 {
     Q_OBJECT
@@ -128,7 +129,7 @@ class PolygonTool: public MapTool
 
 public:
 
-    PolygonTool(QObject *p) ;
+    PolygonTool(QObject *p, bool closed = false) ;
     virtual ~PolygonTool() ;
 
 protected:
@@ -151,6 +152,7 @@ private:
     QPoint start_, current_ ;  // map coordinates of drag start and current position
     QPoint click_ ; // initial click position
     bool is_dragging_, is_editing_, is_panning_ ;
+    bool is_closed_ ;
 
     int track_counter_ ;
     QUndoStack *undo_stack_ ;
@@ -184,45 +186,8 @@ private:
     bool is_panning_ ;
 } ;
 
-// Edit a feature
-class FeatureSelectTool: public MapTool
-{
-    Q_OBJECT
 
-public:
-
-    FeatureSelectTool(QObject *p) ;
-    virtual ~FeatureSelectTool() ;
-
-protected:
-
-    friend class MapWidget ;
-    friend class MainWindow ;
-
-    virtual void mousePressed(QMouseEvent *pevent) ;
-    virtual void mouseReleased(QMouseEvent *pevent) ;
-    virtual void mouseMoved(QMouseEvent *pevent) ;
-    virtual void wheelEvent(QWheelEvent *e) ;
-    virtual void paint(QPainter &) ;
-    virtual void init(MapWidget *v);
-    virtual void deinit() ;
-
-private:
-
-    QPoint start_, current_ ;  // map coordinates of drag start and current position
-    QPoint click_ ; // initial click position
-    bool is_panning_ ;
-
- Q_SIGNALS:
-
-    void featureClicked(quint64 id) ;
-
-
-} ;
-
-
-
-class FeatureEditUndoCommand ;
+class OverlayEditUndoCommand ;
 
 // Edit a feature
 class FeatureEditTool: public MapTool
@@ -264,19 +229,19 @@ private:
 } ;
 
 
-enum FeatureEditCommand { FEATURE_APPEND_POINT_CMD, FEATURE_MOVE_NODE_CMD, FEATURE_MOVE_EDGE_CMD, FEATURE_UPDATE_VIEW_CMD,
-                          FEATURE_DELETE_NODE_CMD, FEATURE_INSERT_NODE_CMD, FEATURE_PREPEND_POINT_CMD } ;
+enum OverlayEditCommand { OVERLAY_APPEND_POINT_CMD, OVERLAY_MOVE_NODE_CMD, OVERLAY_MOVE_EDGE_CMD, OVERLAY_UPDATE_VIEW_CMD,
+                          OVERLAY_DELETE_NODE_CMD, OVERLAY_INSERT_NODE_CMD, OVERLAY_PREPEND_POINT_CMD } ;
 
-class FeatureEditUndoCommand: public QUndoCommand {
+class OverlayEditUndoCommand: public QUndoCommand {
 public:
 
-    FeatureEditUndoCommand(MapWidget *view, MapTool *tool, FeatureEditCommand cmd, QUndoCommand *parent = 0): view_(view), cmd_(cmd), tool_(tool), QUndoCommand(parent) {}
+    OverlayEditUndoCommand(MapWidget *view, MapTool *tool, OverlayEditCommand cmd, QUndoCommand *parent = 0): view_(view), cmd_(cmd), tool_(tool), QUndoCommand(parent) {}
 
     virtual void undo() ;
     virtual void redo() ;
     virtual int id() const { return cmd_ ; }
 
-    FeatureEditCommand cmd_ ;
+    OverlayEditCommand cmd_ ;
     QPointF pt_, new_pt_ ;
     MapOverlayPtr feature_, old_feature_ ;
     MapWidget *view_ ;

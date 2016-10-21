@@ -44,6 +44,9 @@ public:
 
     std::string defaultLayer() const { return default_layer_ ; }
     uint32_t backgroundColor() const { return map_bg_ ; }
+    void getVisibleLayers(std::vector<std::string> &names) const ;
+    LayerPtr getLayer(const std::string &id) const { return get_safe_layer(id) ; }
+    void getOverlays(const std::string &layer_id, std::vector<std::string> &ids) const ;
 
 private:
 
@@ -67,7 +70,14 @@ private:
 
 struct Layer {
 
-    Layer(): z_order_(0), visible_(true), enabled_(true) {}
+    Layer(): z_order_(0), visible_(false), enabled_(true) {}
+
+    std::string name(const std::string &lang = "en") const {
+        auto it = names_.find(lang) ;
+        if ( it == names_.end() ) it = names_.find("en") ;
+        if ( it != names_.end() ) return it->second ;
+        else return std::string() ;
+    }
 
     std::string id_ ;
     std::map<std::string, std::string> names_ ;

@@ -154,17 +154,15 @@ public:
 };
 
 
-// overlays with geometry associated with polygon
+// overlays with geometry associated with polygon or polyline
 
-class PolygonOverlay: public MapOverlay
+class PolylineOverlay: public MapOverlay
 {
 public:
 
-    PolygonOverlay(const QString &name) ;
+    PolylineOverlay(const QString &name, bool closed) ;
 
     virtual void draw(QPainter &p, MapWidget *w) ;
-
-    virtual MapOverlayGeometryType geomType() const { return PolygonGeometry ; }
 
     virtual QRectF boundingBox() const {
         return poly_.boundingRect() ;
@@ -205,20 +203,18 @@ public:
     virtual void insertNode(int nodeAfter, const QPointF &pt) ;
     virtual int numNodes() const { return poly_.size() ; }
 
-    virtual MapOverlayPtr clone() const ;
-
     virtual void serialize(QDataStream &ds) const {
         MapOverlay::serialize(ds) ;
-        ds << poly_ ;
+        ds << poly_ << is_closed_ ;
     }
 
     virtual void deserialize(QDataStream &ds) {
         MapOverlay::deserialize(ds) ;
-        ds >> poly_ ;
+        ds >> poly_ >> is_closed_ ;
     }
 
     virtual QByteArray type() const {
-        return "polygon" ;
+        return "polyline" ;
     }
 
     virtual int cost() const {
@@ -228,8 +224,9 @@ public:
 protected:
 
     QPolygonF poly_ ;
-
+    bool is_closed_ ;
     QPen pen_, selected_pen_, edit_pen_ ;
+    QBrush fill_brush_ ;
 
 
 private:
@@ -239,6 +236,35 @@ private:
     void drawActive(QPainter &painter, MapWidget *parent);
 
 };
+
+class PolygonOverlay: public PolylineOverlay
+{
+public:
+
+    PolygonOverlay(const QString &name) ;
+
+    virtual MapOverlayGeometryType geomType() const { return PolygonGeometry ; }
+
+    virtual MapOverlayPtr clone() const ;
+
+    virtual QByteArray type() const {
+        return "polygon" ;
+    }
+};
+
+class LinestringOverlay: public PolylineOverlay
+{
+public:
+
+    LinestringOverlay(const QString &name) ;
+
+    virtual MapOverlayGeometryType geomType() const { return LinestringGeometry ; }
+
+    virtual MapOverlayPtr clone() const ;
+
+    virtual QByteArray type() const { return "linestring" ; }
+};
+
 
 // displays an icon with a label over a point
 

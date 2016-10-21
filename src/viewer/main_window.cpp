@@ -11,8 +11,8 @@
 #include <QFileDialog>
 #include <QDockWidget>
 #include <QStatusBar>
-#include <QDomDocument>
-#include <QPluginLoader>
+#include <QComboBox>
+#include <QPushButton>
 
 #include <fstream>
 #include <sstream>
@@ -84,13 +84,12 @@ void MainWindow::createTools()
 {
     pan_tool_ = new PanTool(this) ;
     zoom_tool_ = new ZoomTool(this) ;
-    polygon_tool_ = new PolygonTool(this) ;
+    polyline_tool_ = new PolygonTool(this, false) ;
+    polygon_tool_ = new PolygonTool(this, true) ;
     waypoint_tool_ = new PointTool(this) ;
-    select_tool_ = new FeatureSelectTool(this) ;
     edit_tool_ = new FeatureEditTool(this) ;
 
-
-
+    undo_group_->addStack(((PolygonTool *)polyline_tool_)->undo_stack_) ;
     undo_group_->addStack(((PolygonTool *)polygon_tool_)->undo_stack_) ;
     undo_group_->addStack(((FeatureEditTool *)edit_tool_)->undo_stack_) ;
 }
@@ -111,15 +110,17 @@ void MainWindow::createDocks()
 
     connect(feature_library_view_, SIGNAL(collectionClicked(quint64, quint64)), this, SLOT(onCollectionSelected(quint64, quint64))) ;
     connect(feature_library_view_, SIGNAL(folderClicked(quint64)), this, SLOT(onFolderSelected(quint64))) ;
+    connect(feature_library_view_, SIGNAL(folderClicked(quint64)), feature_list_view_, SLOT(clear())) ;
     connect(feature_library_view_, SIGNAL(collectionClicked(quint64, quint64)), feature_list_view_, SLOT(populate(quint64, quint64))) ;
     connect(feature_library_view_, SIGNAL(zoomOnRect(QRectF)), map_widget_, SLOT(zoomToRect(QRectF))) ;
     connect(feature_list_view_, SIGNAL(featuresSelected(QVector<quint64>)), map_widget_, SLOT(selectOverlays(QVector<quint64>))) ;
     connect(feature_list_view_, SIGNAL(zoomOnRect(QRectF)), map_widget_, SLOT(zoomToRect(QRectF))) ;
-    connect(select_tool_, SIGNAL(featureClicked(quint64)), feature_library_view_, SLOT(onFeatureClicked(quint64))) ;
+
     connect(feature_library_view_->model(), SIGNAL(dataChanged(QModelIndex,QModelIndex)), map_widget_, SLOT(invalidateOverlay())) ;
+    connect(feature_library_view_->model(), SIGNAL(rowsInserted(QModelIndex, int, int)), map_widget_, SLOT(invalidateOverlay())) ;
+    connect(feature_library_view_->model(), SIGNAL(rowsRemoved(QModelIndex, int, int)), map_widget_, SLOT(invalidateOverlay())) ;
 
     feature_library_dock_->setWidget(splitter) ;
-
 
     addDockWidget(Qt::LeftDockWidgetArea, feature_library_dock_);
 }
@@ -162,6 +163,12 @@ void MainWindow::createWidgets()
     status_bar_->addWidget(status_coords_, 0);
     status_bar_->addWidget(status_middle_, 0);
 
+    theme_combo_ = new QComboBox(this) ;
+    layer_combo_ = new QComboBox(this) ;
+    overlays_menu_ = new QMenu() ;
+
+    connect(layer_combo_, SIGNAL(currentIndexChanged(int)), this, SLOT(onLayerChanged(int))) ;
+    connect(theme_combo_, SIGNAL(currentIndexChanged(int)), this, SLOT(onThemeChanged(int))) ;
 }
 
 Q_DECLARE_METATYPE(MapTool *)
@@ -170,10 +177,6 @@ void MainWindow::createActions()
 {
     // files
 
-    import_files_action_ = new QAction(tr("Import files ..."), this);
-    connect(import_files_action_, SIGNAL(triggered()), this, SLOT(importFiles()));
-
-    // maps
     maps_actions_ = new QActionGroup(this) ;
 
     for( auto lp: maps_.maps_ )
@@ -190,6 +193,9 @@ void MainWindow::createActions()
 
         maps_actions_->addAction(mapAct) ;
     }
+
+    import_act_ = new QAction(QIcon(":/images/import.png"), tr("Import overlay"), this);
+    connect(import_act_, SIGNAL(triggered()), this, SLOT(importFiles()));
 
     map_tools_actions_ = new QActionGroup(this) ;
 
@@ -213,19 +219,12 @@ void MainWindow::createActions()
     edit_tool_act_->setEnabled(true) ;
     map_tools_actions_->addAction(edit_tool_act_) ;
 
-    select_tool_act_ = new QAction(QIcon(":/images/feature-edit.png"), tr("Select feature"), this);
-    connect(select_tool_act_, SIGNAL(triggered()), this, SLOT(toolChanged()));
-    select_tool_act_->setCheckable(true);
-    select_tool_act_->setData(QVariant::fromValue<MapTool *>(select_tool_)) ;
-    select_tool_act_->setEnabled(true) ;
-    map_tools_actions_->addAction(select_tool_act_) ;
-
-    poly_tool_act_ = new QAction(QIcon(":/images/polygon-tool.png"), tr("Trace a track"), this);
-    connect(poly_tool_act_, SIGNAL(triggered()), this, SLOT(toolChanged()));
-    poly_tool_act_->setCheckable(true);
-    poly_tool_act_->setData(QVariant::fromValue<MapTool *>(polygon_tool_)) ;
-    poly_tool_act_->setDisabled(true) ;
-    map_tools_actions_->addAction(poly_tool_act_) ;
+    line_tool_act_ = new QAction(QIcon(":/images/polygon-tool-open.png"), tr("Trace a line string"), this);
+    connect(line_tool_act_, SIGNAL(triggered()), this, SLOT(toolChanged()));
+    line_tool_act_->setCheckable(true);
+    line_tool_act_->setData(QVariant::fromValue<MapTool *>(polyline_tool_)) ;
+    line_tool_act_->setDisabled(true) ;
+    map_tools_actions_->addAction(line_tool_act_) ;
 
     wpt_tool_act_ = new QAction(QIcon(":/images/flag-blue.png"), tr("Place a waypoint"), this);
     connect(wpt_tool_act_, SIGNAL(triggered()), this, SLOT(toolChanged()));
@@ -233,6 +232,13 @@ void MainWindow::createActions()
     wpt_tool_act_->setData(QVariant::fromValue<MapTool *>(waypoint_tool_)) ;
     wpt_tool_act_->setDisabled(true) ;
     map_tools_actions_->addAction(wpt_tool_act_) ;
+
+    poly_tool_act_ = new QAction(QIcon(":/images/polygon-tool-closed.png"), tr("Trace a polygon"), this);
+    connect(poly_tool_act_, SIGNAL(triggered()), this, SLOT(toolChanged()));
+    poly_tool_act_->setCheckable(true);
+    poly_tool_act_->setData(QVariant::fromValue<MapTool *>(polygon_tool_)) ;
+    poly_tool_act_->setDisabled(true) ;
+    map_tools_actions_->addAction(poly_tool_act_) ;
 
     undo_act_ = new QAction(tr("Undo"), this) ;
     undo_act_->setShortcut(QKeySequence(tr("Ctrl+Z")));
@@ -246,11 +252,6 @@ void MainWindow::createActions()
 
 void MainWindow::createMenus()
 {
-    file_menu_ = menuBar()->addMenu(tr("File")) ;
-    file_menu_->addAction(import_files_action_) ;
-
-    connect(file_menu_, SIGNAL(aboutToShow()), this, SLOT(updateMenus())) ;
-
     edit_menu_ = menuBar()->addMenu(tr("Edit")) ;
     edit_menu_->addAction(undo_act_) ;
     edit_menu_->addAction(redo_act_) ;
@@ -267,7 +268,31 @@ void MainWindow::createToolBars()
     map_tool_bar_ = new QToolBar("MapTools") ;
     map_tool_bar_->setObjectName("MapToolsTB") ;
 
+    map_tool_bar_->addAction(import_act_) ;
+    map_tool_bar_->addSeparator() ;
     map_tool_bar_->addActions(map_tools_actions_->actions());
+    map_tool_bar_->addSeparator() ;
+
+    for( auto &theme: maps_.themes_) {
+        theme_combo_->addItem(theme.second.name_.c_str()) ;
+    }
+    map_tool_bar_->addWidget(new QLabel("Themes: ")) ;
+
+    map_tool_bar_->addWidget(theme_combo_) ;
+
+    populateLayers() ;
+    map_tool_bar_->addSeparator() ;
+    map_tool_bar_->addWidget(new QLabel("Styles: ")) ;
+    map_tool_bar_->addWidget(layer_combo_) ;
+
+    populateOverlaysMenu() ;
+    map_tool_bar_->addSeparator() ;
+
+    QPushButton* toolButton = new QPushButton("Layers:");
+    toolButton->setMenu(overlays_menu_);
+
+
+    map_tool_bar_->addWidget(toolButton) ;
 
     addToolBar(map_tool_bar_) ;
 
@@ -376,7 +401,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
     QCoreApplication::quit() ;
 }
 
-
 void MainWindow::updateMenus()
 {
     undo_act_->setEnabled(undo_group_->canUndo()) ;
@@ -397,10 +421,14 @@ void MainWindow::baseMapChanged()
         auto theme = maps_.getTheme(default_theme_) ;
         provider->setTheme(theme) ;
         provider->setLayer(default_layer_) ;
+        layer_combo_->setEnabled(true) ;
+        theme_combo_->setEnabled(true) ;
+    } {
+        layer_combo_->setEnabled(false) ;
+        theme_combo_->setEnabled(false) ;
     }
+
     map_widget_->setBasemap(bmap) ;
-
-
     map_widget_->update() ;
 
     default_map_ = id ;
@@ -454,6 +482,7 @@ void MainWindow::onFolderSelected(quint64 folder_id)
 {
     current_folder_id_ = folder_id ;
     poly_tool_act_->setEnabled(false) ;
+    line_tool_act_->setEnabled(false) ;
     wpt_tool_act_->setEnabled(false) ;
 }
 
@@ -494,6 +523,64 @@ void MainWindow::displayCoords(const QPointF &coords)
     status_coords_->setText(dms(coords)) ;
 }
 
+void MainWindow::onThemeChanged(int idx) {
+    default_theme_ = (const char *)theme_combo_->itemData(idx).toByteArray() ;
+    auto m = maps_.getMap(default_map_) ;
+    MapFileTileProvider *mp = dynamic_cast<MapFileTileProvider *>(m.get()) ;
+    mp->setTheme(maps_.getTheme(default_theme_)) ;
+    map_widget_->invalidateMap() ;
+}
+
+void MainWindow::onLayerChanged(int idx) {
+    default_layer_ = (const char *)layer_combo_->itemData(idx).toByteArray() ;
+    auto m = maps_.getMap(default_map_) ;
+    MapFileTileProvider *mp = dynamic_cast<MapFileTileProvider *>(m.get()) ;
+    mp->setLayer(default_layer_) ;
+    map_widget_->invalidateMap() ;
+}
+
+void MainWindow::populateLayers()
+{
+    layer_combo_->clear() ;
+
+    std::shared_ptr<RenderTheme> theme = maps_.getTheme(default_theme_) ;
+    vector<std::string> layers ;
+    theme->getVisibleLayers(layers) ;
+
+    int selected = -1, count = 0 ;
+    for( const string &layer_id: layers ) {
+        auto layer = theme->getLayer(layer_id) ;
+        string name = layer->name();
+        layer_combo_->addItem(name.c_str(), layer_id.c_str()) ;
+        if ( layer_id == default_layer_ ) selected = count ;
+        ++count ;
+    }
+
+    layer_combo_->setCurrentIndex(selected);
+}
+
+void MainWindow::populateOverlaysMenu()
+{
+    overlays_menu_->clear() ;
+
+    std::shared_ptr<RenderTheme> theme = maps_.getTheme(default_theme_) ;
+
+    vector<string> ids ;
+    theme->getOverlays(default_layer_, ids) ;
+
+    for( const string &layer_id: ids ) {
+        auto layer = theme->getLayer(layer_id) ;
+        string name = layer->name();
+        bool is_enabled = layer->enabled_ ;
+        QAction *act = new QAction(name.c_str(), overlays_menu_) ;
+        act->setCheckable(true);
+        act->setChecked(is_enabled) ;
+        overlay_menu_actions_.append(act) ;
+    }
+
+    overlays_menu_->addActions(overlay_menu_actions_) ;
+}
+
 
 void MainWindow::onCollectionSelected(quint64 collection_id, quint64 feature_id)
 {
@@ -502,5 +589,6 @@ void MainWindow::onCollectionSelected(quint64 collection_id, quint64 feature_id)
     feature_library_view_->selectCollection(collection_id) ;
 
     poly_tool_act_->setEnabled(true) ;
+    line_tool_act_->setEnabled(true) ;
     wpt_tool_act_->setEnabled(true) ;
 }

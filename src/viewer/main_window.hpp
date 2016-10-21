@@ -63,6 +63,10 @@ public Q_SLOTS:
     void onCollectionSelected(quint64 collection_id, quint64 feature_id = 0) ;
     void onFolderSelected(quint64 folder_id) ;
     void displayCoords(const QPointF &coords) ;
+    void onThemeChanged(int idx) ;
+    void onLayerChanged(int idx) ;
+    void populateLayers() ;
+    void populateOverlaysMenu() ;
 
 Q_SIGNALS:
 
@@ -90,7 +94,7 @@ protected:
     void loadImporters() ;
 
     MapWidget *map_widget_ ;
-    MapTool *pan_tool_, *zoom_tool_, *polygon_tool_, *waypoint_tool_, *edit_tool_, *select_tool_;
+    MapTool *pan_tool_, *zoom_tool_, *polyline_tool_, *polygon_tool_, *waypoint_tool_, *edit_tool_, *select_tool_;
 
     MapManager maps_ ;
     std::string default_theme_, default_layer_, default_map_ ;
@@ -104,11 +108,15 @@ protected:
     QDockWidget *feature_library_dock_ ;
     FeatureLibraryView *feature_library_view_ ;
     FeatureListView *feature_list_view_ ;
+    QComboBox *theme_combo_, *layer_combo_ ;
+    QMenu *overlays_menu_ ;
+    QList<QAction *> overlay_menu_actions_ ;
 
-    QAction *poly_tool_act_, *wpt_tool_act_, *edit_tool_act_, *select_tool_act_ ;
+    QAction *poly_tool_act_, *line_tool_act_, *wpt_tool_act_, *edit_tool_act_, *select_tool_act_ ;
     QActionGroup *maps_actions_, *map_tools_actions_ ;
-    QAction *import_files_action_,  *undo_act_, *redo_act_ ;
+    QAction *import_act_,  *undo_act_, *redo_act_ ;
     QUndoGroup *undo_group_ ;
+
 
 
     QSharedPointer<MapOverlayManager> overlay_manager_ ;

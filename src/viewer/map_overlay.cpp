@@ -13,6 +13,8 @@ MapOverlayPtr MapOverlay::create(const std::string &type_name, const QString &na
 {
     if ( type_name == "polygon" )
         return MapOverlayPtr(new PolygonOverlay(name)) ;
+    if ( type_name == "linestring" )
+        return MapOverlayPtr(new LinestringOverlay(name)) ;
     else if ( type_name == "marker" )
         return MapOverlayPtr(new MarkerOverlay(name)) ;
     else
@@ -20,7 +22,7 @@ MapOverlayPtr MapOverlay::create(const std::string &type_name, const QString &na
 }
 
 
-PolygonOverlay::PolygonOverlay(const QString &name): MapOverlay(name)
+PolylineOverlay::PolylineOverlay(const QString &name, bool closed): MapOverlay(name), is_closed_(closed)
 {
     pen_.setColor(QColor(0x8b, 0x8b, 0xc2)) ;
     pen_.setWidth(3) ;
@@ -33,9 +35,12 @@ PolygonOverlay::PolygonOverlay(const QString &name): MapOverlay(name)
     edit_pen_.setColor(QColor(0xff, 0x3d, 0x99)) ;
     edit_pen_.setWidth(4) ;
     edit_pen_.setJoinStyle(Qt::RoundJoin);
+
+    fill_brush_.setStyle(Qt::SolidPattern) ;
+    fill_brush_.setColor(QColor(0x8b, 0x8b, 0xc2, 128)) ;
 }
 
-void PolygonOverlay::draw(QPainter &painter, MapWidget *view)
+void PolylineOverlay::draw(QPainter &painter, MapWidget *view)
 {
     painter.save() ;
 
@@ -49,66 +54,76 @@ void PolygonOverlay::draw(QPainter &painter, MapWidget *view)
     painter.restore() ;
 }
 
-void PolygonOverlay::drawSimple(QPainter &painter, MapWidget *view)
+void PolylineOverlay::drawSimple(QPainter &painter, MapWidget *view)
 {
-    QPoint cp ;
-
-    painter.setPen(pen_) ;
+    QPolygonF dpoly ;
 
     for(int i=0 ; i<poly_.size() ; i++)
     {
-
         const QPointF &p1 = poly_.at(i) ;
         QPoint s1 = view->coordsToDisplay(p1) ;
-
-        if ( i > 0 )
-            painter.drawLine(cp, s1) ;
-
-       cp = s1 ;
-    }
-}
-
-void PolygonOverlay::drawSelected(QPainter &painter, MapWidget *view)
-{
-    // draw polyline
-
-    QPoint cp ;
-
-    painter.setPen(selected_pen_) ;
-
-    for(int i=0 ; i<poly_.size() ; i++)
-    {
-
-        const QPointF &p1 = poly_.at(i) ;
-        QPoint s1 = view->coordsToDisplay(p1) ;
-
-        if ( i > 0 )
-            painter.drawLine(cp, s1) ;
-
-       cp = s1 ;
+        dpoly.append(s1) ;
     }
 
+    if ( is_closed_ ) {
+        QPainterPath p ;
+        p.addPolygon(dpoly);
+        p.closeSubpath();
+        painter.fillPath(p, fill_brush_) ;
+        painter.strokePath(p, pen_) ;
+    }
+    else {
+        painter.setPen(pen_) ;
+        painter.drawPolyline(dpoly) ;
+    }
 
 }
 
-void PolygonOverlay::drawActive(QPainter &painter, MapWidget *view)
+void PolylineOverlay::drawSelected(QPainter &painter, MapWidget *view)
 {
-    // draw polyline
-
-    QPoint cp ;
-
-    painter.setPen(edit_pen_) ;
+    QPolygonF dpoly ;
 
     for(int i=0 ; i<poly_.size() ; i++)
     {
-
         const QPointF &p1 = poly_.at(i) ;
         QPoint s1 = view->coordsToDisplay(p1) ;
+        dpoly.append(s1) ;
+    }
 
-        if ( i > 0 )
-            painter.drawLine(cp, s1) ;
+    if ( is_closed_ ) {
+        QPainterPath p ;
+        p.addPolygon(dpoly);
+        p.closeSubpath();
+        painter.fillPath(p, fill_brush_) ;
+        painter.strokePath(p, selected_pen_) ;
+    }
+    else {
+        painter.setPen(selected_pen_) ;
+        painter.drawPolyline(dpoly) ;
+    }
+}
 
-       cp = s1 ;
+void PolylineOverlay::drawActive(QPainter &painter, MapWidget *view)
+{
+    QPolygonF dpoly ;
+
+    for(int i=0 ; i<poly_.size() ; i++)
+    {
+        const QPointF &p1 = poly_.at(i) ;
+        QPoint s1 = view->coordsToDisplay(p1) ;
+        dpoly.append(s1) ;
+    }
+
+    if ( is_closed_ ) {
+        QPainterPath p ;
+        p.addPolygon(dpoly);
+        p.closeSubpath();
+        painter.fillPath(p, fill_brush_) ;
+        painter.strokePath(p, edit_pen_) ;
+    }
+    else {
+        painter.setPen(edit_pen_) ;
+        painter.drawPolyline(dpoly) ;
     }
 
     // draw handles
@@ -127,19 +142,22 @@ void PolygonOverlay::drawActive(QPainter &painter, MapWidget *view)
 
 
 
-QRect PolygonOverlay::displayRect(MapWidget *view) const
+QRect PolylineOverlay::displayRect(MapWidget *view) const
 {
     return view->coordsToWindow(poly_.boundingRect()) ;
 }
 
-double PolygonOverlay::distanceToPt(const QPoint &coords, int &segment, MapWidget *view) const
+double PolylineOverlay::distanceToPt(const QPoint &coords, int &segment, MapWidget *view) const
 {
     double min_dist = DBL_MAX ;
 
-    for(int i=0 ; i<poly_.size() - 1 ; i++)
+    for(int i=0 ; i<poly_.size() - !is_closed_ ; i++)
     {
-        const QPoint pa = view->coordsToDisplay(poly_.at(i)) ;
-        const QPoint pb = view->coordsToDisplay(poly_.at(i+1)) ;
+        QPoint pa = view->coordsToDisplay(poly_.at(i)) ;
+        QPoint pb ;
+
+        if ( is_closed_ && i == poly_.size() -1 ) pb = view->coordsToDisplay(poly_.at(0)) ;
+        else pb = view->coordsToDisplay(poly_.at(i+1)) ;
 
         QVector2D dir(pb - pa), v1(coords - pa), v2(pb - coords) ;
 
@@ -174,7 +192,7 @@ double PolygonOverlay::distanceToPt(const QPoint &coords, int &segment, MapWidge
 
 }
 
-int PolygonOverlay::touches(const QPoint &coords, MapWidget *view, int &node) const
+int PolylineOverlay::touches(const QPoint &coords, MapWidget *view, int &node) const
 {
     for(int i=0 ; i<poly_.size() ; i++)
     {
@@ -185,6 +203,8 @@ int PolygonOverlay::touches(const QPoint &coords, MapWidget *view, int &node) co
         if ( dist < 10 ) {
             node = i ;
 
+            if ( is_closed_ ) return TOUCH_NODE ;
+
             if ( i == 0 )
                 return ( TOUCH_NODE | TOUCH_BEGIN_POINT ) ;
             else if (  i == poly_.size() - 1 )
@@ -194,35 +214,30 @@ int PolygonOverlay::touches(const QPoint &coords, MapWidget *view, int &node) co
         }
     }
 
-    if ( distanceToPt(coords, node, view) < 10 )
-        return TOUCH_EDGE ;
+    if ( distanceToPt(coords, node, view) < 10 ) return TOUCH_EDGE ;
     else return TOUCH_NOTHING ;
 }
 
-void PolygonOverlay::moveNode(int node, const QPointF &delta)
+void PolylineOverlay::moveNode(int node, const QPointF &delta)
 {
     poly_[node] += delta ;
 }
 
-void PolygonOverlay::moveEdge(const QPointF &delta)
+void PolylineOverlay::moveEdge(const QPointF &delta)
 {
     poly_.translate(delta) ;
 }
 
-MapOverlayPtr PolygonOverlay::clone() const
-{
-    return MapOverlayPtr(new PolygonOverlay(*this)) ;
-}
 
-void PolygonOverlay::deleteNode(int node)
+void PolylineOverlay::deleteNode(int node)
 {
     poly_.remove(node);
 }
 
-void PolygonOverlay::insertNode(int nodeAfter, const QPointF &pt)
+void PolylineOverlay::insertNode(int nodeAfter, const QPointF &pt)
 {
     const QPointF &p1 = poly_.at(nodeAfter) ;
-    const QPointF &p2 = poly_.at(nodeAfter+1) ;
+    const QPointF &p2 = ( is_closed_ && nodeAfter == poly_.size() - 1 ) ? poly_.at(0) : poly_.at(nodeAfter+1) ;
 
     QVector2D v1(p2 - p1) ;
     QVector2D v2(pt - p1) ;
@@ -369,4 +384,22 @@ MapOverlayPtr MarkerOverlay::clone() const
 
 void MarkerOverlay::deleteNode(int node) {
 
+}
+
+PolygonOverlay::PolygonOverlay(const QString &name): PolylineOverlay(name, true) {
+
+}
+
+
+LinestringOverlay::LinestringOverlay(const QString &name): PolylineOverlay(name, false) {
+
+}
+
+
+MapOverlayPtr PolygonOverlay::clone() const {
+    return MapOverlayPtr(new PolygonOverlay(*this)) ;
+}
+
+MapOverlayPtr LinestringOverlay::clone() const {
+    return MapOverlayPtr(new LinestringOverlay(*this)) ;
 }

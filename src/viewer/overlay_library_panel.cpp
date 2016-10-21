@@ -468,14 +468,13 @@ bool FeatureLibraryModel::dropMimeData(const QMimeData *data, Qt::DropAction act
         FileImportDialog dlg(file_list, parentNode->id_, overlay_manager_, 0) ;
         dlg.exec() ;
 
-        for(int i=0 ; i<dlg.collections_.size() ; i++ )
+        Q_FOREACH(CollectionTreeNode *col, dlg.documents_)
         {
-            QModelIndex item = addCollection(parent, dlg.collections_[i]) ;
+            if ( col->name_.isEmpty() ) addCollection(parent, col->collection_) ;
+            else addCollectionTree(parent, col) ;
+
+            delete col ;
         }
-
-        qDeleteAll(dlg.collections_) ;
-
-
     }
 
     return false ;
@@ -764,9 +763,10 @@ FeatureLibraryView::FeatureLibraryView(QSharedPointer<MapOverlayManager> mgr, QW
     connect(selectionModel(),SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
             this,SLOT( onSelectionChanged(const QItemSelection&, const QItemSelection & ) ) );
 
+    QModelIndex root = model_.index(0, 0) ;
+    selectionModel()->select(root, QItemSelectionModel::Select | QItemSelectionModel::Current| QItemSelectionModel::Rows ) ;
+
     installEventFilter(this) ;
-
-
 }
 
 void FeatureLibraryView::addNewFolder()
@@ -815,6 +815,9 @@ void FeatureLibraryView::addCollection(const CollectionData *col)
     QModelIndex index = currentIndex();
     if ( !index.isValid() )  return ;
 
+    LibraryNode *n = model_.node(index) ;
+    if ( !n->is_folder_ ) index = index.parent() ;
+
     QModelIndex item = model_.addCollection(index, col) ;
 
     if ( item.isValid() )
@@ -830,6 +833,9 @@ void FeatureLibraryView::addCollectionTree(const CollectionTreeNode *col)
 {
     QModelIndex index = currentIndex();
     if ( !index.isValid() )  return ;
+
+    LibraryNode *n = model_.node(index) ;
+    if ( !n->is_folder_ ) index = index.parent() ;
 
     QModelIndex item = model_.addCollectionTree(index, col) ;
 
@@ -893,7 +899,7 @@ void FeatureLibraryView::onZoom()
 
     QRectF bbox = overlay_manager_->getCollectionBBox(item->id_) ;
 
-    emit zoomOnRect(bbox) ;
+    if ( !bbox.isEmpty() ) emit zoomOnRect(bbox) ;
 }
 
 void FeatureLibraryView::expandFolder(quint64 folder_id)
@@ -906,8 +912,6 @@ void FeatureLibraryView::expandFolder(quint64 folder_id)
         expand(item) ;
         item = item.parent() ;
     }
-
-
 }
 
 void FeatureLibraryView::selectCollection(quint64 collection_id)
@@ -1021,8 +1025,10 @@ void FeatureListView::populate(quint64 collection_id, quint64 feature_id)
         QStandardItem *item = new QStandardItem() ;
 
         item->setText(feature->name()) ;
-        if ( feature->type() == "polygon" ) item->setIcon(QIcon(":/images/polygon-tool.png")) ;
-        else if ( feature->type() == "marker" ) item->setIcon(QIcon(":/images/flag-blue.png")) ;
+        if ( feature->geomType() == MapOverlay::PolygonGeometry ) item->setIcon(QIcon(":/images/polygon-tool-closed.png")) ;
+        else if ( feature->geomType() == MapOverlay::LinestringGeometry ) item->setIcon(QIcon(":/images/polygon-tool-open.png")) ;
+        else if ( feature->geomType() == MapOverlay::PointGeometry ) item->setIcon(QIcon(":/images/flag-blue.png")) ;
+
         item->setData(feature->id()) ;
         item->setData(feature->type(), Qt::UserRole+2) ;
 
@@ -1036,6 +1042,11 @@ void FeatureListView::populate(quint64 collection_id, quint64 feature_id)
         QModelIndex item = items.at(0) ;
         selectionModel()->select(item, QItemSelectionModel::SelectCurrent) ;
     }
+
+}
+
+void FeatureListView::clear() {
+    model_.clear() ;
 
 }
 

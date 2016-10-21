@@ -190,8 +190,6 @@ void Popup::mousePressEvent(QMouseEvent *e)
 
     QRect close_button(frameRect.right()-8, frameRect.top()+8, 8, 8) ;
 
-    qDebug() << click << close_button ;
-
     if ( close_button.contains(click) ) {
         hide() ;
         e->accept() ;

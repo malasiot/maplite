@@ -3,26 +3,23 @@
 
 #include "map_overlay.hpp"
 
-class GPSTrackOverlay: public PolygonOverlay {
+class GPSTrackOverlay: public LinestringOverlay {
 public:
 public:
 
-    GPSTrackOverlay(const QString &name): PolygonOverlay(name) {}
+    GPSTrackOverlay(const QString &name): LinestringOverlay(name) {}
 
     virtual void draw(QPainter &p, MapWidget *w) ;
-
-    virtual MapOverlayGeometryType geomType() const { return PolygonGeometry ; }
 
     virtual MapOverlayPtr clone() const ;
 
     virtual void serialize(QDataStream &ds) const {
-        PolygonOverlay::serialize(ds) ;
+        LinestringOverlay::serialize(ds) ;
         ds << elevation_ ;
-
     }
 
     virtual void deserialize(QDataStream &ds) {
-        PolygonOverlay::deserialize(ds) ;
+        LinestringOverlay::deserialize(ds) ;
         ds >> elevation_ ;
     }
 
@@ -31,7 +28,7 @@ public:
     }
 
     virtual int cost() const {
-        PolygonOverlay::cost() + sizeof(double) * elevation_.size() ;
+        LinestringOverlay::cost() + sizeof(double) * elevation_.size() ;
     }
 
     void addElevation(double ele) {

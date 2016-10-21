@@ -143,6 +143,7 @@ signals:
 
 public Q_SLOTS:
     void populate(quint64 collection_id, quint64 selection_id = 0) ;
+    void clear() ;
 
 private Q_SLOTS:
     void onContextMenu(const QPoint &) ;

@@ -85,6 +85,8 @@ public:
     void showPopup(const QString &txt, const QPoint &click) ;
     void hidePopup() ;
 
+    void invalidateMap() ;
+
 public Q_SLOTS:
     void zoomToRect(const QRectF &rect) ;
     void invalidateOverlay() ;

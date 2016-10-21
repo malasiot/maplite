@@ -433,6 +433,12 @@ void MapWidget::hidePopup() {
     popup_->hide() ;
 }
 
+void MapWidget::invalidateMap()
+{
+    tile_cache_.clear() ;
+    update() ;
+}
+
 void MapWidget::zoomToRect(const QRectF &coords)
 {
     QPoint p1 = coordsToDisplay(coords.topLeft()) ;

@@ -5,7 +5,7 @@
 
 void GPSTrackOverlay::draw(QPainter &p, MapWidget *w)
 {
-    PolygonOverlay::draw(p, w) ;
+    LinestringOverlay::draw(p, w) ;
 
     if ( selected_ )
         drawArrows(p, w) ;

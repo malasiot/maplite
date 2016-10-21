@@ -202,7 +202,7 @@ bool RenderTheme::read(const std::string &file_name, const string &resource_dir)
 
         layer->id_ = id ;
         layer->enabled_ = p.attribute("enabled").as_bool(true) ;
-        layer->visible_ = p.attribute("visible").as_bool(true) ;
+        layer->visible_ = p.attribute("visible").as_bool(false) ;
 
         string parent = p.attribute("parent").as_string() ;
         if ( !parent.empty() ) layer_parents[id] = parent ;
@@ -321,6 +321,25 @@ bool RenderTheme::match(const string &layer_id, const Dictionary &tags, uint8_t 
     }
 
     return ( !ris.empty() ) ;
+}
+
+void RenderTheme::getVisibleLayers(std::vector<string> &ids) const
+{
+    for( const auto &lp: layers_ ) {
+        LayerPtr layer = lp.second ;
+        if ( !layer->visible_ ) continue ;
+        ids.push_back(lp.first) ;
+    }
+}
+
+void RenderTheme::getOverlays(const string &layer_id, std::vector<string> &ids) const
+{
+    LayerPtr layer = get_safe_layer(layer_id) ;
+    if ( !layer ) return ;
+    for( const auto &l: layer->overlays_ ) {
+        ids.push_back(l->id_) ;
+    }
+
 }
 
 

@@ -27,7 +27,6 @@ void PanTool::mousePressed(QMouseEvent *evnt)
 
     if ( current_object_ ) {
         view_->showPopup(current_object_->description(), start_point_) ;
-        qDebug() << current_object_->id() ;
     }
     else {
         panning_ = true ;
@@ -194,7 +193,7 @@ void ZoomTool::mouseReleased(QMouseEvent *mouseEvent)
 ///////////////////////////////////////////////////////////////////////////////////
 
 
-PolygonTool::PolygonTool(QObject *p): MapTool(p), is_dragging_(false), is_panning_(false), track_counter_(1) {
+PolygonTool::PolygonTool(QObject *p, bool closed): MapTool(p), is_dragging_(false), is_panning_(false), track_counter_(1), is_closed_(closed) {
     undo_stack_ = new QUndoStack(this) ;
 }
 
@@ -287,7 +286,7 @@ void PolygonTool::paint(QPainter &painter)
 
         painter.setPen(QPen(Qt::red)) ;
 
-        PolygonOverlay *co = dynamic_cast<PolygonOverlay *>(current_object_.data()) ;
+        PolylineOverlay *co = dynamic_cast<PolylineOverlay *>(current_object_.data()) ;
 
         const QPolygonF &poly_ = co->getPolygon() ;
 
@@ -297,6 +296,13 @@ void PolygonTool::paint(QPainter &painter)
             QPoint s1 = view_->coordsToDisplay(p1) ;
 
             painter.drawLine(s1, current_) ;
+
+            if ( is_closed_ ) {
+                const QPointF &p0 = poly_.front() ;
+                QPoint s0 = view_->coordsToDisplay(p0) ;
+
+                painter.drawLine(current_, s0) ;
+            }
         }
 
         painter.restore() ;
@@ -311,10 +317,19 @@ void PolygonTool::mouseReleased(QMouseEvent *mouseEvent)
         if ( current_object_ == 0  )
         {
             QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
-            QString name = mgr->uniqueOverlayName("Track %1", view_->currentCollection(), track_counter_) ;
 
-            current_object_ = MapOverlayPtr(new PolygonOverlay(name)) ;
+            if ( is_closed_ ) {
+                QString name = mgr->uniqueOverlayName("Polygon %1", view_->currentCollection(), track_counter_) ;
+                current_object_ = MapOverlayPtr(new PolygonOverlay(name)) ;
+            }
+            else {
+                QString name = mgr->uniqueOverlayName("Line %1", view_->currentCollection(), track_counter_) ;
+                current_object_ = MapOverlayPtr(new LinestringOverlay(name)) ;
+            }
+
+
             current_object_->setSelected(true) ;
+
 
             view_->setCurrentOverlay(current_object_) ;
 
@@ -324,7 +339,7 @@ void PolygonTool::mouseReleased(QMouseEvent *mouseEvent)
 
         QPointF pt = view_->displayToCoords(current_) ;
 
-        FeatureEditUndoCommand *ucmd = new FeatureEditUndoCommand(view_, this, FEATURE_APPEND_POINT_CMD) ;
+        OverlayEditUndoCommand *ucmd = new OverlayEditUndoCommand(view_, this, OVERLAY_APPEND_POINT_CMD) ;
         ucmd->feature_ = current_object_->clone() ;
         ucmd->pt_ = pt ;
         undo_stack_->push(ucmd);
@@ -431,88 +446,6 @@ void PointTool::mouseMoved(QMouseEvent *mouseEvent)
 
 ////////////////////////////////////////////////////////////////////////////////////
 
-
-///////////////////////////////////////////////////////////////////////////////////
-
-
-FeatureSelectTool::FeatureSelectTool(QObject *p): MapTool(p) {
-    is_panning_ = false ;
-}
-
-FeatureSelectTool::~FeatureSelectTool()
-{
-
-}
-
-void FeatureSelectTool::init(MapWidget *v)
-{
-    MapTool::init(v) ;
-    view_->setMouseTracking(true) ;
-
-}
-
-void FeatureSelectTool::deinit()
-{
-    view_->setMouseTracking(false) ;
-
-}
-
-void FeatureSelectTool::mouseMoved(QMouseEvent *mouseEvent)
-{
-    QPoint pos = mouseEvent->pos() ;
-
-    if ( is_panning_  ) {
-        QPoint offset = click_ - pos ;
-        view_->scroll(offset) ;
-        click_ = pos ;
-    }
-
-}
-
-void FeatureSelectTool::wheelEvent(QWheelEvent *e)
-{
-    current_ = view_->positionToDisplay(e->pos()) ;
-
-}
-
-void FeatureSelectTool::mousePressed(QMouseEvent *mouseEvent)
-{
-    click_ = mouseEvent->pos() ;
-    start_ = view_->positionToDisplay(click_) ;
-    current_ = start_ ;
-
-    if ( mouseEvent->buttons() & Qt::RightButton )
-        is_panning_ = true ;
-}
-
-
-void FeatureSelectTool::paint(QPainter &painter)
-{
-
-
-}
-
-void FeatureSelectTool::mouseReleased(QMouseEvent *mouseEvent)
-{
-    if ( is_panning_ )
-        is_panning_ = false ;
-    else {
-        QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
-
-        MapOverlayPtr obj = mgr->findNearest("marker", start_, view_, 10) ;
-        if ( !obj ) obj = mgr->findNearest("polygon", start_, view_, 10) ;
-
-        if ( obj ) {
-            emit featureClicked(obj->id()) ;
-        }
-    }
-
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////
-
-
 FeatureEditTool::FeatureEditTool(QObject *p): MapTool(p), is_dragging_(false) {
     undo_stack_ = new QUndoStack(this) ;
 }
@@ -541,9 +474,31 @@ void FeatureEditTool::deinit()
 
 void FeatureEditTool::mouseMoved(QMouseEvent *mouseEvent)
 {
-    if ( !current_object_ ) return ;
-
     QPoint pos = mouseEvent->pos() ;
+
+    if ( !is_editing_ ) {
+
+        current_ = view_->positionToDisplay(pos) ;
+
+        QSharedPointer<MapOverlayManager> mgr = view_->getOverlayManager() ;
+
+        current_object_ = mgr->findNearest("*", current_, view_, 10) ;
+
+        if ( current_object_ ) {
+            view_->setCursor(QCursor(Qt::ArrowCursor)) ;
+            current_object_->setSelected(true) ;
+            view_->setCurrentOverlay(current_object_) ;
+        }
+        else {
+            view_->setCurrentOverlay(MapOverlayPtr()) ;
+            view_->setCursor(QCursor(Qt::OpenHandCursor)) ;
+        }
+
+        view_->update() ;
+        return ;
+    }
+
+
 
     if ( mouseEvent->buttons() & Qt::LeftButton )
     {
@@ -563,7 +518,7 @@ void FeatureEditTool::mouseMoved(QMouseEvent *mouseEvent)
             QPointF start_coords = view_->displayToCoords(start_) ;
             QPointF new_coords = view_->displayToCoords(current_) ;
 
-            FeatureEditUndoCommand *ucmd = new FeatureEditUndoCommand(view_, this, FEATURE_MOVE_NODE_CMD) ;
+            OverlayEditUndoCommand *ucmd = new OverlayEditUndoCommand(view_, this, OVERLAY_MOVE_NODE_CMD) ;
             ucmd->feature_ = current_object_->clone() ;
             ucmd->pt_ = start_coords ;
             ucmd->new_pt_ = new_coords ;
@@ -579,7 +534,7 @@ void FeatureEditTool::mouseMoved(QMouseEvent *mouseEvent)
             QPointF start_coords = view_->displayToCoords(start_) ;
             QPointF new_coords = view_->displayToCoords(current_) ;
 
-            FeatureEditUndoCommand *ucmd = new FeatureEditUndoCommand(view_, this, FEATURE_MOVE_EDGE_CMD) ;
+            OverlayEditUndoCommand *ucmd = new OverlayEditUndoCommand(view_, this, OVERLAY_MOVE_EDGE_CMD) ;
             ucmd->feature_ = current_object_->clone() ;
             ucmd->pt_ = start_coords ;
             ucmd->new_pt_ = new_coords ;
@@ -646,7 +601,7 @@ void FeatureEditTool::mousePressed(QMouseEvent *mouseEvent)
     current_ = start_ ;
 
     undo_stack_->setActive() ;
-    undo_stack_->beginMacro("command");
+
 
     if ( mouseEvent->buttons() & Qt::RightButton ) {
         is_panning_ = true;
@@ -657,11 +612,14 @@ void FeatureEditTool::mousePressed(QMouseEvent *mouseEvent)
     else  if ( is_editing_ && ( mouseEvent->buttons() & Qt::LeftButton ) && ( current_touch_ & TOUCH_NODE ) &&
                ( mouseEvent->modifiers() & Qt::ControlModifier))
     {
-        FeatureEditUndoCommand *ucmd = new FeatureEditUndoCommand(view_, this, FEATURE_DELETE_NODE_CMD) ;
+
+        OverlayEditUndoCommand *ucmd = new OverlayEditUndoCommand(view_, this, OVERLAY_DELETE_NODE_CMD) ;
         ucmd->feature_ = current_object_->clone() ;
         ucmd->node_ = current_node_ ;
 
+        undo_stack_->beginMacro("command");
         undo_stack_->push(ucmd);
+        undo_stack_->endMacro() ;
         object_modified_ = true ;
     }
     else  if ( is_editing_ && ( mouseEvent->buttons() & Qt::LeftButton ) && current_touch_ == TOUCH_EDGE &&
@@ -669,11 +627,13 @@ void FeatureEditTool::mousePressed(QMouseEvent *mouseEvent)
     {
         QPointF new_coords = view_->displayToCoords(current_) ;
 
-        FeatureEditUndoCommand *ucmd = new FeatureEditUndoCommand(view_, this, FEATURE_INSERT_NODE_CMD) ;
+        OverlayEditUndoCommand *ucmd = new OverlayEditUndoCommand(view_, this, OVERLAY_INSERT_NODE_CMD) ;
         ucmd->feature_ = current_object_->clone() ;
         ucmd->node_ = current_node_ ;
         ucmd->new_pt_ = new_coords ;
+        undo_stack_->beginMacro("command");
         undo_stack_->push(ucmd);
+        undo_stack_->endMacro();
         object_modified_ = true ;
         current_touch_ = TOUCH_NODE ;
         current_node_ = current_node_ + 1 ;
@@ -695,7 +655,7 @@ void FeatureEditTool::mousePressed(QMouseEvent *mouseEvent)
 
         if ( is_extending_ == 1 )
         {
-            FeatureEditUndoCommand *ucmd = new FeatureEditUndoCommand(view_, this, FEATURE_APPEND_POINT_CMD) ;
+            OverlayEditUndoCommand *ucmd = new OverlayEditUndoCommand(view_, this, OVERLAY_APPEND_POINT_CMD) ;
             ucmd->feature_ = current_object_->clone() ;
             ucmd->pt_ = pt ;
             undo_stack_->push(ucmd);
@@ -704,7 +664,7 @@ void FeatureEditTool::mousePressed(QMouseEvent *mouseEvent)
             object_modified_ = true ;
         }
         else {
-            FeatureEditUndoCommand *ucmd = new FeatureEditUndoCommand(view_, this, FEATURE_PREPEND_POINT_CMD) ;
+            OverlayEditUndoCommand *ucmd = new OverlayEditUndoCommand(view_, this, OVERLAY_PREPEND_POINT_CMD) ;
             ucmd->feature_ = current_object_->clone() ;
             ucmd->pt_ = pt ;
             undo_stack_->push(ucmd);
@@ -714,6 +674,7 @@ void FeatureEditTool::mousePressed(QMouseEvent *mouseEvent)
         }
 
     }
+
 }
 
 
@@ -752,8 +713,7 @@ void FeatureEditTool::mouseReleased(QMouseEvent *mouseEvent)
             view_->setCurrentOverlay(current_object_) ;
         }
 
-        MapOverlayPtr obj = mgr->findNearest("marker", start_, view_, 10) ;
-        if ( !obj ) obj = mgr->findNearest("polygon", start_, view_, 10) ;
+        MapOverlayPtr obj = mgr->findNearest("*", start_, view_, 10) ;
 
         if ( obj ) {
             current_object_ = obj ;
@@ -771,7 +731,7 @@ void FeatureEditTool::mouseReleased(QMouseEvent *mouseEvent)
         view_->setCursor(QCursor(Qt::ArrowCursor)) ;
     }
 
-    undo_stack_->endMacro() ;
+
     is_panning_ = false ;
 
 }
@@ -779,43 +739,43 @@ void FeatureEditTool::mouseReleased(QMouseEvent *mouseEvent)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
-void FeatureEditUndoCommand::undo()
+void OverlayEditUndoCommand::undo()
 {
     switch ( cmd_ )
     {
-    case FEATURE_APPEND_POINT_CMD:
+    case OVERLAY_APPEND_POINT_CMD:
     {
         PolygonOverlay *feature = static_cast<PolygonOverlay *>(feature_.data()) ;
         feature->popBack() ;
         view_->update() ;
         break ;
     }
-    case FEATURE_PREPEND_POINT_CMD:
+    case OVERLAY_PREPEND_POINT_CMD:
     {
         PolygonOverlay *feature = static_cast<PolygonOverlay *>(feature_.data()) ;
         feature->popFront() ;
         view_->update() ;
         break ;
     }
-    case FEATURE_MOVE_NODE_CMD:
+    case OVERLAY_MOVE_NODE_CMD:
     {
         feature_->moveNode(node_, pt_ - new_pt_) ;
         view_->update() ;
         break ;
     }
-    case FEATURE_MOVE_EDGE_CMD:
+    case OVERLAY_MOVE_EDGE_CMD:
     {
         feature_->moveEdge(pt_ - new_pt_) ;
         view_->update() ;
         break ;
     }
-    case FEATURE_DELETE_NODE_CMD:
+    case OVERLAY_DELETE_NODE_CMD:
     {
         feature_ = old_feature_->clone() ;
         view_->update();
         break ;
     }
-    case FEATURE_INSERT_NODE_CMD:
+    case OVERLAY_INSERT_NODE_CMD:
     {
         feature_->deleteNode(node_) ;
         node_ -- ;
@@ -829,44 +789,44 @@ void FeatureEditUndoCommand::undo()
     view_->setCurrentOverlay(feature_);
 }
 
-void FeatureEditUndoCommand::redo()
+void OverlayEditUndoCommand::redo()
 {
     switch ( cmd_ )
     {
-    case FEATURE_APPEND_POINT_CMD:
+    case OVERLAY_APPEND_POINT_CMD:
     {
         PolygonOverlay *feature = static_cast<PolygonOverlay *>(feature_.data()) ;
         feature->addPoint(pt_) ;
         view_->update() ;
         break ;
     }
-    case FEATURE_PREPEND_POINT_CMD:
+    case OVERLAY_PREPEND_POINT_CMD:
     {
         PolygonOverlay *feature = static_cast<PolygonOverlay *>(feature_.data()) ;
         feature->prepend(pt_) ;;
         view_->update() ;
         break ;
     }
-    case FEATURE_MOVE_NODE_CMD:
+    case OVERLAY_MOVE_NODE_CMD:
     {
         feature_->moveNode(node_, new_pt_ - pt_) ;
         view_->update();
         break ;
     }
-    case FEATURE_MOVE_EDGE_CMD:
+    case OVERLAY_MOVE_EDGE_CMD:
     {
         feature_->moveEdge(new_pt_ - pt_) ;
         view_->update();
         break ;
     }
-    case FEATURE_DELETE_NODE_CMD:
+    case OVERLAY_DELETE_NODE_CMD:
     {
         old_feature_ = feature_->clone() ;
         feature_->deleteNode(node_) ;
         view_->update();
         break ;
     }
-    case FEATURE_INSERT_NODE_CMD:
+    case OVERLAY_INSERT_NODE_CMD:
     {
         old_feature_ = feature_->clone() ;
         feature_->insertNode(node_, new_pt_) ;
