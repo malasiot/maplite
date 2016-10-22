@@ -3,7 +3,7 @@
 #include "map_overlay.hpp"
 #include "map_overlay_manager.hpp"
 #include "main_window.hpp"
-
+#include "tile_cache.hpp"
 
 #include <QDebug>
 #include <QPainter>
@@ -11,6 +11,7 @@
 #include <QTime>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QBuffer>
 #include <QVector2D>
 #include <math.h>
 #include <cassert>
@@ -51,7 +52,8 @@ QPointF px2ll(const QPoint &coord, unsigned int zoomLevel, unsigned int tile_siz
 }
 
 
-MapWidget::MapWidget(QWidget *parent): QWidget(parent), overlay_cache_(10000), cache_tiles_(false) {
+MapWidget::MapWidget(QWidget *parent): QWidget(parent), overlay_cache_(10 * 1024 * 1024),
+    persistent_cache_(100 * 1024 * 1024), cache_tiles_(true) {
 
     zoom_ = 10 ;
     zoom_mode_ = Mouse ;
@@ -64,6 +66,10 @@ MapWidget::MapWidget(QWidget *parent): QWidget(parent), overlay_cache_(10000), c
     undo_stack_ = new QUndoStack(this) ;
 
     popup_ = new Popup(QSize(300, 300), this) ;
+
+    QString cache_path = QDesktopServices::storageLocation(QDesktopServices::DataLocation)  ;
+    persistent_cache_.open((const char *)cache_path.toUtf8()) ;
+
 }
 
 void MapWidget::setBasemap(const std::shared_ptr<TileProvider> &tiles)
@@ -71,7 +77,7 @@ void MapWidget::setBasemap(const std::shared_ptr<TileProvider> &tiles)
     base_map_ = tiles ;
 
     if ( base_map_->isAsync() )
-        connect(base_map_.get(), SIGNAL(tileReady(QString,QImage)), this, SLOT(onFetchFinished(QString,QImage)) ) ;
+        connect(base_map_.get(), SIGNAL(tileReady(QByteArray,QImage)), this, SLOT(onFetchFinished(QByteArray,QImage)) ) ;
 }
 
 
@@ -379,7 +385,7 @@ void MapWidget::drawBaseMap(QPainter &painter, const QRegion &region)
 
             if ( region.intersects(r) )
             {
-                QString key = base_map_->getKey(x, y, z) ;
+                QString key = base_map_->tileKey(x, y, z) ;
 
                 if ( QPixmap *px = tile_cache_.find(key) )
                 {
@@ -437,6 +443,13 @@ void MapWidget::invalidateMap()
 {
     tile_cache_.clear() ;
     update() ;
+}
+
+void MapWidget::cleanup()
+{
+    fetch_canceled_ = true ;
+    QThreadPool::globalInstance()->waitForDone() ;
+    pending_.clear() ;
 }
 
 void MapWidget::zoomToRect(const QRectF &coords)
@@ -599,7 +612,7 @@ void TileFetcher::run()
 {
     if ( instance_->fetch_canceled_ ) return ;
 
-    QString key = instance_->base_map_->getKey(x_, y_, z_) ;
+    QByteArray key = instance_->base_map_->tileKey(x_, y_, z_) ;
 
     QImage cached_tile = instance_->fetchSavedTile(x_, y_, z_) ;
 
@@ -609,7 +622,7 @@ void TileFetcher::run()
     {
         QImage tile = instance_->base_map_->getTile(x_, y_, z_) ;
 
-    //    instance_->saveTile(tile, x_, y_, z_) ;
+        instance_->saveTile(tile, x_, y_, z_) ;
 
         emit tileFetchFinished(key, tile) ;
     }
@@ -623,7 +636,7 @@ void MapWidget::fetchMissing(const QList<Tile> &missing)
     {
         const Tile &t = it.next() ;
 
-        QString key = base_map_->getKey(t.x_, t.y_, t.z_) ;
+        QByteArray key = base_map_->tileKey(t.x_, t.y_, t.z_) ;
 
         {
             QMutexLocker locker(&mutex_) ;
@@ -643,7 +656,7 @@ void MapWidget::fetchMissing(const QList<Tile> &missing)
         else {
 
             TileFetcher *fetcher = new TileFetcher(this, t.x_, t.y_, t.z_) ;
-            QObject::connect(fetcher, SIGNAL(tileFetchFinished(QString,QImage)), this, SLOT(onFetchFinished(QString,QImage))) ;
+            QObject::connect(fetcher, SIGNAL(tileFetchFinished(QByteArray,QImage)), this, SLOT(onFetchFinished(QByteArray,QImage))) ;
 
             QThreadPool::globalInstance()->start(fetcher);
         }
@@ -656,30 +669,37 @@ QImage MapWidget::fetchSavedTile(int x, int y, int z)
 {
     if ( cache_tiles_ )
     {
-        QString filePath = cache_dir_.absolutePath() + "/" + base_map_->name() + QString("/%1/%2/%3.png").arg(z).arg(x).arg(y);
+        string bytes = persistent_cache_.load((const char *)base_map_->tileKey(x, y, z), time(0)) ;
 
+        if ( bytes.empty() ) return QImage() ;
+
+        QByteArray data(&bytes[0], bytes.size()) ;
         QImage tile ;
-        tile.load(filePath) ;
+        tile.loadFromData(data) ;
 
         return tile ;
     }
     else return QImage() ;
 }
 
-void MapWidget::saveTile(const QImage &tile_, int x, int y, int z)
+void MapWidget::saveTile(const QImage &tile, int x, int y, int z)
 {
     if ( cache_tiles_ )
     {
-        QString filePath = cache_dir_.absolutePath() + "/" + base_map_->name() + QString("/%1/%2/").arg(z).arg(x) ;
+        QByteArray ba;
+        QBuffer buffer(&ba);
+        buffer.open(QIODevice::WriteOnly);
+        tile.save(&buffer, "PNG");
 
-        QDir(filePath).mkpath(".") ;
+        string bytes(ba.data(), ba.size()) ;
 
-        tile_.save(filePath + QString("%1.png").arg(y)) ;
+        TileKey tk(x, y, z, true) ;
+        persistent_cache_.save((const char *)base_map_->tileKey(x, y, z), bytes, time(0)) ;
     }
 
 }
 
-void MapWidget::onFetchFinished(const QString &key, const QImage &tile)
+void MapWidget::onFetchFinished(const QByteArray &key, const QImage &tile)
 {
     if ( !tile.isNull() )
     {
@@ -690,7 +710,7 @@ void MapWidget::onFetchFinished(const QString &key, const QImage &tile)
         if ( base_map_->isAsync() )
         {
             int x, y, z ;
-            base_map_->coordsFromKey(key, x, y, z) ;
+            base_map_->coordsFromTileKey(key, x, y, z) ;
             saveTile(tile, x, y, z) ;
         }
     }

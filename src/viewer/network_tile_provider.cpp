@@ -9,8 +9,8 @@
 #include <QCoreApplication>
 #include <QDebug>
 
-NetworkTileProvider::NetworkTileProvider(const QString &name, const QString &url):
-    TileProvider(name, 256), url_(url)
+NetworkTileProvider::NetworkTileProvider(const QByteArray &id, const QString &url):
+    TileProvider(id, 256), url_(url)
 {
     async_ = true ;
     manager_ = new QNetworkAccessManager(this) ;
@@ -31,7 +31,7 @@ QImage NetworkTileProvider::getTile(int x, int y, int z)
     req.setRawHeader( "Host" , url.host().toAscii() );
 
     QNetworkReply *reply = manager_->get(req) ;
-    reply->setProperty("key", getKey(x, y, z)) ;
+    reply->setProperty("key", tileKey(x, y, z)) ;
     reply->setProperty("url", url) ;
 
     connect(reply, SIGNAL(finished()), this, SLOT(finished()));
@@ -43,7 +43,7 @@ void NetworkTileProvider::finished()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
 
-    QString key = reply->property("key").toString();
+    QByteArray key = reply->property("key").toByteArray();
     QUrl orig_url = reply->property("url").toUrl() ;
 
     QUrl possibleRedirectUrl =

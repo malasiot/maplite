@@ -134,14 +134,14 @@ void MainWindow::createWidgets()
     map_widget_->setTool(pan_tool_) ;
     map_widget_->setCacheDir(QDesktopServices::storageLocation(QDesktopServices::CacheLocation)) ;
 
-    if ( !default_map_.empty() && maps_.hasMap(default_map_) )
+    if ( !current_map_.isEmpty() && maps_.hasMap(current_map_) )
     {
-        std::shared_ptr<TileProvider> bmap = maps_.getMap(default_map_) ;
+        std::shared_ptr<TileProvider> bmap = maps_.getMap(current_map_) ;
         if ( !bmap->isAsync() ) {
             auto provider = std::dynamic_pointer_cast<MapFileTileProvider>(bmap) ;
-            auto theme = maps_.getTheme(default_theme_) ;
+            auto theme = maps_.getTheme(current_theme_) ;
             provider->setTheme(theme) ;
-            provider->setLayer(default_layer_) ;
+            provider->setStyle(current_style_) ;
         }
         map_widget_->setBasemap(bmap) ;
         map_widget_->setCenter(default_center_.x(), default_center_.y(), default_zoom_) ;
@@ -164,11 +164,8 @@ void MainWindow::createWidgets()
     status_bar_->addWidget(status_middle_, 0);
 
     theme_combo_ = new QComboBox(this) ;
-    layer_combo_ = new QComboBox(this) ;
-    overlays_menu_ = new QMenu() ;
-
-    connect(layer_combo_, SIGNAL(currentIndexChanged(int)), this, SLOT(onLayerChanged(int))) ;
-    connect(theme_combo_, SIGNAL(currentIndexChanged(int)), this, SLOT(onThemeChanged(int))) ;
+    style_combo_ = new QComboBox(this) ;
+    map_combo_ = new QComboBox(this) ;
 }
 
 Q_DECLARE_METATYPE(MapTool *)
@@ -178,21 +175,6 @@ void MainWindow::createActions()
     // files
 
     maps_actions_ = new QActionGroup(this) ;
-
-    for( auto lp: maps_.maps_ )
-    {
-        std::shared_ptr<TileProvider> p = lp.second ;
-
-        QAction *mapAct = new QAction(p->name(), this);
-        connect(mapAct, SIGNAL(triggered()), this, SLOT(baseMapChanged()));
-        mapAct->setCheckable(true);
-        mapAct->setProperty("id", lp.first.c_str()) ;
-
-        if ( lp.first == default_map_ )
-            mapAct->setChecked(true) ;
-
-        maps_actions_->addAction(mapAct) ;
-    }
 
     import_act_ = new QAction(QIcon(":/images/import.png"), tr("Import overlay"), this);
     connect(import_act_, SIGNAL(triggered()), this, SLOT(importFiles()));
@@ -256,10 +238,6 @@ void MainWindow::createMenus()
     edit_menu_->addAction(undo_act_) ;
     edit_menu_->addAction(redo_act_) ;
     connect(edit_menu_, SIGNAL(aboutToShow()), this, SLOT(updateMenus())) ;
-
-    maps_menu_ = menuBar()->addMenu(tr("Maps")) ;
-    maps_menu_->addActions(maps_actions_->actions()) ;
-    connect(maps_menu_, SIGNAL(aboutToShow()), this, SLOT(updateMenus())) ;
 }
 
 
@@ -268,34 +246,73 @@ void MainWindow::createToolBars()
     map_tool_bar_ = new QToolBar("MapTools") ;
     map_tool_bar_->setObjectName("MapToolsTB") ;
 
+
     map_tool_bar_->addAction(import_act_) ;
     map_tool_bar_->addSeparator() ;
     map_tool_bar_->addActions(map_tools_actions_->actions());
     map_tool_bar_->addSeparator() ;
 
-    for( auto &theme: maps_.themes_) {
-        theme_combo_->addItem(theme.second.name_.c_str()) ;
+    map_tool_bar_->addWidget(new QLabel("Maps: ")) ;
+
+
+    int count = 0, selected ;
+    for( auto lp: maps_.maps_ )
+    {
+        std::shared_ptr<TileProvider> p = lp.second ;
+        if ( !p->isAsync() )
+            map_combo_->addItem(p->name(), p->id()) ;
+
+        if ( lp.first == current_map_ )
+            selected = count ;
+
+        ++count ;
     }
+
+    count = 0 ;
+    for( auto lp: maps_.maps_ )
+    {
+        std::shared_ptr<TileProvider> p = lp.second ;
+        if ( p->isAsync() )
+            map_combo_->addItem(p->name(), p->id()) ;
+
+        if ( lp.first == current_map_ )
+            selected = count ;
+
+        ++count ;
+    }
+
+    map_tool_bar_->addWidget(map_combo_) ;
+
+    connect(map_combo_, SIGNAL(currentIndexChanged(int)), this, SLOT(baseMapChanged(int))) ;
+
+    map_combo_->setCurrentIndex(selected) ;
+
+    map_tool_bar_->addSeparator() ;
+
+
+    count = 0 ;
+    for( auto &theme: maps_.themes_) {
+        theme_combo_->addItem(theme.second.name_, theme.first) ;
+        if ( theme.first == current_theme_ ) selected = count ;
+        ++count ;
+    }
+
+    theme_combo_->setCurrentIndex(selected) ;
+
     map_tool_bar_->addWidget(new QLabel("Themes: ")) ;
 
     map_tool_bar_->addWidget(theme_combo_) ;
 
-    populateLayers() ;
+    populateStyles() ;
+
     map_tool_bar_->addSeparator() ;
     map_tool_bar_->addWidget(new QLabel("Styles: ")) ;
-    map_tool_bar_->addWidget(layer_combo_) ;
-
-    populateOverlaysMenu() ;
-    map_tool_bar_->addSeparator() ;
-
-    QPushButton* toolButton = new QPushButton("Layers:");
-    toolButton->setMenu(overlays_menu_);
-
-
-    map_tool_bar_->addWidget(toolButton) ;
+    map_tool_bar_->addWidget(style_combo_) ;
 
     addToolBar(map_tool_bar_) ;
 
+    connect(theme_combo_, SIGNAL(currentIndexChanged(int)), this, SLOT(onThemeChanged(int))) ;
+    connect(style_combo_, SIGNAL(currentIndexChanged(int)), this, SLOT(onStyleChanged(int))) ;
 }
 
 void MainWindow::initMaps()
@@ -334,25 +351,25 @@ void MainWindow::readAppSettings()
 {
     QSettings settings ;
 
-    default_map_ = (const char *)settings.value("map/name", default_map_.c_str()).toByteArray() ;
+    current_map_ = (const char *)settings.value("map/id", current_map_).toByteArray() ;
 
-    if ( default_map_.empty() )
-        default_map_ = maps_.getDefaultMap() ;
+    if ( current_map_.isEmpty() )
+        current_map_ = maps_.getDefaultMap() ;
 
-    default_theme_ = (const char *)settings.value("map/theme").toByteArray() ;
+    current_theme_ = (const char *)settings.value("map/theme").toByteArray() ;
 
-    if ( default_theme_.empty() )
-        default_theme_ = maps_.getDefaultTheme() ;
+    if ( current_theme_.isEmpty() )
+        current_theme_ = maps_.getDefaultTheme() ;
 
-    if ( default_map_.empty() || default_theme_.empty() )
+    if ( current_map_.isEmpty() || current_theme_.isEmpty() )
         QCoreApplication::quit() ;
 
-    default_layer_ = (const char *)settings.value("map/layer").toByteArray() ;
+    current_style_ = settings.value("map/style").toByteArray() ;
 
-    if ( default_layer_.empty())
-        default_layer_ = maps_.getTheme(default_theme_)->defaultLayer() ;
+    if ( current_style_.isEmpty())
+        current_style_ = maps_.getTheme(current_theme_)->defaultLayer().c_str() ;
 
-    auto base_map = maps_.getMap(default_map_) ;
+    auto base_map = maps_.getMap(current_map_) ;
 
     if ( settings.contains("map/zoom") )
         default_zoom_ = settings.value("map/zoom").toInt() ;
@@ -376,9 +393,9 @@ void MainWindow::writeAppSettings()
 
     settings.setValue("map/zoom", map_widget_->getZoom()) ;
     settings.setValue("map/center", map_widget_->getCenter()) ;
-    settings.setValue("map/name", default_map_.c_str()) ;
-    settings.setValue("map/theme", default_theme_.c_str()) ;
-    settings.setValue("map/layer", default_layer_.c_str()) ;
+    settings.setValue("map/id", current_map_) ;
+    settings.setValue("map/theme", current_theme_) ;
+    settings.setValue("map/style", current_style_) ;
 }
 
 
@@ -396,6 +413,10 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
     event->accept();
 
+    map_widget_->cleanup() ;
+
+    QThreadPool::globalInstance()->waitForDone();
+
     QClipboard *clipboard = QApplication::clipboard() ;
     clipboard->clear() ;
     QCoreApplication::quit() ;
@@ -408,30 +429,30 @@ void MainWindow::updateMenus()
 }
 
 
-void MainWindow::baseMapChanged()
+void MainWindow::baseMapChanged(int idx)
 {
-    QAction *act =  dynamic_cast<QAction *>(sender());
-
-    string id = (const char *)act->property("id").toByteArray() ;
+    QByteArray id = map_combo_->itemData(idx).toByteArray() ;
 
     std::shared_ptr<TileProvider> bmap = maps_.getMap(id) ;
 
     if ( !bmap->isAsync() ) {
         auto provider = std::dynamic_pointer_cast<MapFileTileProvider>(bmap) ;
-        auto theme = maps_.getTheme(default_theme_) ;
+        auto theme = maps_.getTheme(current_theme_) ;
         provider->setTheme(theme) ;
-        provider->setLayer(default_layer_) ;
-        layer_combo_->setEnabled(true) ;
+        provider->setThemeId(current_theme_) ;
+        provider->setStyle(current_style_) ;
+        style_combo_->setEnabled(true) ;
         theme_combo_->setEnabled(true) ;
-    } {
-        layer_combo_->setEnabled(false) ;
+    }
+    else {
+        style_combo_->setEnabled(false) ;
         theme_combo_->setEnabled(false) ;
     }
 
     map_widget_->setBasemap(bmap) ;
     map_widget_->update() ;
 
-    default_map_ = id ;
+    current_map_ = id ;
 }
 
 void MainWindow::toolChanged()
@@ -524,62 +545,46 @@ void MainWindow::displayCoords(const QPointF &coords)
 }
 
 void MainWindow::onThemeChanged(int idx) {
-    default_theme_ = (const char *)theme_combo_->itemData(idx).toByteArray() ;
-    auto m = maps_.getMap(default_map_) ;
+    current_theme_ = (const char *)theme_combo_->itemData(idx).toByteArray() ;
+    auto m = maps_.getMap(current_map_) ;
     MapFileTileProvider *mp = dynamic_cast<MapFileTileProvider *>(m.get()) ;
-    mp->setTheme(maps_.getTheme(default_theme_)) ;
+    mp->setTheme(maps_.getTheme(current_theme_)) ;
+    map_widget_->invalidateMap() ;
+    populateStyles() ;
+}
+
+void MainWindow::onStyleChanged(int idx) {
+    current_style_ = (const char *)style_combo_->itemData(idx).toByteArray() ;
+    auto m = maps_.getMap(current_map_) ;
+    MapFileTileProvider *mp = dynamic_cast<MapFileTileProvider *>(m.get()) ;
+    mp->setStyle(current_style_) ;
     map_widget_->invalidateMap() ;
 }
 
-void MainWindow::onLayerChanged(int idx) {
-    default_layer_ = (const char *)layer_combo_->itemData(idx).toByteArray() ;
-    auto m = maps_.getMap(default_map_) ;
-    MapFileTileProvider *mp = dynamic_cast<MapFileTileProvider *>(m.get()) ;
-    mp->setLayer(default_layer_) ;
-    map_widget_->invalidateMap() ;
-}
-
-void MainWindow::populateLayers()
+void MainWindow::populateStyles()
 {
-    layer_combo_->clear() ;
+    style_combo_->clear() ;
+    style_combo_->disconnect() ;
 
-    std::shared_ptr<RenderTheme> theme = maps_.getTheme(default_theme_) ;
+    std::shared_ptr<RenderTheme> theme = maps_.getTheme(current_theme_) ;
     vector<std::string> layers ;
     theme->getVisibleLayers(layers) ;
+
+    string cs((const char *)current_style_) ;
 
     int selected = -1, count = 0 ;
     for( const string &layer_id: layers ) {
         auto layer = theme->getLayer(layer_id) ;
         string name = layer->name();
-        layer_combo_->addItem(name.c_str(), layer_id.c_str()) ;
-        if ( layer_id == default_layer_ ) selected = count ;
+        style_combo_->addItem(name.c_str(), layer_id.c_str()) ;
+        if ( layer_id == cs ) selected = count ;
         ++count ;
     }
 
-    layer_combo_->setCurrentIndex(selected);
+
+    style_combo_->setCurrentIndex(selected);
 }
 
-void MainWindow::populateOverlaysMenu()
-{
-    overlays_menu_->clear() ;
-
-    std::shared_ptr<RenderTheme> theme = maps_.getTheme(default_theme_) ;
-
-    vector<string> ids ;
-    theme->getOverlays(default_layer_, ids) ;
-
-    for( const string &layer_id: ids ) {
-        auto layer = theme->getLayer(layer_id) ;
-        string name = layer->name();
-        bool is_enabled = layer->enabled_ ;
-        QAction *act = new QAction(name.c_str(), overlays_menu_) ;
-        act->setCheckable(true);
-        act->setChecked(is_enabled) ;
-        overlay_menu_actions_.append(act) ;
-    }
-
-    overlays_menu_->addActions(overlay_menu_actions_) ;
-}
 
 
 void MainWindow::onCollectionSelected(quint64 collection_id, quint64 feature_id)

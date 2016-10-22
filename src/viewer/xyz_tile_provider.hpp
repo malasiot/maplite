@@ -6,8 +6,8 @@
 class XYZTileProvider: public NetworkTileProvider
 {
 public:
-    XYZTileProvider(const QString &name, const QString &url):
-        NetworkTileProvider(name, url) {}
+    XYZTileProvider(const QByteArray &id, const QString &url):
+        NetworkTileProvider(id, url) {}
 
     QString makeRequestUrl(int x, int y, int z) ;
 

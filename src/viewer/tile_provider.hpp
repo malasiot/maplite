@@ -9,12 +9,16 @@ class TileProvider: public QObject
 {
     Q_OBJECT
 public:
-    TileProvider(const QString &name, unsigned int tileSize):
-        tile_size_(tileSize), name_(name), async_(false), start_zoom_(-1), has_start_position_(false) {}
+    TileProvider(const QByteArray &id, unsigned int tileSize):
+        tile_size_(tileSize), id_(id), async_(false), start_zoom_(-1), has_start_position_(false) {}
 
     virtual QImage getTile(int x, int y, int z) = 0 ;
 
-    QString getKey(int x, int y, int z)  ;
+    QByteArray id() const {  return id_ ; }
+
+    void setName(const QString &name) {
+        name_ = name ;
+    }
 
     QString name() const { return name_ ; }
     QString attribution() const { return attribution_ ; }
@@ -22,7 +26,7 @@ public:
     unsigned int tileSize() const { return tile_size_ ; }
     bool isAsync() const { return async_ ; }
 
-    void coordsFromKey(const QString &key, int &x, int &y, int &z) ;
+    void coordsFromTileKey(const QByteArray &key, int &x, int &y, int &z) ;
 
     void setDescription(const QString &desc) { description_ = desc ; }
     void setAttribution(const QString &attr) { attribution_ = attr ; }
@@ -38,10 +42,13 @@ public:
         has_start_position_ = true ;
     }
 
+    virtual QByteArray key() const { return id_ ; }
+    virtual QByteArray tileKey(int x, int y, int z) const ;
 protected:
 
     unsigned int tile_size_, min_zoom_, max_zoom_ ;
     QString name_ ;
+    QByteArray id_ ;
     QString attribution_, description_ ;
     bool async_ ;
     QPointF start_position_ ;
@@ -50,7 +57,7 @@ protected:
 
 Q_SIGNALS:
 
-    void tileReady(QString, QImage) ;
+    void tileReady(QByteArray, QImage) ;
 
 } ;
 

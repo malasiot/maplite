@@ -2,8 +2,8 @@
 
 using namespace std ;
 
-MapFileTileProvider::MapFileTileProvider(const QString &name, const std::shared_ptr<MapFileReader> &reader):
-    TileProvider(name, 256), reader_(reader)
+MapFileTileProvider::MapFileTileProvider(const QByteArray &id, const std::shared_ptr<MapFileReader> &reader):
+    TileProvider(id, 256), reader_(reader)
 {
     const MapFileInfo &info = reader_->getMapFileInfo() ;
     if ( info.flags_ & 0x40 ) setStartPosition(LatLon(info.start_lat_, info.start_lon_)) ;
@@ -23,7 +23,7 @@ QImage MapFileTileProvider::getTile(int x, int y, int z)
 
     ImageBuffer buf(256, 256) ;
 
-    renderer_->render(key, buf, tile, layer_ ) ;
+    renderer_->render(key, buf, tile, (const char *)style_ ) ;
 
     string data ;
     buf.saveToPNGBuffer(data);

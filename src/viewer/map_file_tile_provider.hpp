@@ -14,27 +14,32 @@ class MapFileTileProvider: public TileProvider
 {
 public:
 
-    MapFileTileProvider(const QString &name, const std::shared_ptr<MapFileReader> &reader) ;
+    MapFileTileProvider(const QByteArray &id, const std::shared_ptr<MapFileReader> &reader) ;
 
     void setTheme(const std::shared_ptr<RenderTheme> &theme) {
         theme_ = theme ;
         renderer_->setTheme(theme) ;
     }
 
-    void setLayer(const std::string &layer) {
-        layer_ = layer ;
+    void setThemeId(const QByteArray &theme_id) {
+        theme_id_ = theme_id ;
+    }
+
+    void setStyle(const QByteArray &style) {
+        style_ = style ;
     }
 
     QImage getTile(int x, int y, int z) ;
     QString name() const ;
 
+    QByteArray key() const { return id_ + "_" + theme_id_ + " " + style_ ; }
 
 private:
 
     std::shared_ptr<MapFileReader> reader_ ;
     std::shared_ptr<Renderer> renderer_ ;
     std::shared_ptr<RenderTheme> theme_ ;
-    std::string layer_ ;
+    QByteArray style_, theme_id_ ;
 
 };
 

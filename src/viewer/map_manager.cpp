@@ -4,85 +4,87 @@
 #include "map_file_tile_provider.hpp"
 #include "xyz_tile_provider.hpp"
 
-#include <boost/filesystem.hpp>
+#include <QDomDocument>
+#include <QFileInfo>
+#include <QDir>
+#include <QTextStream>
 
 using namespace std ;
-namespace fs = boost::filesystem ;
 
-static string get_absolute_path(const fs::path &folder, const string orig_path) {
+static QString get_absolute_path(const QDir &folder, const QString orig_path) {
 
-    if ( orig_path.empty() ) return orig_path ;
+    if ( orig_path.isEmpty() ) return orig_path ;
 
-    fs::path full_path ;
+    QString full_path ;
 
-    if ( fs::path(orig_path).is_relative() ) {
-        full_path = fs::canonical(orig_path, folder) ;
+    if ( QFileInfo(orig_path).isRelative() ) {
+        full_path = folder.absoluteFilePath(orig_path) ;
     }
     else full_path = orig_path ;
 
-    if ( fs::exists(full_path) ) return full_path.native() ;
-    else return string() ;
+    if ( QFileInfo(full_path).exists() ) return full_path ;
+    else return QString() ;
 }
 
 
-bool MapManager::parseConfig(const std::string &cfg_path) {
+bool MapManager::parseConfig(const QString &cfg_path) {
 
-    fs::path rp(cfg_path) ;
+    if ( !QFileInfo(cfg_path).exists() ) return false ;
 
-    if ( !fs::exists(rp) ) return false ;
+    QDomDocument doc ;
+    QFile file(cfg_path);
 
-    string cfg_file = rp.native() ;
-
-    pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_file(cfg_file.c_str());
-
-    if ( !result ) {
-        LOG_WARN_STREAM("XML [" << cfg_file << "] parsed with errors: " << result.description() ) ;
+    if (!file.open(QIODevice::ReadOnly)) return false ;
+    QString err_msg ;
+    if (!doc.setContent(&file, false, &err_msg)) {
+        file.close();
         return false ;
     }
+    file.close();
 
-    pugi::xml_node root = doc.child("config") ;
+    QDir dir(QFileInfo(cfg_path).absoluteDir()) ;
 
-    if ( !root ) return false ;
+    QDomElement root = doc.documentElement() ;
+    if ( root.tagName() != "config" ) return false ;
 
-    for( pugi::xml_node p: root.children("themes") ) {
+    for( QDomElement p = root.firstChildElement("themes") ; !p.isNull() ; p = p.nextSiblingElement("themes") ) {
 
-        for( pugi::xml_node q: p.children("theme") ) {
+        for( QDomElement q = p.firstChildElement("theme") ; !q.isNull() ; q = q.nextSiblingElement("theme") ) {
 
-            string id = q.attribute("id").as_string() ;
-            string src = q.attribute("src").as_string() ;
-            string name = q.attribute("name").as_string() ;
-            bool is_default = q.attribute("default").as_bool() ;
-            string resource_dir = q.attribute("resources").as_string() ;
-            string attribution, description ;
+            QByteArray id = q.attribute("id").toAscii() ;
+            QString src = q.attribute("src") ;
+            QString name = q.attribute("name") ;
+            bool is_default = q.attribute("default") == "true" ;
+            QString resource_dir = q.attribute("resources") ;
+            QString attribution, description ;
 
-            if ( id.empty() || themes_.count(id) ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: id attribute missing or non-unique in theme element" ) ;
+            if ( id.isEmpty() || themes_.count(id) ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: id attribute missing or non-unique in theme element" ) ;
                 continue ;
             }
 
-            if ( name.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: name attribute missing in theme element" ) ;
+            if ( name.isEmpty() ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: name attribute missing in theme element" ) ;
                 continue ;
             }
 
-            pugi::xml_node e = q.child("description") ;
-            if ( e ) description = e.text().as_string() ;
+            QDomElement e = q.firstChildElement("description") ;
+            if ( !e.isNull() ) description = e.text() ;
 
-            e = q.child("attribution") ;
-            if ( e ) attribution = e.text().as_string() ;
+            e = q.firstChildElement("attribution") ;
+            if ( !e.isNull() ) attribution = e.text() ;
 
-            src = get_absolute_path(rp.parent_path(), src) ;
-            resource_dir = get_absolute_path(rp.parent_path(), resource_dir) ;
+            src = get_absolute_path(dir, src) ;
+            resource_dir = get_absolute_path(dir, resource_dir) ;
 
-            if ( src.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: src attribute missing or path not exists while parsing theme element" ) ;
+            if ( src.isEmpty() ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: src attribute missing or path not exists while parsing theme element" ) ;
                 continue ;
             }
 
             std::shared_ptr<RenderTheme> theme(new RenderTheme()) ;
 
-            if ( !theme->read(src, resource_dir) ) continue ;
+            if ( !theme->read((const char *)src.toUtf8(), (const char *)resource_dir.toUtf8()) ) continue ;
 
             ThemeInfo info ;
             info.theme_ = theme ;
@@ -91,58 +93,62 @@ bool MapManager::parseConfig(const std::string &cfg_path) {
             info.name_ = name ;
             info.src_ = src ;
 
-            if ( default_theme_id_.empty() || is_default ) default_theme_id_ = id ;
+            if ( default_theme_id_.isEmpty() || is_default ) default_theme_id_ = id ;
 
             themes_.emplace(id, info) ;
         }
     }
+    for( QDomElement p = root.firstChildElement("maps") ; !p.isNull() ; p = p.nextSiblingElement("maps") ) {
 
-    for( pugi::xml_node p: root.children("maps") ) {
+        for( QDomElement q = p.firstChildElement("offline") ; !q.isNull() ; q = q.nextSiblingElement("offline") ) {
 
-        for( pugi::xml_node q: p.children("offline") ) {
 
-            string id = q.attribute("id").as_string() ;
-            string src = q.attribute("src").as_string() ;
-            string name = q.attribute("name").as_string() ;
-            bool is_default = q.attribute("default").as_bool() ;
-            string attribution, description ;
+            QByteArray id = q.attribute("id").toAscii() ;
+            QString src = q.attribute("src") ;
+            QString name = q.attribute("name") ;
+            bool is_default = q.attribute("default") == "true" ;
+            QString attribution, description ;
             int start_zoom = -1 ;
             LatLon start_position ;
             bool has_start_position = false ;
 
-            if ( id.empty() || maps_.count(id) ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: id attribute missing or non-unique in map element" ) ;
+            if ( id.isEmpty() || maps_.count(id) ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: id attribute missing or non-unique in map element" ) ;
                 continue ;
             }
 
-            if ( name.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: name attribute missing in map element" ) ;
+            if ( name.isEmpty() ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: name attribute missing in map element" ) ;
                 continue ;
             }
 
-            src = get_absolute_path(rp.parent_path(), src) ;
+            src = get_absolute_path(dir, src) ;
 
-            if ( src.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: src attribute missing or path not exists while parsing map element" ) ;
+            if ( src.isEmpty() ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: src attribute missing or path not exists while parsing map element" ) ;
                 continue ;
             }
 
-            pugi::xml_node e = q.child("description") ;
-            if ( e ) description = e.text().as_string() ;
+            QDomElement e = q.firstChildElement("description") ;
+            if ( !e.isNull() ) description = e.text() ;
 
-            e = q.child("attribution") ;
-            if ( e ) attribution = e.text().as_string() ;
+            e = q.firstChildElement("attribution") ;
+            if ( !e.isNull() ) attribution = e.text() ;
 
-            e = q.child("start_zoom") ;
-            if ( e ) start_zoom = e.text().as_int(-1) ;
+            bool ok ;
+            e = q.firstChildElement("start_zoom") ;
+            if ( !e.isNull() ) start_zoom = e.text().toInt(&ok) ;
+            if ( !ok ) start_zoom = -1 ;
 
-            e = q.child("start_position") ;
-            if ( e ) {
-                string txt = e.text().as_string() ;
-                istringstream strm(txt) ;
+            e = q.firstChildElement("start_position") ;
+
+            if ( !e.isNull() ) {
+                QString txt = e.text() ;
+                QTextStream strm(&txt) ;
+
                 float lat, lon ;
                 strm >> lat >> lon ;
-                if ( strm ) {
+                if ( strm.status() == 0 ) {
                     start_position = LatLon(lat, lon) ;
                     has_start_position = true ;
                 }
@@ -151,16 +157,17 @@ bool MapManager::parseConfig(const std::string &cfg_path) {
             std::shared_ptr<MapFileReader> reader(new MapFileReader()) ;
 
             try {
-                reader->open(src) ;
+                reader->open((const char *)src.toUtf8()) ;
 
-                std::shared_ptr<MapFileTileProvider> provider(new MapFileTileProvider(QString::fromUtf8(name.c_str()), reader)) ;
+                std::shared_ptr<MapFileTileProvider> provider(new MapFileTileProvider(id, reader)) ;
 
-                if ( !description.empty() ) provider->setDescription(QString::fromUtf8(description.c_str()));
-                if ( !attribution.empty() ) provider->setAttribution(QString::fromUtf8(attribution.c_str()));
+                provider->setName(name) ;
+                if ( !description.isEmpty() ) provider->setDescription(description);
+                if ( !attribution.isEmpty() ) provider->setAttribution(attribution);
                 if ( has_start_position ) provider->setStartPosition(start_position) ;
                 if ( start_zoom >= 0 ) provider->setStartZoom(start_zoom) ;
 
-                if ( default_map_id_.empty() || is_default ) default_map_id_ = id ;
+                if ( default_map_id_.isEmpty() || is_default ) default_map_id_ = id ;
 
                 maps_.emplace(id, provider) ;
             }
@@ -170,74 +177,85 @@ bool MapManager::parseConfig(const std::string &cfg_path) {
             }
         }
 
-        for( pugi::xml_node q: p.children("online") ) {
+        for( QDomElement q = p.firstChildElement("online") ; !q.isNull() ; q = q.nextSiblingElement("online") ) {
 
-            string id = q.attribute("id").as_string() ;
-            string url = q.attribute("url").as_string() ;
-            string name = q.attribute("name").as_string() ;
-            bool is_default = q.attribute("default").as_bool() ;
-            string image_format = q.attribute("format").as_string("png") ;
 
-            string attribution, description ;
-            int start_zoom = -1, minz, maxz ;
+            QByteArray id = q.attribute("id").toAscii() ;
+            QString url = q.attribute("url") ;
+            QString name = q.attribute("name") ;
+            bool is_default = q.attribute("default") == "true" ;
+            QByteArray image_format = q.attribute("format", "png").toAscii() ;
+
+            QString attribution, description ;
+            int start_zoom = -1, minz = 0, maxz = 20 ;
             LatLon start_position ;
             bool has_start_position = false ;
 
-            if ( id.empty() || maps_.count(id) ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: id attribute missing or non-unique in map element" ) ;
+            if ( id.isEmpty() || maps_.count(id) ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: id attribute missing or non-unique in map element" ) ;
                 continue ;
             }
 
-            if ( name.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: name attribute missing in map element" ) ;
+            if ( name.isEmpty() ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: name attribute missing in map element" ) ;
                 continue ;
             }
 
-            if ( url.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: url attribute missing or path not exists while parsing map element" ) ;
+            if ( url.isEmpty() ) {
+                LOG_WARN_STREAM("XML [" << (const char *)cfg_path.toUtf8() << "] error: url attribute missing or path not exists while parsing map element" ) ;
                 continue ;
             }
 
-            pugi::xml_node e = q.child("description") ;
-            if ( e ) description = e.text().as_string() ;
+            QDomElement e = q.firstChildElement("description") ;
+            if ( !e.isNull() ) description = e.text() ;
 
-            e = q.child("attribution") ;
-            if ( e ) attribution = e.text().as_string() ;
+            e = q.firstChildElement("attribution") ;
+            if ( !e.isNull() ) attribution = e.text() ;
 
-            e = q.child("start_zoom") ;
-            if ( e ) start_zoom = e.text().as_int(-1) ;
+            bool ok ;
+            e = q.firstChildElement("start_zoom") ;
+            if ( !e.isNull() ) start_zoom = e.text().toInt(&ok) ;
+            if ( !ok ) start_zoom = -1 ;
 
-            e = q.child("minz") ;
-            if ( e ) minz = e.text().as_int(0) ;
+            e = q.firstChildElement("start_position") ;
 
-            e = q.child("maxz") ;
-            if ( e ) maxz = e.text().as_int(20) ;
+            if ( !e.isNull() ) {
+                QString txt = e.text() ;
+                QTextStream strm(&txt) ;
 
-            e = q.child("start_position") ;
-            if ( e ) {
-                string txt = e.text().as_string() ;
-                istringstream strm(txt) ;
                 float lat, lon ;
                 strm >> lat >> lon ;
-                if ( strm ) {
+                if ( strm.status() == 0 ) {
                     start_position = LatLon(lat, lon) ;
                     has_start_position = true ;
                 }
             }
 
-            std::shared_ptr<XYZTileProvider> provider(new XYZTileProvider(QString::fromUtf8(name.c_str()), QString::fromUtf8(url.c_str()))) ;
+            e = q.firstChildElement("minz") ;
+            if ( !e.isNull() ) minz = e.text().toInt(&ok) ;
+            if ( !ok ) minz = 0 ;
 
-            if ( !description.empty() ) provider->setDescription(QString::fromUtf8(description.c_str()));
-            if ( !attribution.empty() ) provider->setAttribution(QString::fromUtf8(attribution.c_str()));
+            e = q.firstChildElement("maxz") ;
+            if ( !e.isNull() ) maxz = e.text().toInt(&ok) ;
+            if ( !ok ) maxz = 20 ;
+
+
+            std::shared_ptr<XYZTileProvider> provider(new XYZTileProvider(id, url)) ;
+
+            provider->setName(name) ;
+            if ( !description.isEmpty() ) provider->setDescription(description);
+            if ( !attribution.isEmpty() ) provider->setAttribution(attribution);
 
             provider->setZoomRange(minz, maxz) ;
-            provider->setTileFormat(image_format.c_str()) ;
+            provider->setTileFormat(image_format) ;
 
-            if ( default_map_id_.empty() || is_default ) default_map_id_ = id ;
+            if ( default_map_id_.isEmpty() || is_default ) default_map_id_ = id ;
 
             maps_.emplace(id, provider) ;
 
         }
+
+
     }
 
     return true ;

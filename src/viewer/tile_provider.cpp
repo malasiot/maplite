@@ -2,14 +2,20 @@
 
 #include <QDebug>
 
-QString TileProvider::getKey(int x, int y, int z)
+QByteArray TileProvider::tileKey(int x, int y, int z) const
 {
-    return name_ + QString("/%1/%2/%3").arg(x).arg(y).arg(z) ;
+    QByteArray ba ;
+
+    QTextStream strm(&ba, QIODevice::WriteOnly) ;
+    strm << key() << "/" << x << "/" << y << "/" << z ;
+    strm.flush() ;
+
+    return ba ;
 }
 
-void TileProvider::coordsFromKey(const QString &key, int &x, int &y, int &z)
+void TileProvider::coordsFromTileKey(const QByteArray &key, int &x, int &y, int &z)
 {
-    QStringList tokens = key.split('/') ;
+    QList<QByteArray> tokens = key.split('/') ;
 
     x = tokens.at(1).toInt() ;
     y = tokens.at(2).toInt() ;

@@ -6,6 +6,7 @@
 #include "theme.hpp"
 
 #include <QString>
+#include <QSettings>
 
 class MapManager {
 
@@ -13,41 +14,53 @@ public:
 
     MapManager() = default ;
 
-    bool parseConfig(const std::string &path) ;
+    bool parseConfig(const QString &path) ;
 
-    bool hasMap(const std::string id) const { return maps_.count(id) ; }
+    bool hasMap(const QByteArray &id) const { return maps_.count(id) ; }
 
-    std::shared_ptr<TileProvider> getMap(const std::string &id) const {
+    std::shared_ptr<TileProvider> getMap(const QByteArray &id) const {
         auto it = maps_.find(id) ;
         if ( it != maps_.end() ) return it->second ;
         else return nullptr ;
     }
 
-    std::shared_ptr<RenderTheme> getTheme(const std::string &id) const {
+    std::shared_ptr<RenderTheme> getTheme(const QByteArray &id) const {
         auto it = themes_.find(id) ;
         if ( it != themes_.end() ) return it->second.theme_ ;
         else return nullptr ;
     }
 
-    std::string getDefaultMap() const {
+    QByteArray getDefaultMap() const {
         return default_map_id_ ;
     }
 
-    std::string getDefaultTheme() const {
+    QByteArray getDefaultTheme() const {
         return default_theme_id_ ;
     }
 
     struct ThemeInfo {
-        std::string description_ ;
-        std::string attribution_ ;
-        std::string name_ ;
-        std::string src_ ;
+        QString description_ ;
+        QString attribution_ ;
+        QString name_ ;
+        QString src_ ;
         std::shared_ptr<RenderTheme> theme_ ;
     };
 
-    std::map<std::string, std::shared_ptr<TileProvider> > maps_ ;
-    std::map<std::string, ThemeInfo> themes_ ;
-    std::string default_map_id_, default_theme_id_ ;
+    struct ThemeBinding {
+
+        void read(QSettings &sts) ;
+        void write(QSettings &sts) ;
+
+        QByteArray theme_id_ ;
+        QByteArray style_id_ ;
+        QList<QByteArray> layers_ ;
+    };
+
+    std::map<QByteArray, std::shared_ptr<TileProvider> > maps_ ;
+    std::map<QByteArray, ThemeInfo> themes_ ;
+    std::map<QByteArray, ThemeBinding> bindings_ ;
+
+    QByteArray default_map_id_, default_theme_id_ ;
 };
 
 

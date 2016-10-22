@@ -1,12 +1,21 @@
 #ifndef __TILE_KEY_HPP__
 #define __TILE_KEY_HPP__
 
+#include <cstdint>
+#include <sstream>
+
 struct TileKey {
 
     TileKey(uint32_t x, uint32_t y, uint8_t z, bool is_top_left = false):
         x_(x), y_(is_top_left ? (1 << z) - 1 -y : y), z_(z) {}
     
     TileKey toGoogle() const { return TileKey(x_, y_, z_, true) ; }
+
+    std::string toString() const {
+        std::ostringstream strm ;
+        strm << (int)z_ << '/' << x_ << '/' << y_ ;
+        return strm.str() ;
+    }
     
     uint32_t x() const { return x_ ; }
     uint32_t y() const { return y_ ; }

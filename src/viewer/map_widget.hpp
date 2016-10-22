@@ -14,6 +14,7 @@
 #include "tile_provider.hpp"
 #include "map_overlay.hpp"
 #include "popup.hpp"
+#include "tile_cache.hpp"
 
 #include <memory>
 
@@ -87,6 +88,8 @@ public:
 
     void invalidateMap() ;
 
+    void cleanup() ;
+
 public Q_SLOTS:
     void zoomToRect(const QRectF &rect) ;
     void invalidateOverlay() ;
@@ -145,11 +148,12 @@ protected:
     quint64 current_collection_ ;
     QUndoStack *undo_stack_ ;
     Popup *popup_ ;
+    PersistentTileCache persistent_cache_ ;
 
 
 public Q_SLOTS:
 
-    void onFetchFinished(const QString &, const QImage &img) ;
+    void onFetchFinished(const QByteArray &, const QImage &img) ;
     void selectOverlays(const QVector<quint64> &ids);
 
 Q_SIGNALS:
@@ -167,7 +171,7 @@ public:
     void run() ;
 
 Q_SIGNALS:
-    void tileFetchFinished(QString, QImage) ;
+    void tileFetchFinished(QByteArray, QImage) ;
 
 private:
 

@@ -45,6 +45,7 @@ SET(MAPLITE_VIEWER_SOURCES
 	map_manager.cpp
 	popup.cpp
 	overlay_import.cpp
+    tile_cache.cpp
 
     ${SRC_ROOT}/io/mapsforge_map_reader.cpp
     ${SRC_ROOT}/io/serializer.cpp
@@ -53,14 +54,14 @@ SET(MAPLITE_VIEWER_SOURCES
     ${SRC_ROOT}/util/database.cpp
     ${SRC_ROOT}/util/zfstream.cpp
     ${SRC_ROOT}/util/base64.cpp
-	${SRC_ROOT}/util/logger.cpp
+    ${SRC_ROOT}/util/logger.cpp
 
-	overlays/gps_overlays.cpp
+    overlays/gps_overlays.cpp
 
-	io/gpx_reader.cpp
-	io/kml_reader.cpp
-	io/minizip/unzip.c
-	io/minizip/ioapi.c
+    io/gpx_reader.cpp
+    io/kml_reader.cpp
+    io/minizip/unzip.c
+    io/minizip/ioapi.c
 )
 
 SET(MAPLITE_VIEWER_HEADERS
@@ -79,12 +80,13 @@ SET(MAPLITE_VIEWER_HEADERS
     data_import.hpp
     map_manager.hpp
     popup.hpp
-	overlay_import.hpp
+    overlay_import.hpp
+    tile_cache.hpp
 
-	overlays/gps_overlays.hpp
+    overlays/gps_overlays.hpp
 
-	io/gpx_reader.hpp
-	io/kml_reader.hpp
+    io/gpx_reader.hpp
+    io/kml_reader.hpp
 )
 
 SET(MAPLITE_VIEWER_FORMS )

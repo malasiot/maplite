@@ -10,7 +10,7 @@ class NetworkTileProvider: public TileProvider
 {
     Q_OBJECT
 public:
-    NetworkTileProvider(const QString &name, const QString &url_template_) ;
+    NetworkTileProvider(const QByteArray &id, const QString &url_template_) ;
 
     QImage getTile(int x, int y, int z) ;
 
