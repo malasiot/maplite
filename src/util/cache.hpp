@@ -29,6 +29,26 @@ public:
         assert( capacity_ !=0 );
     }
 
+    void clear() {
+        boost::mutex::scoped_lock lock(mutex_);
+        key_to_value_.clear() ;
+        key_tracker_.clear() ;
+    }
+
+    void remove(const key_type &key) {
+        boost::mutex::scoped_lock lock(mutex_);
+
+        // Identify least recently used key
+        const typename key_to_value_type::iterator it  = key_to_value_.find(key);
+        if ( it == key_to_value_.end() ) return ;
+
+        size_ -= std::get<2>(it->second) ;
+
+        // Erase both elements to completely purge record
+        key_to_value_.erase(it);
+        key_tracker_.erase(std::get<1>(it->second)) ;
+    }
+
     // Obtain value of the cached function for k
     // if not exists then it calls the loader function that should load data with the given key and return also data size
 
@@ -58,7 +78,6 @@ public:
     // Record a fresh key-value pair in the cache
     value_type insert(const key_type& k,const value_type& v, uint64_t cost) {
 
-
         assert( key_to_value_.find(k) == key_to_value_.end() );
 
         uint64_t sz = cost ;
@@ -77,6 +96,11 @@ public:
 
         return std::get<0>(key_to_value_[k]) ;
 
+    }
+
+    bool contains(const key_type& k) {
+        boost::mutex::scoped_lock lock(mutex_);
+        return key_to_value_.count(k) != 0 ;
     }
 
 private:

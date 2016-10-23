@@ -3,7 +3,7 @@
 using namespace std ;
 
 MapFileTileProvider::MapFileTileProvider(const QByteArray &id, const std::shared_ptr<MapFileReader> &reader):
-    TileProvider(id, 256), reader_(reader)
+    TileProvider(id, 256), reader_(reader), file_time_(0)
 {
     const MapFileInfo &info = reader_->getMapFileInfo() ;
     if ( info.flags_ & 0x40 ) setStartPosition(LatLon(info.start_lat_, info.start_lon_)) ;

@@ -13,12 +13,13 @@
 #include <float.h>
 
 #include "database.hpp"
+#include "tms.hpp"
 
 using namespace SpatialIndex ;
 using namespace std ;
 
-const size_t MapOverlayManager::index_page_size_ = 4096 ;
-const size_t MapOverlayManager::index_buffer_capacity_ = 256 ;
+const size_t MapOverlayManager::index_page_size_ = 64 * 1024 ;
+const size_t MapOverlayManager::index_buffer_capacity_ = 16 * 1024 * 1024 ;
 
 bool MapOverlayManager::open(const QString &storage)
 {
@@ -102,6 +103,7 @@ public:
 
 MapOverlayPtr MapOverlayManager::findNearest(const QByteArray &searchType, const QPoint &click, MapWidget *view, double thresh)
 {
+
     QVector<quint64> ids ;
 
     QueryVisitor v(ids) ;
@@ -130,8 +132,6 @@ MapOverlayPtr MapOverlayManager::findNearest(const QByteArray &searchType, const
 
         int seg ;
         double dist = overlay->distanceToPt(click, seg, view) ;
-
-   //     qDebug() << overlay->id() << dist ;
 
         if ( dist < min_dist )
         {
@@ -358,7 +358,6 @@ void MapOverlayManager::query(QVector<quint64> &ovr, QVector<QRectF> &boxes)
         index_->intersectsWithQuery(r, vis);
 
     }
-
 }
 
 bool MapOverlayManager::addNewFolder(const QString &name, quint64 parent_id, QString &name_unique, quint64 &item_id)

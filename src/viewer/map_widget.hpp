@@ -14,12 +14,15 @@
 #include "tile_provider.hpp"
 #include "map_overlay.hpp"
 #include "popup.hpp"
+#include "cache.hpp"
 #include "tile_cache.hpp"
 
 #include <memory>
 
 class MapTool ;
 class MapOverlayManager ;
+
+typedef Cache<uint64_t, MapOverlayPtr> OverlayCache ;
 
 class MapWidget: public QWidget {
     Q_OBJECT
@@ -141,7 +144,7 @@ protected:
     QDir cache_dir_ ;
     QImage base_map_image_ ;
     MapTool *current_tool_ ;
-    QCache<quint64, MapOverlay> overlay_cache_ ; // cached overlays
+    OverlayCache overlay_cache_ ; // cached overlays
     QSharedPointer<MapOverlayManager> overlay_manager_ ;
     MapOverlayPtr current_overlay_ ;
     QSet<quint64> selected_ ;

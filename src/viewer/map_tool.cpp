@@ -47,7 +47,7 @@ void PanTool::mouseMoved(QMouseEvent *evnt)
 
         start_point_ = current_ ;
     }
-    else {
+    else  if ( view_->getZoom() > 10 ){
 
         QPoint p = view_->positionToDisplay(current_) ;
 
@@ -65,7 +65,7 @@ void PanTool::mouseMoved(QMouseEvent *evnt)
             view_->setCursor(QCursor(Qt::OpenHandCursor)) ;
         }
 
-        view_->update() ;
+       view_->update() ;
     }
 
 }

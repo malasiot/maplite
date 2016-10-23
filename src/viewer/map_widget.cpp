@@ -4,6 +4,7 @@
 #include "map_overlay_manager.hpp"
 #include "main_window.hpp"
 #include "tile_cache.hpp"
+#include "map_file_tile_provider.hpp"
 
 #include <QDebug>
 #include <QPainter>
@@ -491,38 +492,23 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
 
         if ( current_overlay_ && current_overlay_->id() == id ) continue ;
 
-        if ( overlay_cache_.contains(id) )
-        {
-            obj = MapOverlayPtr(overlay_cache_.object(id)) ;
-//            qDebug() << "loading cached object" << obj->id() << obj->name() ;
-        }
-        else  {
-            obj = overlay_manager_->load(id) ;
-//            qDebug() << "loading stored object" << obj->id() << obj->name() ;
-        }
+        overlay_cache_.fetch(id,
+           [this] ( const uint64_t &id, MapOverlayPtr &val) ->uint64_t {
+            val = overlay_manager_->load(id) ;
+            return val->cost() ;
+        }, obj) ;
 
-        if ( obj == 0 )
-            continue ;
+
+        if ( obj == nullptr ) continue ;
         if ( !obj->isVisible() ) continue ;
 
         obj->setSelected(selected_.contains(id)) ;
-
 
         features_to_draw.append(obj) ;
 
         obj->draw(painter, this) ;
     }
 
-    // after we have drawn add them to the cache
-    // TODO: Crashes
-/*
-    Q_FOREACH( MapFeature *o, features_to_draw )
-    {
-       //  if ( !overlay_cache_.contains(o->id())) ;
-            overlay_cache_.insert(o->id(), o, o->cost()) ;
-
-    }
-*/
     // draw currently active object if any
 
     if ( current_overlay_ )
@@ -669,7 +655,7 @@ QImage MapWidget::fetchSavedTile(int x, int y, int z)
 {
     if ( cache_tiles_ )
     {
-        string bytes = persistent_cache_.load((const char *)base_map_->tileKey(x, y, z), time(0)) ;
+        string bytes = persistent_cache_.load((const char *)base_map_->tileKey(x, y, z), base_map_->creationTime()) ;
 
         if ( bytes.empty() ) return QImage() ;
 
@@ -693,8 +679,7 @@ void MapWidget::saveTile(const QImage &tile, int x, int y, int z)
 
         string bytes(ba.data(), ba.size()) ;
 
-        TileKey tk(x, y, z, true) ;
-        persistent_cache_.save((const char *)base_map_->tileKey(x, y, z), bytes, time(0)) ;
+        persistent_cache_.save((const char *)base_map_->tileKey(x, y, z), bytes, base_map_->creationTime()) ;
     }
 
 }

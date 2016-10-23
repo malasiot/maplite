@@ -44,6 +44,8 @@ public:
 
     virtual QByteArray key() const { return id_ ; }
     virtual QByteArray tileKey(int x, int y, int z) const ;
+    virtual time_t creationTime() const { return 0 ; }
+
 protected:
 
     unsigned int tile_size_, min_zoom_, max_zoom_ ;

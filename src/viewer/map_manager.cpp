@@ -8,6 +8,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QTextStream>
+#include <QDateTime>
 
 using namespace std ;
 
@@ -159,6 +160,8 @@ bool MapManager::parseConfig(const QString &cfg_path) {
             try {
                 reader->open((const char *)src.toUtf8()) ;
 
+
+
                 std::shared_ptr<MapFileTileProvider> provider(new MapFileTileProvider(id, reader)) ;
 
                 provider->setName(name) ;
@@ -166,6 +169,7 @@ bool MapManager::parseConfig(const QString &cfg_path) {
                 if ( !attribution.isEmpty() ) provider->setAttribution(attribution);
                 if ( has_start_position ) provider->setStartPosition(start_position) ;
                 if ( start_zoom >= 0 ) provider->setStartZoom(start_zoom) ;
+                provider->setCreationTime(QFileInfo(src).created().toTime_t()) ;
 
                 if ( default_map_id_.isEmpty() || is_default ) default_map_id_ = id ;
 

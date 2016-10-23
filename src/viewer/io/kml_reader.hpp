@@ -15,10 +15,11 @@ public:
 
 private:
 
-    CollectionTreeNode *importKml(QIODevice *data, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx) ;
+    CollectionTreeNode *importKml(QIODevice *data, const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx) ;
     CollectionTreeNode *importKmz(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx) ;
 
     static KMLReader instance_ ;
+    QString default_name_ ;
 };
 
 #endif

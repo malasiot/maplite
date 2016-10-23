@@ -29,10 +29,14 @@ public:
         style_ = style ;
     }
 
+    void setCreationTime(time_t t) { file_time_ = t ; }
+
     QImage getTile(int x, int y, int z) ;
     QString name() const ;
 
     QByteArray key() const { return id_ + "_" + theme_id_ + " " + style_ ; }
+
+    time_t creationTime() const { return file_time_ ; }
 
 private:
 
@@ -40,6 +44,7 @@ private:
     std::shared_ptr<Renderer> renderer_ ;
     std::shared_ptr<RenderTheme> theme_ ;
     QByteArray style_, theme_id_ ;
+    time_t file_time_ ;
 
 };
 

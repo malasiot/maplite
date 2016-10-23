@@ -22,7 +22,7 @@ bool PersistentTileCache::open(const string &root_folder)
 
     bool create_tables = !fs::exists(db_path) ;
 
-    db_.reset(new SQLite::Database(db_path.native())) ;
+    db_.reset(new SQLite::Database(db_path.native(), 20)) ;
 
     try {
         if ( create_tables ) { // create database for the first time
@@ -131,7 +131,7 @@ string PersistentTileCache::load(const std::string &key, std::time_t t)
         SQLite::Session session(db_.get()) ;
         SQLite::Connection &con = session.handle() ;
 
-        SQLite::Query cmd(con, "SELECT content FROM tiles WHERE key=? AND created < ? AND state = 0") ;
+        SQLite::Query cmd(con, "SELECT content FROM tiles WHERE key=? AND created <= ? AND state = 0") ;
 
         cmd.bind(1, key) ;
         cmd.bind(2, (int)t) ;

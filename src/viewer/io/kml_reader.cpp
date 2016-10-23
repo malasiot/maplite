@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QBuffer>
 #include <QStack>
+#include <QFileInfo>
 
 #include "minizip/unzip.h"
 
@@ -98,7 +99,7 @@ CollectionTreeNode *KMLReader::importKmz(const QString &fileName, quint64 folder
         if ( !data.isEmpty() )
         {
             QBuffer buffer(&data) ;
-            res = importKml(&buffer, folder_id, fidx) ;
+            res = importKml(&buffer, QFileInfo(fileName).baseName(), folder_id, fidx) ;
         }
     }
 
@@ -112,7 +113,7 @@ CollectionTreeNode *KMLReader::import(const QString &fileName, quint64 folder_id
     QFile file(fileName) ;
     if ( !file.open(QIODevice::ReadOnly) ) return 0 ;
 
-    return importKml(&file, folder_id, fidx) ;
+    return importKml(&file, QFileInfo(fileName).baseName(), folder_id, fidx) ;
 }
 
 struct KmlPlacemark {
@@ -328,11 +329,12 @@ bool KmlHandler::fatalError(const QXmlParseException &exception)
 }
 
 
-static void createFoldersRecursive(CollectionTreeNode *node, quint64 parent_id, QSharedPointer<MapOverlayManager> fidx)
+static void createFoldersRecursive(const QString &defaultName, CollectionTreeNode *node, quint64 parent_id, QSharedPointer<MapOverlayManager> fidx)
 {
     QString unique_name ;
     quint64 item_id ;
 
+    if ( node->name_.isEmpty() ) node->name_ = defaultName ;
     fidx->addNewFolder(node->name_, parent_id, unique_name, item_id) ;
 
     node->name_ = unique_name ;
@@ -358,17 +360,17 @@ static void createFoldersRecursive(CollectionTreeNode *node, quint64 parent_id, 
     }
 
     Q_FOREACH(CollectionTreeNode *child, node->children_)
-        createFoldersRecursive(child, item_id, fidx) ;
+        createFoldersRecursive(defaultName, child, item_id, fidx) ;
 }
 
-CollectionTreeNode *KMLReader::importKml(QIODevice *data, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
+CollectionTreeNode *KMLReader::importKml(QIODevice *data, const QString &defaultName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
     KmlHandler handler(fidx) ;
     if ( !handler.parse(data) ) return 0 ;
 
     CollectionTreeNode *root = handler.root_node_ ;
 
-    if ( root ) createFoldersRecursive(root, folder_id, fidx) ;
+    if ( root ) createFoldersRecursive(defaultName, root, folder_id, fidx) ;
 
     return root ;
 }
