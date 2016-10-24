@@ -66,7 +66,6 @@ void FileImportDialog::stop()
 
 void FileImportDialog::finished()
 {
-    collections_ = worker_->collections_ ;
     documents_ = worker_->documents_ ;
     worker_->deleteLater();
 

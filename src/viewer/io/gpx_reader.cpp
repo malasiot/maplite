@@ -212,8 +212,9 @@ CollectionTreeNode *GPXReader::import(const QString &fileName, quint64 folder_id
 
     CollectionTreeNode *node = new CollectionTreeNode ;
     node->collection_ = col ;
+    col->name_ = fidx->uniqueCollectionName(col->name_, col->folder_) ;
 
-    if ( fidx->addNewCollection(col->name_, col->folder_, col->attributes_, col->name_, col->id_ ) )
+    if ( fidx->addNewCollection(col->name_, col->folder_, col->attributes_,  col->id_ ) )
     {
         if ( !fidx->write(featureList, col->id_) )
         {

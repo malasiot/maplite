@@ -1,6 +1,7 @@
 #include "kml_reader.hpp"
 #include "map_overlay.hpp"
 #include "map_overlay_manager.hpp"
+#include "overlays/gps_overlays.hpp"
 
 #include <QStringList>
 #include <QDebug>
@@ -108,12 +109,21 @@ CollectionTreeNode *KMLReader::importKmz(const QString &fileName, quint64 folder
     return res ;
 }
 
+static bool isZip(const QString &fileName) {
+    QFile file(fileName) ;
+    if ( !file.open(QIODevice::ReadOnly) ) return false ;
+    QByteArray ba = file.read(4) ;
+    return ( ba.at(0) == 0x50 ) && ( ba.at(1) == 0x4b ) && ( ba.at(2) == 0x03 ) && ( ba.at(3) == 0x04 ) ;
+}
+
 CollectionTreeNode *KMLReader::import(const QString &fileName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
-    QFile file(fileName) ;
-    if ( !file.open(QIODevice::ReadOnly) ) return 0 ;
-
-    return importKml(&file, QFileInfo(fileName).baseName(), folder_id, fidx) ;
+    if ( isZip(fileName) ) return importKmz(fileName, folder_id, fidx) ;
+    else {
+        QFile file(fileName) ;
+        if ( !file.open(QIODevice::ReadOnly) ) return nullptr ;
+        return importKml(&file,  QFileInfo(fileName).baseName(), folder_id, fidx) ;
+    }
 }
 
 struct KmlPlacemark {
@@ -155,7 +165,7 @@ bool KmlPlacemark::parseCoordinates(const QString &coords)
 class KmlHandler : public QXmlDefaultHandler
 {
 public:
-    KmlHandler(QSharedPointer<MapOverlayManager> index): index_(index) {
+    KmlHandler(QSharedPointer<MapOverlayManager> index, const QString &dname): index_(index), default_name_(dname) {
         root_node_ = new CollectionTreeNode ;
         nodes_.push_back(root_node_) ;
     }
@@ -183,13 +193,12 @@ protected:
 private:
 
     enum NodeType { FolderNode, PlacemarkNode, OtherNode } current_node_type_ ;
-    QString current_text_;
+    QString current_text_, default_name_;
 
     QStack<CollectionTreeNode *> nodes_ ;
     QStack<NodeType> types_ ;
     QSharedPointer<MapOverlayManager> index_ ;
     KmlPlacemark *placemark_ ;
-
 };
 
 bool KmlHandler::parse(QIODevice *source)
@@ -264,6 +273,9 @@ bool KmlHandler::endElement(const QString & /* namespaceURI */,
     NodeType type = types_.back() ;
 
     if (qName == "Folder" || qName == "Document") {
+        CollectionTreeNode *current = nodes_.back() ;
+        if ( current->name_.isEmpty() ) current->name_ = default_name_ ;
+
         nodes_.pop_back() ;
     }
     else if ( qName == "name" ) {
@@ -299,12 +311,12 @@ bool KmlHandler::endElement(const QString & /* namespaceURI */,
         }
         else if ( placemark_->type_ == 1 )
         {
-            PolygonOverlay *marker = new PolygonOverlay(placemark_->name_) ;
+            LinestringOverlay *ovr = new LinestringOverlay(placemark_->name_) ;
 
             Q_FOREACH(const QPointF &pt, placemark_->geometry_)
-                marker->addPoint(pt) ;
+                ovr->addPoint(pt) ;
 
-            current->overlay_list_.append(MapOverlayPtr(marker)) ;
+            current->overlay_list_.append(MapOverlayPtr(ovr)) ;
         }
 
         delete placemark_ ;
@@ -329,48 +341,18 @@ bool KmlHandler::fatalError(const QXmlParseException &exception)
 }
 
 
-static void createFoldersRecursive(const QString &defaultName, CollectionTreeNode *node, quint64 parent_id, QSharedPointer<MapOverlayManager> fidx)
-{
-    QString unique_name ;
-    quint64 item_id ;
-
-    if ( node->name_.isEmpty() ) node->name_ = defaultName ;
-    fidx->addNewFolder(node->name_, parent_id, unique_name, item_id) ;
-
-    node->name_ = unique_name ;
-    node->folder_id_ = item_id ;
-
-    if ( !node->overlay_list_.isEmpty() )
-    {
-        CollectionData *col = new CollectionData ;
-
-        node->collection_ = col ;
-
-        QString unique_col_name ;
-        quint64 collection_id ;
-        QMap<QString, QVariant> attr ;
-
-        fidx->addNewCollection(node->name_, node->folder_id_, attr, unique_col_name, collection_id) ;
-
-        col->name_ = unique_col_name ;
-        col->id_ = collection_id ;
-        col->folder_ = item_id ;
-
-        fidx->write(node->overlay_list_, col->id_ )  ;
-    }
-
-    Q_FOREACH(CollectionTreeNode *child, node->children_)
-        createFoldersRecursive(defaultName, child, item_id, fidx) ;
-}
 
 CollectionTreeNode *KMLReader::importKml(QIODevice *data, const QString &defaultName, quint64 folder_id, QSharedPointer<MapOverlayManager> fidx)
 {
-    KmlHandler handler(fidx) ;
-    if ( !handler.parse(data) ) return 0 ;
+    KmlHandler handler(fidx, defaultName) ;
+    if ( !handler.parse(data) ) return nullptr ;
 
     CollectionTreeNode *root = handler.root_node_ ;
 
-    if ( root ) createFoldersRecursive(defaultName, root, folder_id, fidx) ;
+    // we add first the tree ( folders and collections )
+    fidx->addCollectionTree(root, folder_id) ;
+    // and then the actually geometries so that they can be included in a transaction
+    fidx->addCollectionTreeOverlays(root) ;
 
     return root ;
 }

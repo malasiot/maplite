@@ -155,17 +155,17 @@ QModelIndex FeatureLibraryModel::addItem(const QModelIndex &parent, const QStrin
     quint64 parent_folder_id = parentNode->id_ ;
     quint64 item_id ;
 
-    QString unique_name ;
+    QString unique_name = overlay_manager_->uniqueCollectionName(name, parent_folder_id) ;
 
     LibraryNode *item = 0;
 
     if ( folder )  {
-        if ( overlay_manager_->addNewFolder(name, parent_folder_id, unique_name, item_id) )
+        if ( overlay_manager_->addNewFolder(unique_name, parent_folder_id, item_id) )
             item = new LibraryNode(unique_name, item_id, true, parentNode) ;
     }
     else {
         QMap<QString, QVariant> attr ;
-        if ( overlay_manager_->addNewCollection(name, parent_folder_id, attr, unique_name, item_id) )
+        if ( overlay_manager_->addNewCollection(unique_name, parent_folder_id, attr, item_id) )
             item = new LibraryNode(unique_name, item_id, false, parentNode) ;
     }
 
@@ -765,6 +765,7 @@ FeatureLibraryView::FeatureLibraryView(QSharedPointer<MapOverlayManager> mgr, QW
 
     QModelIndex root = model_.index(0, 0) ;
     selectionModel()->select(root, QItemSelectionModel::Select | QItemSelectionModel::Current| QItemSelectionModel::Rows ) ;
+    setCurrentIndex(root);
 
     installEventFilter(this) ;
 }

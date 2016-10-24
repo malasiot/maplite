@@ -495,7 +495,8 @@ void MapWidget::drawOverlays(QPainter &painter, const QRegion &region)
         overlay_cache_.fetch(id,
            [this] ( const uint64_t &id, MapOverlayPtr &val) ->uint64_t {
             val = overlay_manager_->load(id) ;
-            return val->cost() ;
+            if ( val ) return val->cost() ;
+            else return 0 ;
         }, obj) ;
 
 

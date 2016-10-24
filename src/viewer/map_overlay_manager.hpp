@@ -8,6 +8,7 @@
 #include "database.hpp"
 #include "map_overlay.hpp"
 
+
 namespace SpatialIndex {
     class ISpatialIndex ;
     class IStorageManager ;
@@ -19,6 +20,7 @@ namespace SpatialIndex {
 
 class MapOverlay ;
 class MapWidget ;
+struct CollectionTreeNode ;
 
 class MapOverlayManager {
 
@@ -43,12 +45,16 @@ public:
 
     // write object(s) to database and spatial index
     bool write(const QVector<MapOverlayPtr> &objects, quint64 collection_id = 0) ;
+    bool write(SQLite::Connection &con, const QVector<MapOverlayPtr> &objects, quint64 collection_id = 0) ;
 
     // query objects within the collection of rectangles
     void query(QVector<quint64> &ovr, QVector<QRectF> &boxes) ;
 
-    bool addNewFolder(const QString &name, quint64 parent_id, QString &unique_name, quint64 &item_id) ;
-    bool addNewCollection(const QString &name, quint64 parent_id, const QMap<QString, QVariant> &attributes, QString &unique_name, quint64 &item_id) ;
+    bool addNewFolder(const QString &name, quint64 parent_id, quint64 &item_id) ;
+    bool addNewCollection(const QString &name, quint64 parent_id, const QMap<QString, QVariant> &attributes, quint64 &item_id) ;
+    bool addCollectionTree(CollectionTreeNode *col, quint64 parent_id) ;
+    bool addCollectionTreeOverlays(SQLite::Connection &con, CollectionTreeNode *node);
+    bool addCollectionTreeOverlays(CollectionTreeNode *node);
 
     bool addOverlayInCollection(quint64 collection_id, const QVector<quint64> &overlays) ;
     bool deleteOverlaysFromCollection(quint64 collection_id, const QVector<quint64> &overlays) ;
@@ -62,8 +68,13 @@ public:
     bool getAllOverlays(const QVector<quint64> overlay_ids, QVector<MapOverlayPtr> &overlays);
     bool getAllOverlaysInFolder(quint64 folder_id, QVector<MapOverlayPtr> &features) ;
 
-    bool deleteFolder(quint64 id) ;
+    bool deleteFolder(quint64 folder_id);
+    bool deleteFolder(SQLite::Connection &con, quint64 id) ;
     bool deleteCollection(quint64 id) ;
+    bool deleteCollection(SQLite::Connection &con, quint64 id) ;
+
+    bool deleteFolders(SQLite::Connection &con, quint64 parent_folder_id);
+    bool deleteCollections(SQLite::Connection &con, quint64 folder_id);
 
     bool renameFolder(quint64 id, const QString &newName) ;
     bool renameCollection(quint64 id, const QString &newName) ;
@@ -76,6 +87,8 @@ public:
     // get a unique feature name for a collection using the specified arg pattern. counter should contain the initial numeric value and is update after the call
 
     QString uniqueOverlayName(const QString &pattern, quint64 collection_id, int &counter);
+    QString uniqueFolderName(const QString &name, quint64 &parent_id);
+    QString uniqueCollectionName(const QString &name, quint64 &folder_id);
 
     QRectF getOverlayBBox(const QVector<quint64> &feature_ids) ;
     QRectF getCollectionBBox(quint64 collection_id);
@@ -84,6 +97,10 @@ public:
     bool setFolderVisibility(quint64 id, bool state, bool update_children = true);
 
     void cleanup() ;
+
+
+
+
 
 protected:
 

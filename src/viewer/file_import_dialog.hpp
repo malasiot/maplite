@@ -21,7 +21,6 @@ class FileImportDialog: public QDialog
 public:
     FileImportDialog(const QStringList &files, quint64 parent_folder_id, QSharedPointer<MapOverlayManager> ovrmgr, QWidget *parent);
 
-    QVector<CollectionData *> collections_ ;
     QVector<CollectionTreeNode *> documents_ ;
 
 public Q_SLOTS:
@@ -52,7 +51,6 @@ private:
 
     friend class FileImportDialog ;
 
-    QVector<CollectionData *> collections_ ;
     QVector<CollectionTreeNode *> documents_ ;
 
     void stop() {

@@ -55,7 +55,7 @@ void PanTool::mouseMoved(QMouseEvent *evnt)
 
         current_object_ = mgr->findNearest("*", p, view_, 10) ;
 
-        if ( current_object_ ) {
+        if ( current_object_  && current_object_->isVisible()) {
             view_->setCursor(QCursor(Qt::ArrowCursor)) ;
             current_object_->setSelected(true) ;
             view_->setCurrentOverlay(current_object_) ;
@@ -484,7 +484,7 @@ void FeatureEditTool::mouseMoved(QMouseEvent *mouseEvent)
 
         current_object_ = mgr->findNearest("*", current_, view_, 10) ;
 
-        if ( current_object_ ) {
+        if ( current_object_ && current_object_->isVisible() ) {
             view_->setCursor(QCursor(Qt::ArrowCursor)) ;
             current_object_->setSelected(true) ;
             view_->setCurrentOverlay(current_object_) ;

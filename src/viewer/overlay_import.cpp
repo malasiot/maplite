@@ -7,6 +7,7 @@ CollectionTreeNode *OverlayImportManager::read(const QString &fileName, quint64 
         CollectionTreeNode *data = reader->import(fileName, folder_id, fidx) ;
         if ( data ) return data ;
     }
+    return nullptr ;
 }
 
 QString OverlayImportManager::filter() const {
