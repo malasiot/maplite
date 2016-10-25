@@ -1,6 +1,6 @@
 **C++ applications to create, serve and view maps in mapsforge format:**
 
-- osm2map: convert OpenStreetMap data into a mapsforge offline map. 
+- [osm2map](https://github.com/malasiot/mftools/blob/master/src/convert/Readme.md): convert OpenStreetMap data into a mapsforge offline map. 
 
 - mapsforge I/O: C++ classes to read and write mapsforge binary format
 
