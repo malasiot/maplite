@@ -2,7 +2,7 @@
 
 - [osm2map](https://github.com/malasiot/mftools/blob/master/src/convert/Readme.md): convert OpenStreetMap data into a mapsforge offline map. 
 
-- mapsforge I/O: C++ classes to read and write mapsforge binary format
+- [mapsforge I/O](https://github.com/malasiot/mftools/tree/master/src/io): C++ classes to read and write mapsforge binary format
 
 - renderer: a renderer of mapsforge vector tiles based on the Cairo graphics engine
 
