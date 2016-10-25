@@ -69,7 +69,7 @@ An example of a simple filter is as follows:
         [ highway == 'steps' ] { write [z16] highway ; }
     }
 ```    
-Cosider in the example above a way with "highway=secondary" tag given. The first rule "is_way()" matches and the command block
+Consider in the example above a way with "highway=secondary" tag given. The first rule "is_way()" matches and the command block
 is visited.
 The first command is a rule with no condition which means that it is always executed. The first command in the subrule is "attach layer".
 The second command is a sub-sub-rule and so on. In our case nothing else matches and we reach "continue" command that tells us 
@@ -88,6 +88,15 @@ they would be valid after zoom level 12. If we wanted "surface" tag to appear on
 write [z12-z14] highway
 write [z15-] highway, surface
 ```
-
-
-Well known relation types such as multi-polygons, boundaries and routes are converted into ways by stiching together their members.
+List of commands:
+```
+add <tag> = <expression> ; // adds the tag to the current feature if not already exists
+set <tag> = <expression> ; // inserts or update a tag in the current feature
+delete <tag> ;             // delete tag from the current feature
+write [<zoom_range>] <tag>[=<expression>], <tag>[=<expression>] ... ; // output tags in the given interval 
+write all [<zoom_range>] ; // write all input tags
+attach <tag_list> ;        // append these tags to each write command
+exclude [<zoom_range>] <tag_list> ; // exclude these tags from the output
+continue ;                 // process the next rule in the parent block
+```
+Well known relation types such as multi-polygons, boundaries and routes are converted into ways by stiching together their member ways.
