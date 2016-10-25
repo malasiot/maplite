@@ -311,10 +311,19 @@ bool FeatureLibraryModel::deleteItem(const QModelIndex &index)
 
     success = parentItem->removeChildren(position, 1);
 
-    if ( item->is_folder_ )
+    if ( item->is_folder_ ) {
+
+        QVector<MapOverlayPtr> objs ;
+        overlay_manager_->getAllOverlaysInFolder(item->id_, objs) ;
+        overlay_manager_->deleteOverlaysFromSpatialIndex(objs);
         overlay_manager_->deleteFolder(item->id_) ;
-    else
+    }
+    else {
+        QVector<MapOverlayPtr> objs ;
+        overlay_manager_->getAllOverlaysInCollection(item->id_, objs) ;
+        overlay_manager_->deleteOverlaysFromSpatialIndex(objs);
         overlay_manager_->deleteCollection(item->id_) ;
+    }
 
     endRemoveRows();
 

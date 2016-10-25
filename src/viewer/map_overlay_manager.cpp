@@ -16,6 +16,8 @@
 #include "tms.hpp"
 #include "overlay_import.hpp"
 
+#include <spatialite.h>
+
 using namespace SpatialIndex ;
 using namespace std ;
 
@@ -36,7 +38,7 @@ bool MapOverlayManager::open(const QString &storage)
         SQLite::Session session(db_) ;
         SQLite::Connection &con = session.handle() ;
 
-        con.exec("CREATE TABLE overlays (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, content BLOB NOT NULL, is_visible INTEGER DEFAULT 1);\
+        con.exec("CREATE TABLE overlays (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, content BLOB NOT NULL);\
                  CREATE TABLE collections (id INTEGER PRIMARY KEY AUTOINCREMENT, folder_id INTEGER NOT NULL, is_visible INTEGER DEFAULT 1, name TEXT, attributes BLOB);\
                 CREATE TABLE memberships (overlay_id INTEGER, collection_id INTEGER);\
         CREATE INDEX membership_idx ON memberships (overlay_id);\
@@ -584,8 +586,33 @@ bool MapOverlayManager::addOverlayInCollection(quint64 collection_id, const QVec
     }
 }
 
+void MapOverlayManager::deleteOverlaysFromSpatialIndex(const QVector<MapOverlayPtr> &objs) {
+
+    Q_FOREACH(MapOverlayPtr obj, objs)
+    {
+        double plow[2], phigh[2];
+
+        QRectF mbr = obj->boundingBox().normalized() ;
+
+        plow[0] = std::min(mbr.left(), mbr.right());
+        plow[1] = std::min(mbr.top(), mbr.bottom());
+        phigh[0] = std::max(mbr.left(), mbr.right());
+        phigh[1] = std::max(mbr.top(), mbr.bottom()) ;
+
+        SpatialIndex::Region r(plow, phigh, 2);
+
+        index_->deleteData(r, obj->id()) ;
+    }
+}
+
 bool MapOverlayManager::deleteOverlaysFromCollection(quint64 collection_id, const QVector<quint64> &overlays)
 {
+    // delete from spatial index. We have to obtain the bounding box from database
+
+    QVector<MapOverlayPtr> objs ;
+    getAllOverlays(overlays, objs) ;
+    deleteOverlaysFromSpatialIndex(objs);
+
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
 
@@ -778,6 +805,24 @@ bool MapOverlayManager::getAllOverlays(const QVector<quint64> overlay_ids, QVect
 
 }
 
+bool MapOverlayManager::getAllOverlaysInFolder(quint64 folder_id, QVector<MapOverlayPtr> &overlays) {
+
+    QVector<quint64> cols, folders ;
+    QVector<QString> c_names, f_names ;
+
+    QVector<bool> c_states, f_states ;
+
+    getFolderCollections(cols, c_names, c_states, folder_id);
+    Q_FOREACH(quint64 col_id, cols) {
+        getAllOverlaysInCollection(col_id, overlays) ;
+    }
+
+    getSubFolders(folders, f_names, f_states, folder_id) ;
+
+    Q_FOREACH(quint64 fid, folders) {
+        getAllOverlaysInFolder(fid, overlays) ;
+    }
+}
 
 bool MapOverlayManager::getAllOverlaysInCollection(quint64 collection_id, QVector<MapOverlayPtr> &overlays)
 {
@@ -909,6 +954,7 @@ bool MapOverlayManager::deleteFolder(quint64 folder_id) {
 
 bool MapOverlayManager::deleteCollection(quint64 id)
 {
+
     SQLite::Session session(db_) ;
     SQLite::Connection &con = session.handle() ;
 

@@ -95,11 +95,9 @@ public:
     QRectF getFolderBBox(quint64 folder_id);
 
     bool setFolderVisibility(quint64 id, bool state, bool update_children = true);
+    void deleteOverlaysFromSpatialIndex(const QVector<MapOverlayPtr> &objs);
 
     void cleanup() ;
-
-
-
 
 
 protected:
