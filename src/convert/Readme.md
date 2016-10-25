@@ -27,7 +27,7 @@ Usage: osm2map [options] <files>*
 ```
 The parameters are almost the same with the Osmosis Mapsforge writer [plugin](https://github.com/mapsforge/mapsforge/blob/master/docs/Getting-Started-Map-Writer.md)
 Input files can be in osm, osm.gz or PBF format. The main difference with Osmosis is tag filtering process that allows filtering 
-based on complex  conditional expressions (see X for a complete example), and offers the posibility to change the tag scheme 
+based on complex  conditional expressions (see [filter.cfg](https://github.com/malasiot/mftools/blob/master/data/filter.cfg) for a translation of the default Osmosis tag filter), and offers the posibility to change the tag scheme 
 completely in order to help rendering. The parameter --land-polygon points to a Shapefile containing the land boundary. 
 If no --bbox is given it is computed automatically from input geometries. 
 
