@@ -1,1 +1,3 @@
-![screenshot](https://octodex.github.com/images/yaktocat.png)
+Garmin Basecamp clone using Qt
+
+![screenshot](https://github.com/malasiot/mftools/blob/master/data/screenshots/viewer.png)
