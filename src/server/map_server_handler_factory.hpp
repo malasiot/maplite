@@ -5,6 +5,7 @@
 #include "request_handler.hpp"
 #include "mapsforge_tile_request_handler.hpp"
 #include "asset_request_handler.hpp"
+#include "fs_tile_cache.hpp"
 
 #include <map>
 
@@ -12,7 +13,7 @@
 class MapServerHandlerFactory: public http::RequestHandlerFactory {
 public:
 
-    MapServerHandlerFactory(const std::string &root_folders)  ;
+    MapServerHandlerFactory(const std::string &config_file, const std::shared_ptr<FileSystemTileCache> &cache)  ;
     std::shared_ptr<http::RequestHandler> create(const http::Request &req) ;
 
 private:

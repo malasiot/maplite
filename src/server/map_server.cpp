@@ -3,6 +3,6 @@
 
 using namespace std ;
 
-MapServer::MapServer(const string &root_folders, const string &ports):
-    http::Server(std::make_shared<MapServerHandlerFactory>(root_folders), "127.0.0.1", ports, 4) {
+MapServer::MapServer(const string &config_file, const string &host, const string &ports, const std::string &cache_dir):
+    http::Server(std::make_shared<MapServerHandlerFactory>(config_file, make_shared<FileSystemTileCache>(cache_dir)), host, ports, 4) {
 }

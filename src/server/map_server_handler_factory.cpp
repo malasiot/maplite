@@ -11,105 +11,100 @@ using namespace std ;
 namespace fs = boost::filesystem ;
 using namespace http ;
 
-MapServerHandlerFactory::MapServerHandlerFactory(const string &root_folders)
+
+MapServerHandlerFactory::MapServerHandlerFactory(const string &cfg_file, const std::shared_ptr<FileSystemTileCache> &cache)
 {
     // parse maps
 
-    vector<string> tokens ;
-    boost::split(tokens, root_folders, boost::is_any_of(";"),boost::algorithm::token_compress_on);
+    pugi::xml_document doc;
+    pugi::xml_parse_result result = doc.load_file(cfg_file.c_str());
 
-    for( string &folder: tokens) {
+    if ( !result ) {
+        LOG_FATAL_STREAM("XML [" << cfg_file << "] parsed with errors: " << result.description() ) ;
+        return ;
+    }
 
-        fs::path rp(folder) ;
+    pugi::xml_node root = doc.child("config") ;
+    if ( !root ) {
+        LOG_FATAL_STREAM("XML [" << cfg_file << "] error: no <config> element found" ) ;
+        return ;
+    }
 
-        if ( !fs::exists(rp / "config.xml") ) continue ;
+    for( pugi::xml_node p: root.children("assets") ) {
+        string key = p.attribute("key").as_string() ;
+        string src = p.attribute("src").as_string() ;
 
-        string cfg_file = ( rp / "config.xml" ).native() ;
-
-        pugi::xml_document doc;
-        pugi::xml_parse_result result = doc.load_file(cfg_file.c_str());
-
-        if ( !result ) {
-            LOG_WARN_STREAM("XML [" << cfg_file << "] parsed with errors: " << result.description() ) ;
-            continue ;
+        if ( key.empty() ) {
+            LOG_FATAL_STREAM("XML [" << cfg_file << "] error: key attribute missing from assets element" ) ;
+            return ;
         }
 
-        for( pugi::xml_node p: doc.children("assets") ) {
-            string key = p.attribute("key").as_string() ;
-            string src = p.attribute("src").as_string() ;
-
-            if ( key.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: key attribute missing from assets element" ) ;
-                continue ;
-            }
-
-            if ( src.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: src attribute missing from assets element" ) ;
-                continue ;
-            }
-
-
-            try {
-                fs::path src_path  = fs::canonical(rp / src) ;
-
-                asset_request_handlers_[key] = make_shared<AssetRequestHandler>(key, src_path.native()) ;
-            }
-            catch ( fs::filesystem_error &e ) {
-                LOG_WARN(e.what()) ;
-                continue ;
-            }
-
+        if ( src.empty() ) {
+            LOG_FATAL_STREAM("XML [" << cfg_file << "] error: src attribute missing from assets element" ) ;
+            return ;
         }
 
-        for( pugi::xml_node p: doc.children("tiles") ) {
-            string key = p.attribute("key").as_string() ;
-            string src = p.attribute("src").as_string() ;
-            string type = p.attribute("type").as_string() ;
-            string theme = p.attribute("theme").as_string() ;
-            bool debug_flag = p.attribute("debug").as_bool(false) ;
+        try {
+            fs::path rp(cfg_file) ;
+            fs::path src_path  = fs::canonical(rp.parent_path() / src) ;
 
-            if ( key.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: key attribute missing from tiles element" ) ;
-                continue ;
-            }
+            asset_request_handlers_[key] = make_shared<AssetRequestHandler>(key, src_path.native()) ;
+        }
+        catch ( fs::filesystem_error &e ) {
+            LOG_WARN(e.what()) ;
+            return ;
+        }
+    }
 
-            if ( src.empty() && type != "debug" ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: src attribute missing from tiles element" ) ;
-                continue ;
-            }
+    for( pugi::xml_node p: root.children("tiles") ) {
+        string key = p.attribute("key").as_string() ;
+        string src = p.attribute("src").as_string() ;
+        string type = p.attribute("type").as_string() ;
+        string theme = p.attribute("theme").as_string() ;
+        string layer = p.attribute("layer").as_string() ;
+        bool debug_flag = p.attribute("debug").as_bool(false) ;
 
-            if ( type.empty() ) {
-                LOG_WARN_STREAM("XML [" << cfg_file << "] error: tiles attribute missing from tiles element" ) ;
-                continue ;
-            }
-
-            try {
-                fs::path src_path  = fs::canonical(rp / src) ;
-                src = src_path.native() ;
-
-                if ( !theme.empty() ) {
-                    fs::path theme_path = fs::canonical(rp / theme ) ;
-                    theme = theme_path.native() ;
-                }
-            }
-            catch ( fs::filesystem_error &e ) {
-                LOG_WARN(e.what()) ;
-                continue ;
-            }
-
-            if ( type == "raster" )
-                tile_request_handlers_[key] = make_shared<RasterRequestHandler>(key, src) ;
-            else if ( type == "mapsforge" )
-                tile_request_handlers_[key] = make_shared<MapsforgeTileRequestHandler>(key, src, theme, debug_flag) ;
+        if ( key.empty() ) {
+            LOG_WARN_STREAM("XML [" << cfg_file << "] error: key attribute missing from tiles element" ) ;
+            return ;
         }
 
-  }
+        if ( src.empty() && type != "debug" ) {
+            LOG_WARN_STREAM("XML [" << cfg_file << "] error: src attribute missing from tiles element" ) ;
+            return ;
+        }
+
+        if ( type.empty() ) {
+            LOG_WARN_STREAM("XML [" << cfg_file << "] error: tiles attribute missing from tiles element" ) ;
+            return ;
+        }
+
+        try {
+            fs::path rp(cfg_file) ;
+            fs::path src_path  = fs::canonical(rp.parent_path() / src) ;
+            src = src_path.native() ;
+
+            if ( !theme.empty() ) {
+                fs::path theme_path = fs::canonical(rp.parent_path() / theme ) ;
+                theme = theme_path.native() ;
+            }
+        }
+        catch ( fs::filesystem_error &e ) {
+            LOG_WARN(e.what()) ;
+            return ;
+        }
+
+        if ( type == "raster" )
+            tile_request_handlers_[key] = make_shared<RasterRequestHandler>(key, src) ;
+        else if ( type == "mapsforge" )
+            tile_request_handlers_[key] = make_shared<MapsforgeTileRequestHandler>(key, src, theme, layer, cache, debug_flag) ;
+    }
+
+
 
 }
 
 std::shared_ptr<RequestHandler> MapServerHandlerFactory::create(const Request &req) {
-
-    boost::smatch m ;
 
     for( auto handler: tile_request_handlers_ ) {
         if ( handler.second->matches(req.path_) ) return handler.second ;

@@ -14,8 +14,10 @@ using namespace http ;
 
 bool MapsforgeTileRequestHandler::g_init_tile_index_ = false ;
 
-MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const string &map_file, const string &theme_file, bool debug):
-    TileRequestHandler(id, map_file)
+MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const string &map_file, const string &theme_file,
+                                                         const std::string &layer,
+                                                         const std::shared_ptr<FileSystemTileCache> &cache, bool debug):
+    TileRequestHandler(id, map_file), layer_(layer), cache_(cache)
 {
     if ( !g_init_tile_index_) {
         MapFileReader::initTileCache(1000000) ;
@@ -33,10 +35,14 @@ MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const
         return ;
     }
 
+    theme_.reset(new RenderTheme()) ;
+
     if ( !theme_->read(theme_file) ) {
          LOG_FATAL_STREAM("Error reading map theme :" << theme_file) ;
          return ;
     }
+
+    if ( layer.empty() ) layer_ = theme_->defaultLayer() ;
 
     renderer_.reset(new Renderer(theme_, map_file_->getMapFileInfo().lang_preference_, debug)) ;
 }
@@ -48,21 +54,12 @@ void MapsforgeTileRequestHandler::handle_request(const Request &request, Respons
         resp.status_ = Response::internal_server_error ;
         return ;
     }
-    static boost::regex pattern(R"(([0-9a-zA-Z]+)/(\d+)/(\d+)/(\d+)\.png)") ;
     boost::smatch m ;
-    string sq = request.path_.substr(key_.length()) ;
+    string sq = request.path_.substr(key_.length()+2) ;
 
-    string layer ;
     int zoom, tx, ty ;
 
-    if ( boost::regex_match(sq, m, pattern) ) {
-        layer = m.str(1) ;
-        zoom = stoi(m.str(2)) ;
-        tx = stoi(m.str(3)) ;
-        ty = stoi(m.str(4)) ;
-    }
-    else if ( boost::regex_match(sq, m, TileRequestHandler::uri_pattern_)  ){
-        layer = theme_->defaultLayer() ;
+    if ( boost::regex_match(sq, m, TileRequestHandler::uri_pattern_)  ){
         zoom = stoi(m.str(1)) ;
         tx = stoi(m.str(2)) ;
         ty = stoi(m.str(3)) ;
@@ -71,25 +68,21 @@ void MapsforgeTileRequestHandler::handle_request(const Request &request, Respons
         resp.status_ = Response::bad_request ;
     }
 
-
-    //ty = pow(2, zoom) - 1 - ty ;
-
     LOG_INFO_STREAM("Recieved request for tile: (" << tx << '/' << ty << '/' << zoom << ")" << " of key " << key_) ;
 
     // since we do not store timestamps per tile we use the modification time of the tileset
     time_t mod_time = boost::filesystem::last_write_time(tileset_.native());
 
-    TileKey key(tx, ty, zoom, true) ;
+    TileKey tk(tx, ty, zoom, true) ;
 
-    VectorTile tile = map_file_->readTile(key);
+    string content = cache_->load(key_, tk, mod_time) ;
+    if ( content.empty() ) { // not found in cache
+        VectorTile tile = map_file_->readTile(tk);
+        ImageBuffer buf(256, 256) ;
+        renderer_->render(tk, buf, tile, layer_, 128) ;
+        buf.saveToPNGBuffer(content);
+        cache_->save(key_, tk, content, mod_time) ;
+    }
 
-    ImageBuffer buf(256, 256) ;
-
-    renderer_->render(key, buf, tile, layer, 128) ;
-
-    string content ;
-    buf.saveToPNGBuffer(content);
     resp.encode_file_data(content, "", "image/png", mod_time) ;
-
-    //buf.saveToPNG("/tmp/render.png") ;
 }

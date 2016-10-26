@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<tiles key="greece" src="tiles/greece.map" theme="themes/elevate4/Elevate.xml" type="mapsforge"/>
+</config>
+
