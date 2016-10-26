@@ -10,7 +10,7 @@ The server expects a configuration file which has the form:
 	<assets key="..." src="..."
 </config>
 ```
-The attribution key is prepended to the request url path. It is also used to create folder for caching tiles so it should not contain any special characters which are invalid for url or filesystem. 
+The attribute "key" is prepended to the request url path. It is also used to create folder for caching tiles so it should not contain any special characters which are invalid for url or filesystem. 
 The type can be either "mapsforge" or "jpeg2000". The attribute "src" is the relative path of the map file. For Mapsforge you should also define "theme" the relative path to the theme file and 
 optionally layer (otherwise the default is used).
 The tiles element configures an endpoint of the form 
