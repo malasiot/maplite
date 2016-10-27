@@ -552,6 +552,7 @@ void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double an
         cairo_rotate(cr, angle) ;
         cairo_translate(cr, -ofx, -ofy) ;
 
+
         cairo_set_source_surface (cr, surface, 0, 0);
         cairo_paint(cr) ;
         /*
@@ -749,11 +750,30 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
     }
     else if ( boost::starts_with(src, "symbol:")) {
         string key = src.substr(7) ;
-        if ( boost::starts_with(src, "osmc:") ) {
-            key = key.substr(5) ;
-            return renderOSMCGraphic(cr, key, width, height, rect, scale) ;
+
+        cairo_surface_t *is = nullptr ;
+
+        ResourcePtr cached_data ;
+        if ( cache_.find(key, cached_data) ) {
+            is = dynamic_cast<CairoSurface *>(cached_data.get())->surface_ ;
+
+            cairo_surface_reference(is) ;
         }
-        return nullptr ;
+
+        else {
+
+            if ( boost::starts_with(key, "osmc:") ) {
+                string subkey = key.substr(5) ;
+
+                is = renderOSMCGraphic(cr, subkey, width, height, rect, scale) ;
+
+                if ( cairo_surface_status(is) != CAIRO_STATUS_SUCCESS ) return nullptr ;
+                cairo_surface_reference(is) ;
+                cache_.save(key, ResourcePtr(new CairoSurface(is))) ;
+          }
+
+        }
+        return is ;
     }
 
     return nullptr ;

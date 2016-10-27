@@ -28,7 +28,8 @@ public:
 
 class CairoSurface: public Resource {
 public:
-    CairoSurface(cairo_surface_t *surf): surface_(surf) {}
+    CairoSurface(cairo_surface_t *surf): surface_(surf) {
+     }
     ~CairoSurface() {
            cairo_surface_destroy(surface_) ;
     }

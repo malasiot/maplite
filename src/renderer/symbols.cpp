@@ -681,38 +681,24 @@ Color parse_color(const string &clr) {
     else if ( clr == "purple" ) return { 0.5, 0, 0.5 } ;
     else if ( clr == "red" ) return { 1, 0, 0 } ;
     else if ( clr == "white" ) return { 1, 1, 1 } ;
+    else if ( clr == "yellow" ) return { 1, 1, 0 } ;
     else return { 0, 0, 0 } ;
 }
 
 static void parse_shape(const string &desc, string &shape, Color &clr) {
-    vector<string> tokens ;
-    boost::algorithm::split( tokens, desc, boost::is_any_of("_"), boost::token_compress_on );
 
-    if ( tokens.size() == 0 ) return ;
-    string clr_str = tokens[0] ;
+    string clr_str ;
+    size_t pos = desc.find_first_of('_') ;
 
-    if ( tokens.size() > 1 ) shape = tokens[1] ;
+    if ( pos == string::npos ) clr_str = desc ;
+    else {
+        clr_str = desc.substr(0, pos) ;
+        shape = desc.substr(pos+1) ;
+    }
 
     clr = parse_color(clr_str) ;
 }
 
-struct Point {
-    double x_, y_ ;
-};
-
-typedef vector<Point> Path ;
-
-static void draw_path(cairo_t *cr, const Color &clr, const Path &path, bool stroke = false) {
-
-}
-
-static void draw_rect(cairo_t *cr, const Color &clr, double x, double y, double w, double h, bool stroke = false) {
-
-}
-
-static void draw_circle(cairo_t *cr, const Color &clr, double x, double y, double r, bool stroke = false) {
-
-}
 
 static void osmc_render_background(cairo_t *cr, const string &desc, double sz) {
     Color clr ;
@@ -720,16 +706,41 @@ static void osmc_render_background(cairo_t *cr, const string &desc, double sz) {
 
     parse_shape(desc, shape, clr) ;
 
-    if ( shape.empty() )
-        draw_rect(cr, clr, 0, 0, sz, sz, false) ;
-    else if ( shape == "circle" )
-        draw_circle(cr, clr, 0, 0, sz/2, true) ;
-    else if ( shape == "round" )
-        draw_circle(cr, clr, 0, 0, sz/2, false) ;
-    else if ( shape == "frame" )
-        draw_rect(cr, clr, 0, 0, sz, sz, true) ;
+    cairo_set_source_rgb(cr, clr.r_, clr.g_, clr.b_) ;
+    cairo_set_line_width(cr, 1.0) ;
+
+    if ( shape.empty() ) {
+        cairo_rectangle(cr, 0, 0, sz, sz) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "circle" ) {
+        cairo_arc(cr, sz/2, sz/2, sz/2, 0, 2*M_PI) ;
+        cairo_fill_preserve(cr) ;
+        cairo_set_source_rgb(cr, 0, 0, 0) ;
+        cairo_stroke(cr) ;
+    }
+    else if ( shape == "round" ) {
+        cairo_arc(cr, sz/2, sz/2, sz/2, 0, 2*M_PI) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "frame" ) {
+        cairo_rectangle(cr, 0, 0, sz, sz) ;
+        cairo_fill_preserve(cr) ;
+        cairo_set_source_rgb(cr, 0, 0, 0) ;
+        cairo_stroke(cr) ;
+    }
+
 }
 
+static void osmc_render_text(cairo_t *cr, const string &label, const string &clr_str, double sz) {
+    Color clr = parse_color(clr_str) ;
+    cairo_set_source_rgb(cr, clr.r_, clr.g_, clr.b_) ;
+    cairo_text_extents_t extents ;
+    cairo_text_extents(cr, label.c_str(), &extents) ;
+    cairo_move_to(cr, sz/2 - extents.width/2 - extents.x_bearing/2, sz/2+ extents.height/2) ;
+    cairo_text_path(cr, label.c_str()) ;
+    cairo_fill(cr) ;
+}
 
 static void osmc_render_foreground(cairo_t *cr, const string &desc, double sz) {
     Color clr ;
@@ -737,33 +748,99 @@ static void osmc_render_foreground(cairo_t *cr, const string &desc, double sz) {
 
     parse_shape(desc, shape, clr) ;
 
+    cairo_set_source_rgb(cr, clr.r_, clr.g_, clr.b_) ;
+    cairo_set_line_width(cr, 1.0) ;
+
     if ( shape == "arch" ) ;
         //aw_arch(cr, sz, clr) ;
-    else if ( shape == "bar" )
-        draw_shape(cr, clr, { {0, sz/3}, {sz, sz/3}, {sz, 2*sz/3}, {0, 2*sz/3}}) ;
-    else if ( shape == "circle" )
-        draw_circle(cr, clr, 0, 0, sz/3) ;
-    else if ( shape == "crest" )
-        draw_crest(cr, sz, clr) ;
-    else if ( shape == "cross" )
-        draw_cross(cr, sz, clr) ;
-    else if ( shape == "diamond" )
-        draw_diamond(cr, sz, clr) ;
-    else if ( shape == "dot" )
-        draw_dot(cr, sz, clr) ;
-    else if ( shape == "fork" ) ;
-    else if ( shape == "horse" ) ;
-    else if ( shape == "pointer" ) ;
-    else if ( shape == "rectangle" )
-        draw_rectangle(cr, sz, clr) ;
-    else if ( shape == "rectangle_line" )
-        draw_rectangle_line(cr, sz, clr) ;
-    else if ( shape == "triangle")
-        draw_triangle(cr, sz, clr) ;
-    else if ( shape == "triangle_turned" )
-        draw_triangle_turned(cr, sz, clr) ;
-    else if ( shape == "slash")
-        draw_slash(cr, sz, clr) ;
+    else if ( shape == "bar" ) {
+        cairo_rectangle(cr, 0, sz/3, sz, sz/3) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "stripe" ) {
+        cairo_rectangle(cr, sz/3, 0, sz/3, sz) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "rectangle" ) {
+        cairo_rectangle(cr, sz/4, sz/4, sz/2, sz/2) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "rectangle_line" ) {
+        cairo_rectangle(cr, sz/4, sz/4, sz/2, sz/2) ;
+        cairo_stroke(cr) ;
+    }
+    else if ( shape == "circle" ) {
+        cairo_arc(cr, sz/2, sz/2, sz/3.0, 0, 2*M_PI) ;
+        cairo_stroke(cr) ;
+    }
+    else if ( shape == "dot" ) {
+        cairo_arc(cr, sz/2, sz/2, sz/3.0, 0, 2*M_PI) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "cross" ) {
+        cairo_rectangle(cr, 0, sz/3, sz, sz/3) ;
+        cairo_rectangle(cr, sz/3, 0, sz/3, sz) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "diamond" ) {
+        cairo_move_to(cr, sz/2, sz/8) ;
+        cairo_line_to(cr, 7*sz/8, sz/2) ;
+        cairo_line_to(cr, sz/2, 7*sz/8) ;
+        cairo_line_to(cr, sz/8, sz/2) ;
+        cairo_close_path(cr) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "diamond_line" ) {
+        cairo_move_to(cr, sz/2, sz/8) ;
+        cairo_line_to(cr, 7*sz/8, sz/2) ;
+        cairo_line_to(cr, sz/2, 7*sz/8) ;
+        cairo_line_to(cr, sz/8, sz/2) ;
+        cairo_close_path(cr) ;
+        cairo_stroke(cr) ;
+    }
+    else if ( shape == "slash" ) {
+        cairo_move_to(cr, sz, 0) ;
+        cairo_line_to(cr, 0, 3*sz/4) ;
+        cairo_line_to(cr, 0, sz) ;
+        cairo_line_to(cr, sz, sz/4) ;
+        cairo_close_path(cr) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "backslash" ) {
+        cairo_move_to(cr, 0, 0) ;
+        cairo_line_to(cr, sz, 3*sz/4) ;
+        cairo_line_to(cr, sz, sz) ;
+        cairo_line_to(cr, 0, sz/4) ;
+        cairo_close_path(cr) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "x" ) {
+        cairo_move_to(cr, sz, 0) ;    cairo_line_to(cr, 0, 3*sz/4) ;
+        cairo_line_to(cr, 0, sz) ;    cairo_line_to(cr, sz, sz/4) ;
+        cairo_close_path(cr) ;
+        cairo_move_to(cr, 0, 0) ;     cairo_line_to(cr, sz, 3*sz/4) ;
+        cairo_line_to(cr, sz, sz) ;   cairo_line_to(cr, 0, sz/4) ;
+        cairo_close_path(cr) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "triangle" ) {
+        double r = sz/3, mx = sz/2, my = sz/2 ;
+        cairo_move_to(cr, mx, my - r) ;
+        cairo_line_to(cr, mx - 3*r / (2*sqrt(3)), my + r/2) ;
+        cairo_line_to(cr,  mx +  3*r / (2*sqrt(3)), my + r/2) ;
+        cairo_close_path(cr) ;
+        cairo_fill(cr) ;
+    }
+    else if ( shape == "triangle_turned") {
+        double r = sz/3, mx = sz/2, my = sz/2 ;
+        cairo_move_to(cr, mx, my + r) ;
+        cairo_line_to(cr, mx - 3*r / (2*sqrt(3)), my - r/2) ;
+        cairo_line_to(cr,  mx +  3*r / (2*sqrt(3)), my - r/2) ;
+        cairo_close_path(cr) ;
+        cairo_fill(cr) ;
+    }
+
+
 }
 cairo_surface_t *Renderer::renderOSMCGraphic(cairo_t *cr, const std::string &desc, double width, double height, cairo_rectangle_t &rect, double scale) {
 
@@ -778,6 +855,12 @@ cairo_surface_t *Renderer::renderOSMCGraphic(cairo_t *cr, const std::string &des
 
     cairo_t *ctx = cairo_create(rs) ;
 
+    cairo_scaled_font_t *scaled_font = text_engine_.cairo_setup_font("monospace", 0, sz/3) ;
+
+    if ( !scaled_font ) return nullptr ;
+
+    cairo_set_scaled_font(ctx, scaled_font) ;
+
     vector<string> tokens ;
     parse_osmc_symbol(desc, tokens) ;
     if ( !tokens[1].empty() ) osmc_render_background(ctx, tokens[1], sz) ;
@@ -787,6 +870,7 @@ cairo_surface_t *Renderer::renderOSMCGraphic(cairo_t *cr, const std::string &des
 
     cairo_destroy(ctx) ;
 
-    return rs ;
+    cairo_scaled_font_destroy(scaled_font) ;
 
+    return rs ;
 }
