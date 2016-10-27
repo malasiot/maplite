@@ -72,7 +72,7 @@ private:
                      std::vector<POIInstruction> &instructions, uint32_t &count) ;
 
     void drawCircle(RenderingContext &ctx, double px, double py, const RenderInstruction &) ;
-    void drawSymbol(RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &, int32_t, int32_t) ;
+    void drawSymbol(RenderingContext &ctx, double px, double py, double angle, const std::string &src, const RenderInstruction &, int32_t, int32_t) ;
     void drawCaption(RenderingContext &ctx, double px, double py, double angle, const std::string &label, const RenderInstruction &, int32_t, int32_t) ;
 
     void drawLine(RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &line);
@@ -82,6 +82,7 @@ private:
                            uint cap, uint join);
     void applySimpleFill(cairo_t *cr, uint32_t fill_clr);
     cairo_surface_t *renderGraphic(cairo_t *cr, const std::string &src, double width, double height, cairo_rectangle_t &rect, double scale) ;
+    cairo_surface_t *renderOSMCGraphic(cairo_t *cr, const std::string &desc, double width, double height, cairo_rectangle_t &rect, double scale) ;
     void getSymbolSize(const RenderInstruction &r, double &sw, double &sh);
 
     const double collision_extra = 10 ;

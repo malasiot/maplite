@@ -125,6 +125,26 @@ void Renderer::filterWays(const string &layer, uint8_t zoom, const std::vector<W
 
 }
 
+// subsitute src template with designated key values
+
+static string create_symbol_source(const Dictionary &dict, const std::string &templ) {
+
+    int state = 0 ;
+    string key, res ;
+    for ( const char &c: templ ) {
+        if ( c == '$' && state == 0 )
+            state = 1 ;
+        else if ( c == '{' && state == 1 ) state = 2 ;
+        else if ( state == 2 && c == '}' ) {
+            state = 0 ;
+            res += dict.get(key) ;
+            key.clear() ;
+        }
+        else if ( state == 2 ) key += c ;
+        else res += c ;
+    }
+    return res ;
+}
 
 void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, cairo_matrix_t &cmm, const std::vector<Way> &ways, const std::vector<POI> &pois,
                           std::vector<POIInstruction> &poi_instructions, uint32_t &count)
@@ -158,7 +178,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, ca
                     symbol_id = count ;
 
                     if ( box.contains(mx, my) )
-                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), way_idx_offset + idx) ;
+                        instructions.emplace_back(mx, my, 0.0, ri, create_symbol_source(way.tags_, ri->src_), way_idx_offset + idx) ;
                 }
                 else if ( ri->type() == RenderInstruction::Caption )
                 {
@@ -170,7 +190,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, ca
                     else get_poi_from_area(way, coords[0], mx, my) ;
 
                     if ( box.contains(mx, my) )
-                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), way_idx_offset + idx) ;
+                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_[ri->key_], way_idx_offset + idx) ;
                 }
                 else if ( ri->type() == RenderInstruction::Circle )
                 {
@@ -183,7 +203,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, ca
                     else get_poi_from_area(way, coords[0], mx, my) ;
 
                     if ( box.contains(mx, my) )
-                        instructions.emplace_back(mx, my, 0.0, ri, way.tags_.get(ri->key_), way_idx_offset + idx) ;
+                        instructions.emplace_back(mx, my, 0.0, ri, string(), way_idx_offset + idx) ;
                 }
                 else if ( ri->type() == RenderInstruction::LineSymbol ) {
                     RenderInstruction &line = *ri.get() ;
@@ -201,7 +221,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, ca
                     for( uint i=0 ; i<pts.size() ; i++ ) {
                         const Coord &c = pts[i] ;
                         if ( box.contains(c.x_, c.y_) )
-                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, string(), way_idx_offset + idx, i) ;
+                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, create_symbol_source(way.tags_, ri->src_), way_idx_offset + idx, i) ;
                     }
                 }
                 else if ( ri->type() == RenderInstruction::PathText ) {
@@ -247,7 +267,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, ca
                     symbol_id = count ;
 
                 if ( box.contains(mx, my))
-                    instr.emplace_back(mx, my, 0, ri, poi.tags_.get(ri->key_), idx) ;
+                    instr.emplace_back(mx, my, 0, ri, create_symbol_source(poi.tags_, ri->src_), idx) ;
             }
 
             std::copy( instr.begin(), instr.end(), std::back_inserter(poi_instructions)) ;
@@ -391,10 +411,10 @@ bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile 
             drawCircle(ctx, mx, my, *ri.get()) ;
             break ;
         case RenderInstruction::Symbol:
-            drawSymbol(ctx, mx, my, 0.0, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
+            drawSymbol(ctx, mx, my, 0.0, label, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
             break ;
         case RenderInstruction::LineSymbol:
-            drawSymbol(ctx, mx, my, angle, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
+            drawSymbol(ctx, mx, my, angle, label, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
             break ;
         case RenderInstruction::Caption:
             drawCaption(ctx, mx, my, 0.0, label, *ri.get(), ip.poi_idx_, ip.item_idx_) ;
@@ -503,7 +523,7 @@ void Renderer::drawCircle(RenderingContext &ctx, double px, double py, const Ren
 
 
 
-void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double angle, const RenderInstruction &symbol, int32_t poi_idx, int32_t item_idx)
+void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double angle, const string &src, const RenderInstruction &symbol, int32_t poi_idx, int32_t item_idx)
 {
     cairo_t *cr = ctx.cr_ ;
 
@@ -511,7 +531,7 @@ void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double an
     getSymbolSize(symbol, sw, sh) ;
 
     cairo_rectangle_t extents ;
-    cairo_surface_t *surface = renderGraphic(cr, symbol.src_, sw, sh, extents, 1.0) ;
+    cairo_surface_t *surface = renderGraphic(cr, src, sw, sh, extents, 1.0) ;
 
     if ( !surface ) return ;
 
@@ -534,7 +554,7 @@ void Renderer::drawSymbol(RenderingContext &ctx, double px, double py, double an
 
         cairo_set_source_surface (cr, surface, 0, 0);
         cairo_paint(cr) ;
-/*
+        /*
         cairo_rectangle(cr, 0, 0, extents.width, extents.height);
         cairo_set_source_rgb(cr, 0, 0, 0);
         cairo_stroke(cr) ;
@@ -643,85 +663,97 @@ void Renderer::drawLine(RenderingContext &ctx, const std::vector<std::vector<Coo
 
 cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, double width, double height, cairo_rectangle_t &rect, double scale)
 {
-    if ( boost::ends_with(src, ".png") ) {
+    if ( boost::starts_with(src, "file:") ) {
 
-        cairo_surface_t *is = 0 ;
+        string fpath = src.substr(5) ;
 
-        ResourcePtr cached_data ;
-        if ( cache_.find(src, cached_data) )
-            is = dynamic_cast<CairoSurface *>(cached_data.get())->surface_ ;
-        else {
-            is = cairo_image_surface_create_from_png(src.c_str()) ;
-            if ( cairo_surface_status(is) != CAIRO_STATUS_SUCCESS ) return nullptr ;
-            cache_.save(src, ResourcePtr(new CairoSurface(is))) ;
+        if ( boost::ends_with(fpath, ".png") ) {
+
+            cairo_surface_t *is = 0 ;
+
+            ResourcePtr cached_data ;
+            if ( cache_.find(src, cached_data) )
+                is = dynamic_cast<CairoSurface *>(cached_data.get())->surface_ ;
+            else {
+                is = cairo_image_surface_create_from_png(fpath.c_str()) ;
+                if ( cairo_surface_status(is) != CAIRO_STATUS_SUCCESS ) return nullptr ;
+                cache_.save(src, ResourcePtr(new CairoSurface(is))) ;
+            }
+
+            if ( is )
+            {
+                double orig_width = cairo_image_surface_get_width(is) ;
+                double orig_height = cairo_image_surface_get_height(is) ;
+
+                double scale = ( height > 0 ) ? height/orig_height : 1.0 ;
+
+                rect.x = 0 ;
+                rect.y = 0 ;
+                rect.width = orig_width * scale ;
+                rect.height = orig_height * scale ;
+
+                cairo_surface_t *rs = cairo_recording_surface_create( CAIRO_CONTENT_COLOR_ALPHA, &rect) ;
+
+                cairo_t *ctx = cairo_create(rs) ;
+
+                cairo_save(ctx) ;
+                cairo_scale(ctx, scale, scale) ;
+
+                cairo_set_source_surface(ctx, is, 0, 0) ;
+
+                cairo_paint(ctx) ;
+                cairo_restore(ctx) ;
+
+                cairo_destroy(ctx) ;
+
+                return rs ;
+            }
+            else return 0 ;
+
         }
-
-        if ( is )
+        else if ( boost::ends_with(fpath, ".svg") )
         {
-            double orig_width = cairo_image_surface_get_width(is) ;
-            double orig_height = cairo_image_surface_get_height(is) ;
 
-            double scale = ( height > 0 ) ? height/orig_height : 1.0 ;
+            std::shared_ptr<svg::DocumentInstance> doc ;
+
+            ResourcePtr cached_data ;
+
+            if ( cache_.find(fpath, cached_data) )
+                doc = dynamic_cast<SVGDocumentResource *>(cached_data.get())->instance_ ;
+            else {
+                ifstream strm(fpath.c_str()) ;
+                doc.reset(new svg::DocumentInstance) ;
+                if ( !doc->load(strm) ) return nullptr ;
+                cache_.save(fpath, ResourcePtr(new SVGDocumentResource(doc))) ;
+            }
 
             rect.x = 0 ;
             rect.y = 0 ;
-            rect.width = orig_width * scale ;
-            rect.height = orig_height * scale ;
+            rect.width  = width ;
+            rect.height = height ;
 
             cairo_surface_t *rs = cairo_recording_surface_create( CAIRO_CONTENT_COLOR_ALPHA, &rect) ;
+            // cairo_surface_t *rs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height) ;
 
             cairo_t *ctx = cairo_create(rs) ;
 
-            cairo_save(ctx) ;
-            cairo_scale(ctx, scale, scale) ;
-
-            cairo_set_source_surface(ctx, is, 0, 0) ;
-
-            cairo_paint(ctx) ;
-            cairo_restore(ctx) ;
+            doc->renderToTarget(ctx, 0, 0, width, height, 96) ;
 
             cairo_destroy(ctx) ;
 
+            //              cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
+
             return rs ;
-        }
-        else return 0 ;
 
+        }
     }
-    else if ( boost::ends_with(src, ".svg") )
-    {
-
-        std::shared_ptr<svg::DocumentInstance> doc ;
-
-        ResourcePtr cached_data ;
-
-        if ( cache_.find(src, cached_data) )
-            doc = dynamic_cast<SVGDocumentResource *>(cached_data.get())->instance_ ;
-        else {
-            ifstream strm(src.c_str()) ;
-            doc.reset(new svg::DocumentInstance) ;
-            if ( !doc->load(strm) ) return nullptr ;
-            cache_.save(src, ResourcePtr(new SVGDocumentResource(doc))) ;
+    else if ( boost::starts_with(src, "symbol:")) {
+        string key = src.substr(7) ;
+        if ( boost::starts_with(src, "osmc:") ) {
+            key = key.substr(5) ;
+            return renderOSMCGraphic(cr, key, width, height, rect, scale) ;
         }
-
-        rect.x = 0 ;
-        rect.y = 0 ;
-        rect.width  = width ;
-        rect.height = height ;
-
-        cairo_surface_t *rs = cairo_recording_surface_create( CAIRO_CONTENT_COLOR_ALPHA, &rect) ;
-        // cairo_surface_t *rs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height) ;
-
-        cairo_t *ctx = cairo_create(rs) ;
-
-
-        doc->renderToTarget(ctx, 0, 0, width, height, 96) ;
-
-        cairo_destroy(ctx) ;
-
-        //              cairo_surface_write_to_png(rs, "/tmp/surf.png") ;
-
-        return rs ;
-
+        return nullptr ;
     }
 
     return nullptr ;
@@ -795,7 +827,7 @@ void Renderer::drawCaption(RenderingContext &ctx, double mx, double my, double a
     string family_name ;
 
     if ( caption.font_family_ == RenderInstruction::Default )
-          family_name = "monospace" ;
+        family_name = "monospace" ;
     else if (caption.font_family_ == RenderInstruction::Monospace )
         family_name = "monospace" ;
     else if (caption.font_family_ == RenderInstruction::SansSerif )

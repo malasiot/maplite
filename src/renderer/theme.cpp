@@ -139,10 +139,9 @@ static void parse_option_list(const string &src, vector<string> &tokens) {
 
 static string parse_url(const string &url, const string &root_dir) {
     if ( boost::starts_with(url, "file:") ) {
-        return (boost::filesystem::path(root_dir) / url.substr(5)).native() ;
+        return "file:" + (boost::filesystem::path(root_dir) / url.substr(5)).native() ;
     }
-    else
-        return string() ;
+    else return url ;
 }
 
 

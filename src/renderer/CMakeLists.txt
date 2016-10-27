@@ -27,7 +27,11 @@ SET ( RENDERER_SOURCES
 
 	${SRC_ROOT}/renderer/image_buffer.cpp
 	${SRC_ROOT}/renderer/image_buffer.hpp
+
+	${SRC_ROOT}/renderer/symbols.cpp
+	${SRC_ROOT}/renderer/symbols.hpp
 )
+
 
 ADD_LIBRARY(mapsforge_renderer ${RENDERER_SOURCES})
 TARGET_LINK_LIBRARIES(mapsforge_renderer ${CAIRO_LIBRARY} ${FONTCONFIG_LIBRARIES}
