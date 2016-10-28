@@ -315,6 +315,13 @@ void MapFileWriter::writeSubFileInfo(const WriteOptions &options)
 
 ConsoleProgressPrinter g_prog ;
 
+static bool check_is_sea( const vector<POIData> &pois, const vector<WayDataContainer> &ways ) {
+    if ( !pois.empty() ) return false ;
+    if ( ways.size() > 1 ) return false ;
+    if ( ways[0].tags_.get("natural") == "sea" ) return true ;
+    return false ;
+}
+
 void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
 {
     MapFileOSerializer s(strm_) ;
@@ -362,6 +369,7 @@ void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &opti
             g_prog.advance(j+1);
 
             vector<string> tile_data(chunk_left) ;
+            vector<bool> tile_is_sea(chunk_left) ;
 
 #pragma omp parallel for
             for( uint k = j ; k< j + chunk_left ; k++ ) {
@@ -380,30 +388,24 @@ void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &opti
 
                 fetchTileData(tx, ty, tz, info.min_zoom_, info.max_zoom_, db, options, pois, pois_per_level, ways, ways_per_level ) ;
 
+                bool is_sea = check_is_sea(pois, ways) ;
+                tile_is_sea[k-j] = is_sea ;
+
                 string bytes = writeTileData(tx, ty, tz, options, pois, pois_per_level, ways, ways_per_level) ;
                 tile_data[k-j] = bytes ;
             }
 
             // serial write to file
             for( uint k = j ; k< j + chunk_left ; k++ ) {
-                info.index_[k] = current_pos ;
+                bool is_sea = tile_is_sea[k-j] ;
+                info.index_[k] = (is_sea) ? current_pos : ( current_pos | 0x8000000000LL ) ;
                 const string &bytes = tile_data[k-j] ;
                 s.write_bytes(bytes) ;
                 current_pos += bytes.size() ;
                 sz += bytes.size() ;
+
             }
 
-            /*
-            bool is_sea_tile = ( tile_offset & 0x8000000000LL ) != 0 ;
-
-            std::shared_ptr<TileData> data(new TileData(tx, ty, info.base_zoom_, is_sea_tile)) ;
-
-            if ( !is_sea_tile ) {
-                tile_offset = tile_offset & 0x7FFFFFFFFFLL ;
-                readTileData(info, tile_offset, data) ;
-            }
-        }
-        */
         }
 
         info.size_ = sz ;
@@ -417,7 +419,7 @@ void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &opti
         // write tile offset table
         strm_.seekg(info.offset_ + extra) ;
         for( uint j=0 ; j<tile_count ; j++ ) {
-            s.write_offset(info.index_[j] & 0x7FFFFFFFFFLL) ;
+            s.write_offset(info.index_[j]) ;
         }
         // seek to end of subfile
         strm_.seekg(info.offset_ + info.size_) ;
@@ -549,6 +551,11 @@ static bool fetch_lines(const std::string &tableName, SQLite::Database &db, cons
                 // each line may be broken into multiple linestrings by clipping
                 WayDataContainer wc ;
 
+                // we conveniently also get the MBR of the geometry
+
+                tms::latlonToMeters(geom->MinY, geom->MinX, wc.box_.minx_, wc.box_.miny_) ;
+                tms::latlonToMeters(geom->MaxY, geom->MaxX, wc.box_.maxx_, wc.box_.maxy_) ;
+
                 for( gaiaLinestringPtr p = geom->FirstLinestring ; p != nullptr ; p = p->Next ) {
                     double *coords = p->Coords ;
                     WayDataBlock block ;
@@ -617,8 +624,14 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
 
                 gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
 
+
                 // each polygon may be broken into multiple polygons by clipping
                 WayDataContainer wc ;
+
+                // we conveniently also get the MBR of the geometry
+
+                tms::latlonToMeters(geom->MinY, geom->MinX, wc.box_.minx_, wc.box_.miny_) ;
+                tms::latlonToMeters(geom->MaxY, geom->MaxX, wc.box_.maxx_, wc.box_.maxy_) ;
 
                 for( gaiaPolygonPtr p = geom->FirstPolygon ; p != nullptr ; p = p->Next ) {
 
@@ -636,7 +649,7 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
                         block.coords_[0].emplace_back(lat, lon) ;
                     }
 
-                    block.coords_[0].emplace_back(block.coords_[0][0]) ;
+         //           block.coords_[0].emplace_back(block.coords_[0][0]) ;
 
                     for( uint k=0 ; k< n_interior_rings ; k++ ) {
                         gaiaRing &ir_ring = p->Interiors[k] ;
@@ -721,6 +734,10 @@ void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t mi
     fetch_pois(db, bbox, min_zoom, max_zoom, pois, pois_per_level) ;
     fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
     fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, tol, options.label_positions_, ways, ways_per_level) ;
+
+    for( auto &way: ways) {
+        computeSubTileMask(tx, ty, tz, way, options.bbox_enlargement_) ;
+    }
 }
 
 std::string MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz,
@@ -984,7 +1001,7 @@ string MapFileWriter::writeWayData(const vector<WayDataContainer> &ways, const v
             ostringstream wstrm ;
             MapFileOSerializer wbuffer(wstrm) ;
 
-            wbuffer.write_uint16(0xffff) ; // for the moment the coverage bit flags are set to 1
+            wbuffer.write_uint16(way.subtile_mask_) ;
 
             // collect tags
 
@@ -1063,4 +1080,25 @@ string MapFileWriter::writeWayData(const vector<WayDataContainer> &ways, const v
     }
 
     return strm.str() ;
+}
+
+
+void MapFileWriter::computeSubTileMask(int btx, int bty, int btz, WayDataContainer &way, float bbox_enlargement)
+{
+    // get the boundaries of the 16 tiles at zoom level z0+2 and compute their bounding box
+
+    int ofx = btx * 4, ofy = bty * 4 ;
+    way.subtile_mask_ = 0 ;
+
+    for (int i = 0, k=0; i < 4; i++) {
+        for (int j = 0; j < 4; j++, k++) {
+            int tx = ofx + j, ty = ofy + i, tz = btz + 2 ;
+            TileKey tk(tx, ty, tz, true) ;
+            BBox bbox ;
+            tms::tileBounds(tk.x(), tk.y(), tk.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_, bbox_enlargement) ;
+
+            if ( way.box_.intersects(bbox) ) way.subtile_mask_ |= (1 << (15-k)) ;
+        }
+    }
+
 }

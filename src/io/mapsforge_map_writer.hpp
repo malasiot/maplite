@@ -46,7 +46,8 @@ struct WayDataContainer {
     std::string id_ ;
     boost::optional<ILatLon> label_pos_ ;
     enum Encoding { SingleDelta, DoubleDelta } encoding_ ;
-    std::string encoded_data_ ;
+    uint16_t subtile_mask_ ;
+    BBox box_ ; // box of enclosed geometries
 };
 
 struct WriteOptions {
@@ -108,6 +109,7 @@ private:
                            const std::vector<WayDataContainer> &ways, const std::vector<std::vector<uint32_t> > &ways_per_level);
     std::string writePOIData(const std::vector<POIData> &pois, const std::vector<std::vector<uint32_t>> &pois_per_level, const ILatLon &orig) ;
     std::string writeWayData(const std::vector<WayDataContainer> &ways, const std::vector<std::vector<uint32_t>> &ways_per_level, const ILatLon &orig) ;
+    void computeSubTileMask(int tx, int ty, int tz, WayDataContainer &way, float bbox_enlargement) ;
 private:
 
     MapFileInfo info_ ;

@@ -408,6 +408,15 @@ static bool normalize_tags(TagWriteList &tags, uint8_t &minz, uint8_t &maxz) {
     return true ;
 }
 
+static bool member_of_multipolygon_or_boundary(const OSM::Way &way, const OSM::Document &doc) {
+    for( uint ridx: way.relations_ ) {
+        const OSM::Relation &r = doc.relations_[ridx]  ;
+        string type = r.tags_.get("type") ;
+        if ( type == "multipolygon" || type == "boundary" ) return true ;
+    }
+    return false ;
+}
+
 using namespace OSM::Filter ;
 
 bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cfg)
@@ -465,6 +474,53 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
             addTags(cmd_tags, tags, node.id_) ;
         }
 
+        // relations of type route, merge ways into chunks
+
+        for(int k=0 ; k<doc.relations_.size() ; k++ )
+        {
+            auto relation = doc.relations_[k] ;
+
+            string rel_type = relation.tags_.get("type") ;
+
+            OSM::Filter::Context ctx(relation.tags_, relation.id_,  Context::Way) ;
+
+            TagWriteList tags ;
+            bool cont = false;
+
+            for( const RulePtr &rule: cfg.rules_ ) {
+                if ( matchRule( rule, ctx, tags, cont) ) {
+                    if ( !cont ) break ;
+                }
+            }
+
+            if ( !normalize_tags(tags, zmin, zmax) ) continue ;
+
+            if ( rel_type == "route" ) {
+
+                vector<OSM::Way> chunks ;
+                if ( !OSM::Document::makeWaysFromRelation(doc, relation, chunks) ) continue ;
+
+                SQLite::Command cmd_rel(con, insert_feature_sql("lines", "CompressGeometry(ST_Multi(?))")) ;
+
+                if ( !chunks.empty() ) {
+                    addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_, zmin, zmax) ;
+                    addTags(cmd_tags, tags, relation.id_) ;
+                }
+            }
+            else if ( rel_type == "multipolygon" || rel_type == "boundary" ) {
+
+                OSM::Polygon polygon ;
+                if ( !OSM::Document::makePolygonsFromRelation(doc, relation, polygon) ) continue ;
+
+                SQLite::Command cmd_rel(con, insert_feature_sql("polygons", "CompressGeometry(ST_BuildArea(ST_Multi(?)))")) ;
+
+                if ( !polygon.rings_.empty() ) {
+                    addPolygonGeometry(cmd_rel, doc, polygon, relation.id_, zmin, zmax) ;
+                    addTags(cmd_tags, tags, relation.id_) ;
+                }
+            }
+        }
+
         // ways
 
         for(int k=0 ; k<doc.ways_.size() ; k++ )
@@ -473,6 +529,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
 
             if ( way.tags_.empty() ) continue ;
 
+            if ( member_of_multipolygon_or_boundary(way, doc) ) continue ;
 
             // match feature with filter rules
 
@@ -516,52 +573,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
             }
         }
 
-        // relations of type route, merge ways into chunks
 
-        for(int k=0 ; k<doc.relations_.size() ; k++ )
-        {
-            auto relation = doc.relations_[k] ;
-
-            string rel_type = relation.tags_.get("type") ;
-
-            OSM::Filter::Context ctx(relation.tags_, relation.id_,  Context::Way) ;
-
-            TagWriteList tags ;
-            bool cont = false;
-
-            for( const RulePtr &rule: cfg.rules_ ) {
-                if ( matchRule( rule, ctx, tags, cont) ) {
-                    if ( !cont ) break ;
-                }
-            }
-
-            if ( !normalize_tags(tags, zmin, zmax) ) continue ;
-
-            if ( rel_type == "route" ) {
-
-                vector<OSM::Way> chunks ;
-                if ( !OSM::Document::makeWaysFromRelation(doc, relation, chunks) ) continue ;
-
-                SQLite::Command cmd_rel(con, insert_feature_sql("lines", "CompressGeometry(ST_Multi(?))")) ;
-
-                if ( !chunks.empty() ) {
-                    addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_, zmin, zmax) ;
-                    addTags(cmd_tags, tags, relation.id_) ;
-                }
-            }
-            else if ( rel_type == "multipolygon" || rel_type == "boundary" ) {
-
-                OSM::Polygon polygon ;
-                if ( !OSM::Document::makePolygonsFromRelation(doc, relation, polygon) ) continue ;
-
-                SQLite::Command cmd_rel(con, insert_feature_sql("polygons", "CompressGeometry(ST_Multi(?))")) ;
-
-                if ( !polygon.rings_.empty() ) {
-                    addPolygonGeometry(cmd_rel, doc, polygon, relation.id_, zmin, zmax) ;
-                    addTags(cmd_tags, tags, relation.id_) ;
-                }
-            }
-        }
 
         trans.commit() ;
 

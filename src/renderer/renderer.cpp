@@ -756,7 +756,6 @@ cairo_surface_t *Renderer::renderGraphic(cairo_t *cr, const std::string &src, do
         ResourcePtr cached_data ;
         if ( cache_.find(key, cached_data) ) {
             is = dynamic_cast<CairoSurface *>(cached_data.get())->surface_ ;
-
             cairo_surface_reference(is) ;
         }
 

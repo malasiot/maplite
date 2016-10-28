@@ -141,7 +141,7 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
 
             int64_t tile_offset = si.index_[idx] ;
 
-            bool is_sea_tile = ( tile_offset & 0x8000000000LL ) != 0 ;
+            int is_sea_tile = tile_offset & 0x8000000000ULL  ;
             tile_offset = tile_offset & 0x7FFFFFFFFFLL ;
 
             BaseTile base_tile(TileKey(btx, bty, si.base_zoom_, true)) ;
@@ -191,6 +191,8 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
                 Way sea ;
                 sea.tags_.add("natural", "sea") ;
                 sea.tags_.add("area", "yes") ;
+                sea.tags_.add("layer", "-5") ;
+                sea.layer_ = -5 ;
                 sea.coords_.resize(1) ;
                 sea.coords_[0].emplace_back(lbox.miny_, lbox.minx_) ;
                 sea.coords_[0].emplace_back(lbox.maxy_, lbox.minx_) ;
@@ -205,7 +207,7 @@ VectorTile MapFileReader::readTile(const TileKey &key, int offset)
 
         }
 
-//    exportTileDataOSM(tile, "/tmp/oo.osm");
+    exportTileDataOSM(tile, "/tmp/oo.osm");
 
     return tile ;
 }
