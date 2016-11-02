@@ -6,7 +6,7 @@
 #include "osm_document.hpp"
 #include "geometry.hpp"
 
-#include "filter_config.hpp"
+#include "osm_rule_parser.hpp"
 
 #include <map>
 

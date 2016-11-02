@@ -23,3 +23,6 @@ SET ( RENDER_TILE_SOURCES
 
 ADD_EXECUTABLE(render_tile ${RENDER_TILE_SOURCES})
 TARGET_LINK_LIBRARIES(render_tile mapsforge_renderer ${Boost_LIBRARIES})
+
+ADD_EXECUTABLE(test_spirit test_spirit.cpp)
+TARGET_LINK_LIBRARIES(test_spirit ${LUA_LIBRARIES} ${LUABIND_LIBRARIES} ${Boost_LIBRARIES})

@@ -22,7 +22,7 @@ void latlon_to_tms(const std::vector<std::vector<LatLon>> &latlon,  std::vector<
     }
 }
 
-static const double sample_near_boundaries_offset = 20 ;
+static const double sample_near_boundaries_offset = 10 ;
 
 struct ParametricLineRing
 {
@@ -101,7 +101,7 @@ bool ParametricLineRing::sample(double pp, Coord &sample, double &angle)
 static void sample_polygon(const vector<Coord> &coords, const cairo_matrix_t &cmm, float gap, float initial_gap, float box_len,
                            vector<Coord> &samples, vector<double> &angles, bool fix_angle)
 {
-    static const double angle_threshold = M_PI/60 ;
+    static const double angle_threshold = M_PI/20 ;
 
     ParametricLineRing parp(coords, cmm) ;
 

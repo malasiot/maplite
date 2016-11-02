@@ -455,9 +455,9 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
 
             if ( node.tags_.empty() ) continue ;
 
-            OSM::Filter::Context ctx(node) ;
-
             TagWriteList tags ;
+            OSM::Filter::Context ctx(node, k, &doc, &tags) ;
+
             bool cont = false;
 
             for( const RulePtr &rule: cfg.rules_ ) {
@@ -500,7 +500,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
                 vector<OSM::Way> chunks ;
                 if ( !OSM::Document::makeWaysFromRelation(doc, relation, chunks) ) continue ;
 
-                SQLite::Command cmd_rel(con, insert_feature_sql("lines", "CompressGeometry(ST_Multi(?))")) ;
+                SQLite::Command cmd_rel(con, insert_feature_sql("lines", "ST_Multi(?)")) ;
 
                 if ( !chunks.empty() ) {
                     addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_, zmin, zmax) ;
@@ -512,7 +512,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
                 OSM::Polygon polygon ;
                 if ( !OSM::Document::makePolygonsFromRelation(doc, relation, polygon) ) continue ;
 
-                SQLite::Command cmd_rel(con, insert_feature_sql("polygons", "CompressGeometry(ST_BuildArea(ST_Multi(?)))")) ;
+                SQLite::Command cmd_rel(con, insert_feature_sql("polygons", "ST_Multi(?)")) ;
 
                 if ( !polygon.rings_.empty() ) {
                     addPolygonGeometry(cmd_rel, doc, polygon, relation.id_, zmin, zmax) ;
@@ -533,9 +533,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
 
             // match feature with filter rules
 
-            OSM::Filter::Context ctx(way) ;
-
             TagWriteList tags ;
+            OSM::Filter::Context ctx(way, k, &doc, &tags) ;
             bool cont = false;
 
             for( const RulePtr &rule: cfg.rules_ ) {
@@ -673,6 +672,11 @@ bool OSMProcessor::matchRule(const RulePtr &rule, Context &ctx, TagWriteList &tw
                         tw.actions_.emplace_back(it.key(), it.value(), 0, 255, true) ;
                     ++it ;
                 }
+            }
+            else if ( cmd->type() == Command::UserFunction ) {
+                FunctionCommand *rc = dynamic_cast<FunctionCommand *>(cmd.get());
+
+                rc->func_->eval(ctx) ;
             }
         }
         return true ;

@@ -963,7 +963,6 @@ static string encode_double_delta(const WayDataContainer &wc, const ILatLon &ori
 static string encode_data(const WayDataContainer &wc, const ILatLon &origin, WayDataContainer::Encoding &enc) {
 
     string single_delta_encoded_data = encode_single_delta(wc, origin) ;
-    //   return single_delta_encoded_data ; // TODO:
     string double_delta_encoded_data = encode_double_delta(wc, origin) ;
 
     if ( single_delta_encoded_data.size() < double_delta_encoded_data.size() ) {

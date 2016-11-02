@@ -5,6 +5,7 @@
 #include "osm_rule_parser.hpp"
 
 #include <iomanip>
+#include <boost/format.hpp>
 
 using namespace std ;
 
@@ -183,7 +184,7 @@ string format(const char *format, vector<Literal> &args) {
             }
         }
         else {
-        out:
+out:
             out += *format ;
             ++pc;
         }
@@ -232,6 +233,43 @@ Literal Function::eval(Context &ctx)
             return Literal(ctx.value(tag), false) ;
 
         return Literal() ;
+    }
+    else if ( name_ == "attach_tags_from_hiking_route") {
+
+        if ( ctx.type() == Context::Way ) {
+            Way &w = ctx.doc_->ways_[ctx.fid_] ;
+            string network, ref, symbol ;
+
+            for( uint ridx: w.relations_ )
+            {
+                const Relation &r = ctx.doc_->relations_[ridx] ;
+                if ( r.tags_.get("type") != "route") continue ;
+                if ( r.tags_.get("route") != "hiking" ) continue ;
+
+                string rnet =  r.tags_.get("network") ;
+                if ( rnet.empty() ) rnet = "lwn" ;
+                string rref = r.tags_.get("ref") ;
+                string rsymbol = r.tags_.get("osmc:symbol") ;
+
+                if ( network == "iwn" ) continue ;
+                else if ( network == "nwn" && ( rnet == "rwn" || rnet == "lwn") ) continue ;
+                else if ( network == "rwn" && rnet == "lwn" ) continue ;
+                else if ( network == "lwn" ) continue ;
+                else {
+                    network = rnet ;
+                    ref = rref ;
+                    symbol = "osmc:" + rsymbol ;
+                }
+            }
+
+            ctx.tw_->actions_.emplace_back("hknetwork", network, 0, 255, true) ;
+            if ( !ref.empty() ) ctx.tw_->actions_.emplace_back("ref", ref, 0, 255, true) ;
+            if ( !symbol.empty() ) ctx.tw_->actions_.emplace_back("symbol", symbol, 0, 255, true) ;
+        }
+
+
+        return Literal() ;
+
     }
     else return Literal() ;
 

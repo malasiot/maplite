@@ -768,7 +768,7 @@ namespace OSM {
     /// \param yyvalue   the value to check
     static bool yy_table_value_is_error_ (int yyvalue);
 
-    static const signed char yypact_ninf_;
+    static const short int yypact_ninf_;
     static const signed char yytable_ninf_;
 
     /// Convert a scanner token number \a t to a symbol number.
@@ -795,7 +795,7 @@ namespace OSM {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const unsigned char yytable_[];
 
-  static const unsigned char yycheck_[];
+  static const short int yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -910,10 +910,10 @@ namespace OSM {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 167,     ///< Last index in yytable_.
+      yylast_ = 172,     ///< Last index in yytable_.
       yynnts_ = 32,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
-      yyfinal_ = 44, ///< Termination state number.
+      yyfinal_ = 46, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
       yyntokens_ = 46  ///< Number of tokens.

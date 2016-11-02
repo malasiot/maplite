@@ -221,7 +221,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, ca
                     for( uint i=0 ; i<pts.size() ; i++ ) {
                         const Coord &c = pts[i] ;
                         if ( box.contains(c.x_, c.y_) )
-                            instructions.emplace_back(c.x_, c.y_, angles[i], ri, create_symbol_source(way.tags_, ri->src_), way_idx_offset + idx, i) ;
+                            instructions.emplace_back(c.x_, c.y_, ( line.rotate_ ) ? angles[i] : 0, ri, create_symbol_source(way.tags_, ri->src_), way_idx_offset + idx, i) ;
                     }
                 }
                 else if ( ri->type() == RenderInstruction::PathText ) {
@@ -267,7 +267,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, ca
                     symbol_id = count ;
 
                 if ( box.contains(mx, my))
-                    instr.emplace_back(mx, my, 0, ri, create_symbol_source(poi.tags_, ri->src_), idx) ;
+                    instr.emplace_back(mx, my, 0, ri, poi.tags_.get(ri->key_), idx) ;
             }
 
             std::copy( instr.begin(), instr.end(), std::back_inserter(poi_instructions)) ;

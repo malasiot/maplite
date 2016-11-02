@@ -464,7 +464,7 @@ bool RenderInstruction::parse_line_symbol(pugi::xml_node &p, ThemeParseContext &
     priority_ =         p.attribute("priority").as_int(0) ;
     repeat_ =           p.attribute("repeat").as_bool(false) ;
     repeat_gap_ =       p.attribute("repeat-gap").as_float(200.0) ;
-    repeat_start_ =     p.attribute("repeat_start").as_float(30.0) ;
+    repeat_start_ =     p.attribute("repeat-start").as_float(30.0) ;
     rotate_ =           p.attribute("rotate").as_bool("true") ;
     type_ = LineSymbol;
 

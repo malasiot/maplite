@@ -187,6 +187,7 @@ command:
 	|   CONTINUE_CMD COLON { $$ = std::make_shared<OSM::Filter::SimpleCommand>( OSM::Filter::SimpleCommand::Continue) ;}
 		/* continue with the next to level rule */
 	|   rule { $$ = std::make_shared<OSM::Filter::RuleCommand>( $1) ;}
+        |   function COLON { $$ = std::make_shared<OSM::Filter::FunctionCommand>($1) ; }
 	;
 
 

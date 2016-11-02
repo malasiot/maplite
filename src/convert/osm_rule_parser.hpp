@@ -3,6 +3,7 @@
 
 #include "osm_rule_scanner.hpp"
 #include "osm_document.hpp"
+#include "filter_config.hpp"
 
 #include <deque>
 #include <string>
@@ -11,6 +12,20 @@
 #include <map>
 
 #include <regex>
+
+struct TagWriteAction {
+    TagWriteAction(const std::string &key, const std::string &val, uint8_t zmin, uint8_t zmax, bool attached = false ):
+        key_(key), val_(val), zoom_min_(zmin), zoom_max_(zmax), attached_(attached) {}
+
+    std::string key_, val_ ;
+    uint8_t zoom_min_, zoom_max_ ;
+    bool attached_ ;
+};
+
+struct TagWriteList {
+
+    std::vector<TagWriteAction> actions_ ;
+};
 
 namespace OSM {
 
@@ -26,6 +41,9 @@ class Rule ;
 typedef std::shared_ptr<ExpressionNode> ExpressionNodePtr ;
 typedef std::shared_ptr<Rule> RulePtr ;
 typedef std::shared_ptr<Command> CommandPtr ;
+
+
+
 
 class Parser {
 
@@ -67,8 +85,10 @@ public:
     enum FeatureType { Way, Node } ;
 
     Context() {}
-    Context(const OSM::Node &node): tags_(node.tags_), id_(node.id_), type_(Node) {}
-    Context(const OSM::Way &way): tags_(way.tags_), id_(way.id_), type_(Way) {}
+    Context(const OSM::Node &node, uint64_t fid, Document *doc, TagWriteList *tags):
+        tags_(node.tags_), id_(node.id_), type_(Node), fid_(fid), doc_(doc), tw_(tags) {}
+    Context(const OSM::Way &way, uint64_t fid, Document *doc, TagWriteList *tags):
+        tags_(way.tags_), id_(way.id_), type_(Way), fid_(fid), doc_(doc), tw_(tags) {}
     Context(const Dictionary &tags, const std::string &id, FeatureType t): tags_(tags), id_(id), type_(t) {}
 
     FeatureType type() const { return type_ ; }
@@ -80,6 +100,9 @@ public:
     Dictionary tags_ ;
     std::string id_ ;
     FeatureType type_ ;
+    Document *doc_ ;
+    uint64_t fid_ ;
+    TagWriteList *tw_ ;
 };
 
 
@@ -162,7 +185,7 @@ class ExpressionNode {
 
 class Command {
 public:
-    enum Type { Set, Add, Write, Continue, Delete, WriteAll, Exclude, Attach, Conditional } ;
+    enum Type { Set, Add, Write, Continue, Delete, WriteAll, Exclude, Attach, Conditional, UserFunction } ;
 
     Command() {}
 
@@ -246,6 +269,17 @@ public:
 
     ZoomRange zoom_range_ ;
 
+};
+class Function ;
+
+class FunctionCommand: public Command {
+public:
+
+    Type type() const { return UserFunction ; }
+
+    FunctionCommand(ExpressionNodePtr func): func_(func) {}
+
+    ExpressionNodePtr func_ ;
 };
 
 class RuleCommand: public Command {
