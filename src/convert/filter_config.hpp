@@ -5,7 +5,7 @@
 
 #include "osm_rule_parser.hpp"
 #include "osm_document.hpp"
-
+#include "lua_context.hpp"
 
 struct NodeRuleMap {
     int node_idx_ ;
@@ -16,6 +16,7 @@ struct FilterConfig {
     FilterConfig(){}
 
     std::deque<OSM::Filter::RulePtr> rules_ ;
+    LuaContext lua_ ;
 
     bool parse(const std::string &fileName) ;
 };

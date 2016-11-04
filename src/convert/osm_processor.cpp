@@ -419,7 +419,7 @@ static bool member_of_multipolygon_or_boundary(const OSM::Way &way, const OSM::D
 
 using namespace OSM::Filter ;
 
-bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cfg)
+bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
 {
     // read files from memory and write to spatialite database
 
@@ -458,6 +458,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
             TagWriteList tags ;
             OSM::Filter::Context ctx(node, k, &doc, &tags) ;
 
+            cfg.lua_.setupContext(ctx) ;
+
             bool cont = false;
 
             for( const RulePtr &rule: cfg.rules_ ) {
@@ -486,6 +488,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
 
             TagWriteList tags ;
             bool cont = false;
+
+            cfg.lua_.setupContext(ctx) ;
 
             for( const RulePtr &rule: cfg.rules_ ) {
                 if ( matchRule( rule, ctx, tags, cont) ) {
@@ -536,6 +540,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, const FilterConfig &cf
             TagWriteList tags ;
             OSM::Filter::Context ctx(way, k, &doc, &tags) ;
             bool cont = false;
+
+            cfg.lua_.setupContext(ctx) ;
 
             for( const RulePtr &rule: cfg.rules_ ) {
                 if ( matchRule( rule, ctx, tags, cont) ) {
@@ -591,7 +597,7 @@ bool OSMProcessor::matchRule(const RulePtr &rule, Context &ctx, TagWriteList &tw
 
         bool rcont = true ;
 
-        for ( const CommandPtr &cmd: rule->commands_->commands_ ) {
+        for ( const CommandPtr &cmd: rule->commands_ ) {
             if ( cmd->type() == Command::Conditional && rcont ) {
                 RuleCommand *rc = dynamic_cast<RuleCommand *>(cmd.get());
                 bool c = false ;

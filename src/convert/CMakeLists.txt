@@ -12,8 +12,14 @@ SET ( OSM2MF_SOURCES
 	${SRC_ROOT}/convert/osm_document.cpp
 	${SRC_ROOT}/convert/filter_config.hpp
 	${SRC_ROOT}/convert/osm_filter_functions.hpp
+	${SRC_ROOT}/convert/osm_filter_rule.hpp
+	${SRC_ROOT}/convert/osm_filter_rule.cpp
+	${SRC_ROOT}/convert/parse_context.hpp
+	${SRC_ROOT}/convert/parse_context.cpp
 	${SRC_ROOT}/convert/osm_document.hpp
 	${SRC_ROOT}/convert/osm_rule_parser.hpp
+	${SRC_ROOT}/convert/lua_context.hpp
+	${SRC_ROOT}/convert/lua_context.cpp
 
 	${SRC_ROOT}/io/mapsforge_map_writer.hpp
 	${SRC_ROOT}/io/mapsforge_map_writer.cpp
@@ -58,6 +64,6 @@ LIST(APPEND OSM2MF_SOURCES ${FLEX_OSM_FILTER_SCANNER_OUTPUTS} ${BISON_OSM_FILTER
 )
 
 ADD_EXECUTABLE(osm2map ${OSM2MF_SOURCES})
-TARGET_LINK_LIBRARIES(osm2map ${PROTOBUF_LIBRARIES} ${ZLIB_LIBRARIES} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} ${SHAPELIB_LIBRARY} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(osm2map ${PROTOBUF_LIBRARIES} ${ZLIB_LIBRARIES} ${SQLITE3_LIBRARY} ${SPATIALITE_LIBRARY} ${SHAPELIB_LIBRARY} ${Boost_LIBRARIES} ${LUA_LIBRARIES})
 
 INSTALL(TARGETS osm2map DESTINATION bin  )

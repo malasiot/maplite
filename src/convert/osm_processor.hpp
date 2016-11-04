@@ -7,6 +7,7 @@
 #include "geometry.hpp"
 
 #include "osm_rule_parser.hpp"
+#include "parse_context.hpp"
 
 #include <map>
 
@@ -30,7 +31,7 @@ public:
     bool createGeometriesTable(const std::string &desc);
     bool createTagsTable() ;
 
-    bool processOsmFile(const string &path,  const FilterConfig &cfg) ;
+    bool processOsmFile(const string &path, FilterConfig &cfg) ;
 
     // requires as input a shape file containing the land polygon and clip box (bounding box of the map)
     bool processLandPolygon(const string &shape_file, const BBox &clip_box) ;

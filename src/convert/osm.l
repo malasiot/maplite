@@ -15,7 +15,7 @@ void comment() ;
 %option debug
 %option case-insensitive
 
-%x COMMENT
+%x COMMENT LUA
 
 %{
 # define YY_USER_ACTION  yylloc->columns (yyleng);
@@ -25,8 +25,6 @@ void comment() ;
 %{
    yylloc->step();
 %}
-
-"@layer"			{ return OSM::BisonParser::make_LAYER(*yylloc); }
 
 "AND"                 { return OSM::BisonParser::make_AND(*yylloc); }
 "&&"                { return OSM::BisonParser::make_AND(*yylloc) ; }
@@ -104,6 +102,11 @@ z[0-9][0-9]?	{ return OSM::BisonParser::make_ZOOM_SPEC(atoi(yytext+1), *yylloc) 
 <COMMENT>.  { yylloc->step (); }
 
 "#"[^\n]*\n { yylloc->step();}
+
+"<?" { BEGIN(LUA); }
+<LUA>\n { yylloc->lines (); yylloc->step (); yymore() ;}
+<LUA>"?>" { BEGIN(INITIAL) ; return OSM::BisonParser::make_LUA_SCRIPT(std::string(yytext, yyleng-2), *yylloc) ; }
+<LUA>.  { yylloc->step (); yymore(); }
 
 %%
 

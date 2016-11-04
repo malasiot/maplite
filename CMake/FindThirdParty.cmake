@@ -47,4 +47,4 @@ endif()
 
 
 FIND_PACKAGE(Lua REQUIRED)
-FIND_PACKAGE(Luabind REQUIRED)
+

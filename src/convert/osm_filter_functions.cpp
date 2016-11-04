@@ -3,6 +3,7 @@
 #include <stdarg.h>
 
 #include "osm_rule_parser.hpp"
+#include "parse_context.hpp"
 
 #include <iomanip>
 #include <boost/format.hpp>
@@ -200,14 +201,13 @@ Literal Function::eval(Context &ctx)
 {
     if ( name_ == "format" )
     {
-        if ( children_.empty() ) return Literal() ;
-        ExpressionNodePtr args = children_[0] ;
-        if ( args->children_.size() < 2 ) return Literal() ;
-        string frmt_str = args->children_[0]->eval(ctx).toString() ;
+        if ( args_.empty() ) return Literal() ;
+        if ( args_.size() < 2 ) return Literal() ;
+        string frmt_str = args_[0]->eval(ctx).toString() ;
 
         vector<Literal> vals ;
-        for(uint i=1 ; i<args->children_.size() ; i++)
-            vals.push_back(args->children_[i]->eval(ctx)) ;
+        for(uint i=1 ; i<args_.size() ; i++)
+            vals.push_back(args_[i]->eval(ctx)) ;
         return Literal(format(frmt_str.c_str(), vals), false) ;
     }
     else if ( name_ == "type" ) {
@@ -220,12 +220,12 @@ Literal Function::eval(Context &ctx)
     else if ( name_ == "is_way" ) {
         return ctx.type() == Context::Way ;
     }
-    else if ( name_ == "lname" ) {
+/*    else if ( name_ == "lname" ) {
         if ( ctx.has_tag("name") ) return Literal(ctx.value("name"), false) ;
 
         string lang = "en" ;
-        if ( children_[0]->children_.size() > 0 ) {
-            lang = children_[0]->children_[0]->eval(ctx).toString() ;
+        if ( args_.size() > 0 ) {
+            lang = args_[0]->eval(ctx).toString() ;
         }
         string tag = "name:" +  lang ;
 
@@ -234,6 +234,7 @@ Literal Function::eval(Context &ctx)
 
         return Literal() ;
     }
+    */
     else if ( name_ == "attach_tags_from_hiking_route") {
 
         if ( ctx.type() == Context::Way ) {
@@ -271,7 +272,12 @@ Literal Function::eval(Context &ctx)
         return Literal() ;
 
     }
-    else return Literal() ;
+    else {
+        vector<Literal> vals ;
+        for(uint i=0 ; i<args_.size() ; i++)
+            vals.push_back(args_[i]->eval(ctx)) ;
+        return lua_->call(name_, vals) ;
+    }
 
 }
 

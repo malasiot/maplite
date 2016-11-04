@@ -22,7 +22,7 @@ namespace OSM {
     public:
         FlexScanner(std::istream &strm): yyFlexLexer(&strm)  {}
 
-        virtual BisonParser::symbol_type lex(BisonParser::location_type* yylloc);
+        virtual OSM::BisonParser::symbol_type lex(OSM::BisonParser::location_type* yylloc);
 
     };
 

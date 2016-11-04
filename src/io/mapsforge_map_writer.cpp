@@ -317,6 +317,7 @@ ConsoleProgressPrinter g_prog ;
 
 static bool check_is_sea( const vector<POIData> &pois, const vector<WayDataContainer> &ways ) {
     if ( !pois.empty() ) return false ;
+    if ( ways.empty() ) return false ;
     if ( ways.size() > 1 ) return false ;
     if ( ways[0].tags_.get("natural") == "sea" ) return true ;
     return false ;

@@ -36,16 +36,19 @@ bool FilterConfig::parse(const string &fileName)
         return false ;
     }
 
-    OSM::Filter::Parser parser(strm) ;
+    OSM::Filter::Parser parser(strm, lua_) ;
 
     if ( ! parser.parse() )  {
-        cerr << "Error parsing " << fileName << " : error in rule (line: " << ")" << endl ;
+        cerr << "Error parsing " << fileName << endl ;
         cerr << parser.error_string_ << endl ;
-
         return false ;
     }
 
     rules_ = parser.rules_ ;
+    if ( !lua_.loadScript(parser.script_) ) {
+        cerr << lua_.lastError() << endl ;
+        return false ;
+    }
 
     return true ;
 }

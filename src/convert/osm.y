@@ -16,42 +16,17 @@
 %define parse.error verbose
 
 %code requires {
-
-#include <memory>
-
-	namespace OSM {
-		namespace Filter {
-			class Parser ;
-			class ExpressionNode ;
-			typedef std::shared_ptr<ExpressionNode> ExpressionNodePtr ;
-			class Command ;
-			typedef std::shared_ptr<Command> CommandPtr ;
-			class CommandList ;
-			typedef std::shared_ptr<CommandList> CommandListPtr ;
-			class Rule ;
-			typedef std::shared_ptr<Rule> RulePtr ;
-			class RuleList ;
-			typedef std::shared_ptr<RuleList> RuleListPtr ;
-			class ZoomRange ;
-			typedef std::shared_ptr<ZoomRange> ZoomRangePtr ;
-			class TagList ;
-			typedef std::shared_ptr<TagList> TagListPtr ;
-			class TagDeclaration ;
-			typedef std::shared_ptr<TagDeclaration> TagDeclarationPtr ;
-			class TagDeclarationList ;
-			typedef std::shared_ptr<TagDeclarationList> TagDeclarationListPtr ;
-
-		}
+#include "osm_filter_rule.hpp"
+namespace OSM {
+	namespace Filter {
+		class Parser ;
 	}
-
+}
 }
 
 %code {
-
-
 #include "osm_rule_parser.hpp"
 
-	// Prototype for the yylex function
 static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::BisonParser::location_type &loc);
 }
 
@@ -99,12 +74,14 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 %token <std::string> IDENTIFIER "identifier";
 %token <double> NUMBER "number";
 %token <std::string> STRING "string literal";
+%token <std::string> LUA_SCRIPT "LUA script";
 %token <uint8_t> ZOOM_SPEC "zoom specifier"
 %token END  0  "end of file";
 
 %type <OSM::Filter::ExpressionNodePtr> boolean_value_expression boolean_term boolean_factor boolean_primary predicate comparison_predicate like_text_predicate exists_predicate
-%type <OSM::Filter::ExpressionNodePtr> expression term factor numeric_literal boolean_literal general_literal literal function function_argument function_argument_list attribute
-%type <OSM::Filter::ExpressionNodePtr> list_predicate literal_list unary_predicate
+%type <OSM::Filter::ExpressionNodePtr> expression term factor numeric_literal boolean_literal general_literal literal function function_argument attribute
+%type <OSM::Filter::ExpressionNodePtr> list_predicate unary_predicate
+%type <OSM::Filter::ExpressionListPtr> literal_list function_argument_list
 %type <OSM::Filter::CommandPtr> command
 %type <OSM::Filter::CommandListPtr> command_list action_block
 %type <OSM::Filter::RulePtr> rule
@@ -113,8 +90,6 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 %type <OSM::Filter::TagListPtr> tag_list
 %type <OSM::Filter::TagDeclarationPtr> tag_decl
 %type <OSM::Filter::TagDeclarationListPtr> tag_decl_list
-
-/*%destructor { delete $$; } STRING IDENTIFIER*/
 
 /*operators */
 
@@ -125,16 +100,20 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 %left STAR DIV
 %nonassoc UMINUS EXISTS
 
-%start rule_list
+%start filter
 
 %%
+
+filter:
+	rule_list |
+	LUA_SCRIPT rule_list { driver.script_ = $1 ; }
 
 rule_list: rule { driver.rules_.push_back($1) ; }
 		  | rule rule_list { driver.rules_.push_front($1) ; }
 ;
 
-rule: LEFT_BRACKET boolean_value_expression RIGHT_BRACKET action_block { $$ = std::make_shared<OSM::Filter::Rule>($2, $4) ; }
-	  | action_block { $$ = std::make_shared<OSM::Filter::Rule>(nullptr, $1) ; }
+rule: LEFT_BRACKET boolean_value_expression RIGHT_BRACKET action_block { $$ = std::make_shared<OSM::Filter::Rule>($2, $4->commands_) ; }
+	  | action_block { $$ = std::make_shared<OSM::Filter::Rule>(nullptr, $1->commands_) ; }
 ;
 
 
@@ -215,7 +194,6 @@ predicate:
 	unary_predicate { $$ = $1 ; }
 	|  comparison_predicate	{ $$ = $1 ; }
 	| like_text_predicate	{ $$ = $1 ; }
-	| exists_predicate	    { $$ = $1 ; }
 	| list_predicate        { $$ = $1 ; }
 	;
 
@@ -236,19 +214,15 @@ like_text_predicate:
 	| expression NOT_MATCHES STRING					{ $$ = std::make_shared<OSM::Filter::LikeTextPredicate>($1, $3, false) ; }
 	;
 
-exists_predicate:
-	EXISTS IDENTIFIER								{ $$ = std::make_shared<OSM::Filter::ExistsPredicate>($2) ; }
+list_predicate:
+	IDENTIFIER IN LPAR literal_list RPAR		{ $$ = std::make_shared<OSM::Filter::ListPredicate>($1, $4->children(), true) ; }
+	| IDENTIFIER NOT IN LPAR literal_list RPAR	{ $$ = std::make_shared<OSM::Filter::ListPredicate>($1, $5->children(), false) ; }
 	;
 
-list_predicate:
-		IDENTIFIER IN LPAR literal_list RPAR		{ $$ = std::make_shared<OSM::Filter::ListPredicate>($1, $4, true) ; }
-	  | IDENTIFIER NOT IN LPAR literal_list RPAR	{ $$ = std::make_shared<OSM::Filter::ListPredicate>($1, $5, false) ; }
-		;
-
 literal_list:
-				  literal		{ $$ = std::make_shared<OSM::Filter::ExpressionNode>() ; $$->appendChild($1) ; }
-				| literal COMMA literal_list { $$ = $3 ; $3->prependChild($1) ; }
-				;
+	literal		{ $$ = std::make_shared<OSM::Filter::ExpressionList>() ;  $$->append($1) ;  }
+	| literal COMMA literal_list { $$ = $3 ; $3->prepend($1) ; }
+	;
 
 expression:
 		  term					{ $$ = $1 ; }
@@ -271,15 +245,18 @@ factor:
 		;
 
 function:
-		IDENTIFIER LPAR RPAR		{ $$ = std::make_shared<OSM::Filter::Function>($1) ; }
+		IDENTIFIER LPAR RPAR		{ $$ = std::make_shared<OSM::Filter::Function>($1, &driver.lua_) ; }
 		 | IDENTIFIER LPAR function_argument_list RPAR {
-			$$ = std::make_shared<OSM::Filter::Function>($1, $3) ;
+			$$ = std::make_shared<OSM::Filter::Function>($1, $3->children(), &driver.lua_) ;
 		 }
 	;
 
 function_argument_list:
-		  function_argument		{ $$ = std::make_shared<OSM::Filter::ExpressionNode>() ; $$->appendChild($1) ; }
-		| function_argument COMMA function_argument_list { $$ = $3 ; $3->prependChild($1) ; }
+		  function_argument		{
+				$$ = std::make_shared<OSM::Filter::ExpressionList>() ;
+				$$->append($1) ;
+			}
+		| function_argument COMMA function_argument_list { $$ = $3 ; $3->prepend($1) ; }
 		;
 
 function_argument :
@@ -313,8 +290,6 @@ attribute:
 		$$ = std::make_shared<OSM::Filter::Attribute>($1) ;
 	}
 	;
-
-
 
 %%
 #define YYDEBUG 1
