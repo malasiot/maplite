@@ -1,12 +1,12 @@
-#include "osm_filter_rule.hpp"
-#include "parse_context.hpp"
+#include "tag_filter_rule.hpp"
+#include "tag_filter_context.hpp"
+#include "lua_context.hpp"
 
 #include <boost/format.hpp>
 
 using namespace std ;
 
-namespace OSM {
-namespace Filter {
+namespace tag_filter {
 
 Literal::Literal(const std::string &val, bool auto_conv)
 {
@@ -61,7 +61,7 @@ string Literal::toString() const {
 }
 
 
-Literal BooleanOperator::eval(Context &ctx)
+Literal BooleanOperator::eval(TagFilterContext &ctx)
 {
     switch ( op_ ) {
     case And:
@@ -73,7 +73,7 @@ Literal BooleanOperator::eval(Context &ctx)
     }
 }
 
-Literal ComparisonPredicate::eval(Context &ctx)
+Literal ComparisonPredicate::eval(TagFilterContext &ctx)
 {
     Literal lhs = lhs_->eval(ctx) ;
     Literal rhs = rhs_->eval(ctx) ;
@@ -209,7 +209,7 @@ LikeTextPredicate::LikeTextPredicate(ExpressionNodePtr op, const std::string &pa
 }
 
 
-Literal LikeTextPredicate::eval(Context &ctx)
+Literal LikeTextPredicate::eval(TagFilterContext &ctx)
 {
     Literal op = exp_->eval(ctx) ;
 
@@ -220,7 +220,7 @@ Literal LikeTextPredicate::eval(Context &ctx)
 ListPredicate::ListPredicate(const string &id, const std::deque<ExpressionNodePtr> &op, bool is_pos):
     id_(id), children_(op.begin(), op.end()), is_pos_(is_pos)
 {
-    Context ctx ;
+    TagFilterContext ctx ;
 
     for(int i=0 ; i<children_.size() ; i++)
     {
@@ -231,7 +231,7 @@ ListPredicate::ListPredicate(const string &id, const std::deque<ExpressionNodePt
 }
 
 
-Literal ListPredicate::eval(Context &ctx)
+Literal ListPredicate::eval(TagFilterContext &ctx)
 {
     if ( !ctx.has_tag(id_) ) return Literal() ;
 
@@ -244,21 +244,21 @@ Literal ListPredicate::eval(Context &ctx)
 }
 
 /*
-Literal IsTypePredicate::eval(Context &ctx)
+Literal IsTypePredicate::eval(TagFilterContext &ctx)
 {
     if ( keyword_ == "node")
     {
-        return ctx.type() == Context::Node ;
+        return ctx.type() == TagFilterContext::Node ;
     }
     else if ( keyword_ == "way" )
     {
-        return ctx.type() == Context::Way ;
+        return ctx.type() == TagFilterContext::Way ;
     }
 
 }
 */
 
-Literal Attribute::eval(Context &ctx)
+Literal Attribute::eval(TagFilterContext &ctx)
 {
     if ( !ctx.has_tag(name_) ) return Literal() ;
 
@@ -267,7 +267,7 @@ Literal Attribute::eval(Context &ctx)
 
 
 
-Literal BinaryOperator::eval(Context &ctx)
+Literal BinaryOperator::eval(TagFilterContext &ctx)
 {
     Literal op1 = lhs_->eval(ctx) ;
     Literal op2 = rhs_->eval(ctx) ;
@@ -297,10 +297,31 @@ Literal BinaryOperator::eval(Context &ctx)
 
 }
 
-Literal UnaryPredicate::eval(Context &ctx)
+Literal UnaryPredicate::eval(TagFilterContext &ctx)
 {
     return exp_->eval(ctx).toBoolean() ;
 }
 
+
+
+Literal Function::eval(TagFilterContext &ctx)
+{
+    if ( name_ == "is_poi" ) {
+        return ( ctx.type() == TagFilterContext::Node )  ;
+    }
+    else if ( name_ == "is_way" ) {
+        return ctx.type() == TagFilterContext::Way ;
+    }
+    else if ( name_ == "is_relation" ) {
+        return ctx.type() == TagFilterContext::Relation ;
+    }
+    else {
+        vector<Literal> vals ;
+        for(uint i=0 ; i<args_.size() ; i++)
+            vals.push_back(args_[i]->eval(ctx)) ;
+        return lua_->call(name_, vals) ;
+    }
+
 }
 }
+

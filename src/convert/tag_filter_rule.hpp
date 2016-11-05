@@ -6,13 +6,13 @@
 #include <vector>
 #include <boost/regex.hpp>
 
+#include "tag_filter_context.hpp"
+
 class LuaContext ;
 
-namespace OSM {
-namespace Filter {
+namespace tag_filter {
 
 class ExpressionNode ;
-class Context ;
 class Command ;
 class Rule ;
 
@@ -78,7 +78,7 @@ public:
 
     ExpressionNode() {}
 
-    virtual Literal eval(Context &ctx) { return false ; }
+    virtual Literal eval(TagFilterContext &ctx) { return false ; }
 };
 
 class ExpressionList {
@@ -221,7 +221,7 @@ public:
 
     LiteralExpressionNode(const Literal &l): val_(l) {}
 
-    Literal eval(Context &ctx) { return val_ ; }
+    Literal eval(TagFilterContext &ctx) { return val_ ; }
 
     Literal val_ ;
 };
@@ -230,7 +230,7 @@ class Attribute: public ExpressionNode {
 public:
     Attribute(const std::string name): name_(name) {}
 
-    Literal eval(Context &ctx) ;
+    Literal eval(TagFilterContext &ctx) ;
 
 private:
     std::string name_ ;
@@ -242,7 +242,7 @@ public:
     Function(const std::string &name, LuaContext *lua): name_(name), lua_(lua) {}
     Function(const std::string &name, const std::deque<ExpressionNodePtr> &args, LuaContext *lua): name_(name), args_(args), lua_(lua) {}
 
-    Literal eval(Context &ctx) ;
+    Literal eval(TagFilterContext &ctx) ;
 
 private:
     std::string name_ ;
@@ -255,7 +255,7 @@ class BinaryOperator: public ExpressionNode {
 public:
     BinaryOperator(int op, ExpressionNodePtr lhs, ExpressionNodePtr rhs): op_(op), lhs_(lhs), rhs_(rhs) {}
 
-    Literal eval(Context &ctx) ;
+    Literal eval(TagFilterContext &ctx) ;
 
 private:
     int op_ ;
@@ -269,7 +269,7 @@ public:
 
     BooleanOperator(Type op, ExpressionNodePtr lhs, ExpressionNodePtr rhs): op_(op), lhs_(lhs), rhs_(rhs) {}
 
-    Literal eval(Context &ctx) ;
+    Literal eval(TagFilterContext &ctx) ;
 private:
     Type op_ ;
     ExpressionNodePtr lhs_, rhs_ ;
@@ -280,7 +280,7 @@ public:
 
     UnaryPredicate(ExpressionNodePtr exp): exp_(exp) {}
 
-    Literal eval(Context &ctx) ;
+    Literal eval(TagFilterContext &ctx) ;
 
     ExpressionNodePtr exp_ ;
 };
@@ -292,7 +292,7 @@ public:
     ComparisonPredicate(Type op, ExpressionNodePtr lhs, ExpressionNodePtr rhs): op_(op), lhs_(lhs), rhs_(rhs) {}
 
 
-    Literal eval(Context &ctx) ;
+    Literal eval(TagFilterContext &ctx) ;
 
 private:
     Type op_ ;
@@ -304,7 +304,7 @@ public:
 
     LikeTextPredicate(ExpressionNodePtr op, const std::string &pattern_, bool is_pos) ;
 
-    Literal eval(Context &ctx) ;
+    Literal eval(TagFilterContext &ctx) ;
 private:
     ExpressionNodePtr exp_ ;
     boost::regex pattern_ ;
@@ -316,7 +316,7 @@ public:
 
     ListPredicate(const std::string &identifier, const std::deque<ExpressionNodePtr> &op, bool is_pos) ;
 
-    Literal eval(Context &ctx) ;
+    Literal eval(TagFilterContext &ctx) ;
 
 private:
     std::vector<ExpressionNodePtr> children_ ;
@@ -326,6 +326,6 @@ private:
 
 };
 
-} // namespace Filter
-} // namespace OSM
+} // namespace tag_filter
+
 #endif

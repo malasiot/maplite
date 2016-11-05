@@ -1,6 +1,6 @@
-#line 2 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
+#line 2 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
 
-#line 4 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
+#line 4 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -29,7 +29,7 @@
      * We will address this in a future release of flex, or omit the C++ scanner
      * altogether.
      */
-    #define yyFlexLexer osmFlexLexer
+    #define yyFlexLexer TagFilterConfigFlexLexer
 /* %endif */
 
 /* %if-c-only */
@@ -351,9 +351,9 @@ struct yy_buffer_state
 /* %endif */
 /* %endif */
 
-void *osmalloc (yy_size_t  );
-void *osmrealloc (void *,yy_size_t  );
-void osmfree (void *  );
+void *TagFilterConfigalloc (yy_size_t  );
+void *TagFilterConfigrealloc (void *,yy_size_t  );
+void TagFilterConfigfree (void *  );
 
 #define yy_new_buffer yy_create_buffer
 
@@ -399,7 +399,7 @@ int yyFlexLexer::yylex()
 	return 0;
 	}
 
-#define YY_DECL int FlexScanner::yylex()
+#define YY_DECL int tag_filter::Scanner::yylex()
 
 /* %if-c-only Standard (non-C++) definition */
 /* %endif */
@@ -653,19 +653,19 @@ static yyconst flex_int16_t yy_rule_linenum[61] =
 #define yymore() ((yy_more_flag) = 1)
 #define YY_MORE_ADJ (yy_more_len)
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "/home/malasiot/source/mftools/src/convert/osm.l"
-#line 2 "/home/malasiot/source/mftools/src/convert/osm.l"
-#include <osm_rule_scanner.hpp>
-#include <osm_rule_parser.hpp>
+#line 1 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 2 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#include "tag_filter_config_scanner.hpp"
+#include "tag_filter_config_parser.hpp"
 
-#include <parser/osm_parser.hpp>
+#include "parser/tag_filter_parser.hpp"
 #include <string.h>
 
 void comment() ;
 
-#line 21 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 21 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 # define YY_USER_ACTION  yylloc->columns (yyleng);
-#line 669 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
+#line 669 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
 
 #define INITIAL 0
 #define COMMENT 1
@@ -829,14 +829,14 @@ YY_DECL
 	register int yy_act;
     
 /* %% [7.0] user's declarations go here */
-#line 23 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 23 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 
 
 
    yylloc->step();
 
 
-#line 840 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
+#line 840 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
 
 	if ( !(yy_init) )
 		{
@@ -957,313 +957,313 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 29 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_AND(*yylloc); }
+#line 29 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_AND(*yylloc); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 30 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_AND(*yylloc) ; }
+#line 30 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_AND(*yylloc) ; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 31 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_OR(*yylloc); }
+#line 31 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_OR(*yylloc); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 32 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_OR(*yylloc); }
+#line 32 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_OR(*yylloc); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 33 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_IN(*yylloc); }
+#line 33 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_IN(*yylloc); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 34 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_NOT(*yylloc); }
+#line 34 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_NOT(*yylloc); }
 	YY_BREAK
 /* punctuation */
 case 7:
 YY_RULE_SETUP
-#line 38 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_ASSIGN(*yylloc) ; }
+#line 38 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_ASSIGN(*yylloc) ; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 39 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_EQUAL(*yylloc) ; }
+#line 39 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 40 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_NOT_EQUAL(*yylloc) ; }
+#line 40 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_NOT_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 41 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_NOT_EQUAL(*yylloc) ; }
+#line 41 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_NOT_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 42 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_LESS_THAN(*yylloc) ; }
+#line 42 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_LESS_THAN(*yylloc) ; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 43 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_GREATER_THAN(*yylloc) ; }
+#line 43 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_GREATER_THAN(*yylloc) ; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 44 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_LESS_THAN_OR_EQUAL(*yylloc) ; }
+#line 44 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_LESS_THAN_OR_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 45 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_GREATER_THAN_OR_EQUAL(*yylloc) ; }
+#line 45 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_GREATER_THAN_OR_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 46 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_MATCHES(*yylloc) ; }
+#line 46 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_MATCHES(*yylloc) ; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 47 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_NOT_MATCHES(*yylloc) ; }
+#line 47 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_NOT_MATCHES(*yylloc) ; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 48 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_NOT(*yylloc) ; }
+#line 48 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_NOT(*yylloc) ; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 49 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_EXISTS(*yylloc) ; }
+#line 49 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_EXISTS(*yylloc) ; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 50 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_LPAR(*yylloc) ; }
+#line 50 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_LPAR(*yylloc) ; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 51 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_RPAR(*yylloc) ; }
+#line 51 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_RPAR(*yylloc) ; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 52 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_PLUS(*yylloc) ; }
+#line 52 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_PLUS(*yylloc) ; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 53 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_MINUS(*yylloc) ; }
+#line 53 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_MINUS(*yylloc) ; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 54 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_STAR(*yylloc) ; }
+#line 54 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_STAR(*yylloc) ; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 55 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_DIV(*yylloc) ; }
+#line 55 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_DIV(*yylloc) ; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 56 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_COMMA(*yylloc) ; }
+#line 56 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_COMMA(*yylloc) ; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 57 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_DOT(*yylloc) ; }
+#line 57 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_DOT(*yylloc) ; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 58 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_LEFT_BRACE(*yylloc) ; }
+#line 58 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_LEFT_BRACE(*yylloc) ; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 59 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_RIGHT_BRACE(*yylloc) ; }
+#line 59 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_RIGHT_BRACE(*yylloc) ; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 60 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_COLON(*yylloc) ; }
+#line 60 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_COLON(*yylloc) ; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 61 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_RIGHT_BRACKET(*yylloc) ; }
+#line 61 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_RIGHT_BRACKET(*yylloc) ; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 62 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_LEFT_BRACKET(*yylloc) ; }
+#line 62 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_LEFT_BRACKET(*yylloc) ; }
 	YY_BREAK
 case 32:
 /* rule 32 can match eol */
 YY_RULE_SETUP
-#line 64 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_ADD_CMD(*yylloc) ; }
+#line 64 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_ADD_CMD(*yylloc) ; }
 	YY_BREAK
 case 33:
 /* rule 33 can match eol */
 YY_RULE_SETUP
-#line 65 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_SET_CMD(*yylloc) ; }
+#line 65 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_SET_CMD(*yylloc) ; }
 	YY_BREAK
 case 34:
 /* rule 34 can match eol */
 YY_RULE_SETUP
-#line 66 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_DELETE_CMD(*yylloc) ; }
+#line 66 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_DELETE_CMD(*yylloc) ; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 67 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_WRITE_ALL_CMD(*yylloc) ; }
+#line 67 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_WRITE_ALL_CMD(*yylloc) ; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 68 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_WRITE_CMD(*yylloc) ; }
+#line 68 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_WRITE_CMD(*yylloc) ; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 69 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_EXCLUDE_CMD(*yylloc) ; }
+#line 69 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_EXCLUDE_CMD(*yylloc) ; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 70 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_CONTINUE_CMD(*yylloc) ; }
+#line 70 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_CONTINUE_CMD(*yylloc) ; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 71 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_ATTACH_CMD(*yylloc) ; }
+#line 71 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_ATTACH_CMD(*yylloc) ; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 73 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ return OSM::BisonParser::make_ZOOM_SPEC(atoi(yytext+1), *yylloc) ; }
+#line 73 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ return tag_filter::Parser::make_ZOOM_SPEC(atoi(yytext+1), *yylloc) ; }
 	YY_BREAK
 case 41:
-#line 76 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 76 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 case 42:
 YY_RULE_SETUP
-#line 76 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 76 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 {
-        return OSM::BisonParser::make_IDENTIFIER(yytext, *yylloc);
+        return tag_filter::Parser::make_IDENTIFIER(yytext, *yylloc);
 }
 	YY_BREAK
 case 43:
-#line 81 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 81 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 case 44:
-#line 82 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 82 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 case 45:
-#line 83 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 83 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 case 46:
-#line 84 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 84 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 case 47:
-#line 85 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 85 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 case 48:
 YY_RULE_SETUP
-#line 85 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 85 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 {
-    return OSM::BisonParser::make_NUMBER(atof(yytext), *yylloc) ;
+    return tag_filter::Parser::make_NUMBER(atof(yytext), *yylloc) ;
 }
 	YY_BREAK
 case 49:
 /* rule 49 can match eol */
 YY_RULE_SETUP
-#line 89 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 89 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 {
-    return OSM::BisonParser::make_STRING(std::string(yytext+1, yyleng-2), *yylloc) ;
+    return tag_filter::Parser::make_STRING(std::string(yytext+1, yyleng-2), *yylloc) ;
 }
 	YY_BREAK
 case 50:
 /* rule 50 can match eol */
 YY_RULE_SETUP
-#line 93 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 93 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 yylloc->lines (yyleng); yylloc->step ();
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 95 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 95 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 yylloc->step ();
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(COMMENT):
 case YY_STATE_EOF(LUA):
-#line 97 "/home/malasiot/source/mftools/src/convert/osm.l"
-return OSM::BisonParser::make_END(*yylloc);
+#line 97 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+return tag_filter::Parser::make_END(*yylloc);
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 99 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 99 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 { BEGIN(COMMENT); }
 	YY_BREAK
 case 53:
 /* rule 53 can match eol */
 YY_RULE_SETUP
-#line 100 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 100 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 { yylloc->lines (); yylloc->step ();}
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 101 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 101 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 { BEGIN(INITIAL) ; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 102 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 102 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 { yylloc->step (); }
 	YY_BREAK
 case 56:
 /* rule 56 can match eol */
 YY_RULE_SETUP
-#line 104 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 104 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 { yylloc->step();}
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 106 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 106 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 { BEGIN(LUA); }
 	YY_BREAK
 case 58:
 /* rule 58 can match eol */
 YY_RULE_SETUP
-#line 107 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 107 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 { yylloc->lines (); yylloc->step (); yymore() ;}
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 108 "/home/malasiot/source/mftools/src/convert/osm.l"
-{ BEGIN(INITIAL) ; return OSM::BisonParser::make_LUA_SCRIPT(std::string(yytext, yyleng-2), *yylloc) ; }
+#line 108 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+{ BEGIN(INITIAL) ; return tag_filter::Parser::make_LUA_SCRIPT(std::string(yytext, yyleng-2), *yylloc) ; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 109 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 109 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 { yylloc->step (); yymore(); }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 111 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 111 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 ECHO;
 	YY_BREAK
-#line 1267 "/home/malasiot/source/mftools/src/convert/parser/osm_scanner.cpp"
+#line 1267 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1434,9 +1434,9 @@ yyFlexLexer::yyFlexLexer( std::istream* arg_yyin, std::ostream* arg_yyout )
 yyFlexLexer::~yyFlexLexer()
 {
 	delete [] yy_state_buf;
-	osmfree(yy_start_stack  );
+	TagFilterConfigfree(yy_start_stack  );
 	yy_delete_buffer( YY_CURRENT_BUFFER );
-	osmfree(yy_buffer_stack  );
+	TagFilterConfigfree(yy_buffer_stack  );
 }
 
 /* The contents of this function are C++ specific, so the () macro is not used.
@@ -1571,7 +1571,7 @@ int yyFlexLexer::yy_get_next_buffer()
 
 				b->yy_ch_buf = (char *)
 					/* Include room in for 2 EOB chars. */
-					osmrealloc((void *) b->yy_ch_buf,b->yy_buf_size + 2  );
+					TagFilterConfigrealloc((void *) b->yy_ch_buf,b->yy_buf_size + 2  );
 				}
 			else
 				/* Can't grow it, we don't own it. */
@@ -1620,7 +1620,7 @@ int yyFlexLexer::yy_get_next_buffer()
 	if ((yy_size_t) ((yy_n_chars) + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
 		/* Extend the array by 50%, plus the number we really need. */
 		yy_size_t new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
-		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) osmrealloc((void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf,new_size  );
+		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) TagFilterConfigrealloc((void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf,new_size  );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
 			YY_FATAL_ERROR( "out of dynamic memory in yy_get_next_buffer()" );
 	}
@@ -1911,7 +1911,7 @@ int yyFlexLexer::yy_get_next_buffer()
 {
 	YY_BUFFER_STATE b;
     
-	b = (YY_BUFFER_STATE) osmalloc(sizeof( struct yy_buffer_state )  );
+	b = (YY_BUFFER_STATE) TagFilterConfigalloc(sizeof( struct yy_buffer_state )  );
 	if ( ! b )
 		YY_FATAL_ERROR( "out of dynamic memory in yy_create_buffer()" );
 
@@ -1920,7 +1920,7 @@ int yyFlexLexer::yy_get_next_buffer()
 	/* yy_ch_buf has to be 2 characters longer than the size given because
 	 * we need to put in 2 end-of-buffer characters.
 	 */
-	b->yy_ch_buf = (char *) osmalloc(b->yy_buf_size + 2  );
+	b->yy_ch_buf = (char *) TagFilterConfigalloc(b->yy_buf_size + 2  );
 	if ( ! b->yy_ch_buf )
 		YY_FATAL_ERROR( "out of dynamic memory in yy_create_buffer()" );
 
@@ -1949,9 +1949,9 @@ int yyFlexLexer::yy_get_next_buffer()
 		YY_CURRENT_BUFFER_LVALUE = (YY_BUFFER_STATE) 0;
 
 	if ( b->yy_is_our_buffer )
-		osmfree((void *) b->yy_ch_buf  );
+		TagFilterConfigfree((void *) b->yy_ch_buf  );
 
-	osmfree((void *) b  );
+	TagFilterConfigfree((void *) b  );
 }
 
 /* %if-c-only */
@@ -2112,7 +2112,7 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 		 * immediate realloc on the next call.
          */
 		num_to_alloc = 1;
-		(yy_buffer_stack) = (struct yy_buffer_state**)osmalloc
+		(yy_buffer_stack) = (struct yy_buffer_state**)TagFilterConfigalloc
 								(num_to_alloc * sizeof(struct yy_buffer_state*)
 								);
 		if ( ! (yy_buffer_stack) )
@@ -2131,7 +2131,7 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 		int grow_size = 8 /* arbitrary grow size */;
 
 		num_to_alloc = (yy_buffer_stack_max) + grow_size;
-		(yy_buffer_stack) = (struct yy_buffer_state**)osmrealloc
+		(yy_buffer_stack) = (struct yy_buffer_state**)TagFilterConfigrealloc
 								((yy_buffer_stack),
 								num_to_alloc * sizeof(struct yy_buffer_state*)
 								);
@@ -2168,10 +2168,10 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 		new_size = (yy_start_stack_depth) * sizeof( int );
 
 		if ( ! (yy_start_stack) )
-			(yy_start_stack) = (int *) osmalloc(new_size  );
+			(yy_start_stack) = (int *) TagFilterConfigalloc(new_size  );
 
 		else
-			(yy_start_stack) = (int *) osmrealloc((void *) (yy_start_stack),new_size  );
+			(yy_start_stack) = (int *) TagFilterConfigrealloc((void *) (yy_start_stack),new_size  );
 
 		if ( ! (yy_start_stack) )
 			YY_FATAL_ERROR( "out of memory expanding start-condition stack" );
@@ -2280,12 +2280,12 @@ static int yy_flex_strlen (yyconst char * s )
 }
 #endif
 
-void *osmalloc (yy_size_t  size )
+void *TagFilterConfigalloc (yy_size_t  size )
 {
 	return (void *) malloc( size );
 }
 
-void *osmrealloc  (void * ptr, yy_size_t  size )
+void *TagFilterConfigrealloc  (void * ptr, yy_size_t  size )
 {
 	/* The cast to (char *) in the following accommodates both
 	 * implementations that use char* generic pointers, and those
@@ -2297,9 +2297,9 @@ void *osmrealloc  (void * ptr, yy_size_t  size )
 	return (void *) realloc( (char *) ptr, size );
 }
 
-void osmfree (void * ptr )
+void TagFilterConfigfree (void * ptr )
 {
-	free( (char *) ptr );	/* see osmrealloc() for (char *) cast */
+	free( (char *) ptr );	/* see TagFilterConfigrealloc() for (char *) cast */
 }
 
 /* %if-tables-serialization definitions */
@@ -2309,7 +2309,7 @@ void osmfree (void * ptr )
 
 /* %ok-for-header */
 
-#line 111 "/home/malasiot/source/mftools/src/convert/osm.l"
+#line 111 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
 
 
 

@@ -32,7 +32,7 @@
 
 /**
  ** \file /home/malasiot/source/mftools/src/convert/parser/position.hh
- ** Define the OSM::position class.
+ ** Define the tag_filter::position class.
  */
 
 #ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED
@@ -50,8 +50,8 @@
 #  endif
 # endif
 
-#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // location.cc:291
-namespace OSM {
+#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // location.cc:291
+namespace tag_filter {
 #line 56 "/home/malasiot/source/mftools/src/convert/parser/position.hh" // location.cc:291
   /// Abstract a position.
   class position
@@ -174,7 +174,7 @@ namespace OSM {
     return ostr << pos.line << '.' << pos.column;
   }
 
-#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // location.cc:291
-} // OSM
+#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // location.cc:291
+} // tag_filter
 #line 180 "/home/malasiot/source/mftools/src/convert/parser/position.hh" // location.cc:291
 #endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED

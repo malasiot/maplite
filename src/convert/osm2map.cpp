@@ -102,14 +102,14 @@ int main(int argc, char *argv[])
         exit(1) ;
     }
 
-    FilterConfig fcfg ;
-    if ( !fcfg.parse(filter_config_file) ) {
+    TagFilter filter ;
+    if ( !filter.parse(filter_config_file) ) {
         cerr << "Error parsing OSM tag filter configuration file: " << filter_config_file << endl ;
         return 0 ;
     }
 
     for( const string &fp: osm_files ) {
-        if ( !proc.processOsmFile(fp, fcfg) ) {
+        if ( !proc.processOsmFile(fp, filter) ) {
             cerr << "Error while populating temporary spatialite database" << endl ;
             return 0 ;
         }

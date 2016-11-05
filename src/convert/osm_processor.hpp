@@ -6,8 +6,8 @@
 #include "osm_document.hpp"
 #include "geometry.hpp"
 
-#include "osm_rule_parser.hpp"
-#include "parse_context.hpp"
+#include "tag_filter_config_parser.hpp"
+#include "tag_filter_context.hpp"
 
 #include <map>
 
@@ -31,7 +31,7 @@ public:
     bool createGeometriesTable(const std::string &desc);
     bool createTagsTable() ;
 
-    bool processOsmFile(const string &path, FilterConfig &cfg) ;
+    bool processOsmFile(const string &path, TagFilter &filter) ;
 
     // requires as input a shape file containing the land polygon and clip box (bounding box of the map)
     bool processLandPolygon(const string &shape_file, const BBox &clip_box) ;
@@ -43,8 +43,6 @@ public:
 
 private:
     string insertFeatureSQL(const std::string &desc, const std::string &geomCmd = "?") ;
-
-    bool matchRule(const OSM::Filter::RulePtr &rule, OSM::Filter::Context &ctx, TagWriteList &tw, bool &cont) ;
 
     bool addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const OSM::Way &way, uint8_t zmin, uint8_t zmax) ;
     bool addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const std::vector<OSM::Way> &ways, const std::string &id, uint8_t zmin, uint8_t zmax) ;

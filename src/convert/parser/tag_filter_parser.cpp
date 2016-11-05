@@ -33,7 +33,7 @@
 
 // First part of user declarations.
 
-#line 37 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:399
+#line 37 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:399
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -43,19 +43,18 @@
 #  endif
 # endif
 
-#include "osm_parser.hpp"
+#include "tag_filter_parser.hpp"
 
 // User implementation prologue.
 
-#line 51 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:407
+#line 51 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:407
 // Unqualified %code blocks.
-#line 27 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:408
+#line 24 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:408
 
-#include "osm_rule_parser.hpp"
+#include "tag_filter_config_parser.hpp"
+static tag_filter::Parser::symbol_type yylex(TagFilterConfigParser &driver, tag_filter::Parser::location_type &loc);
 
-static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::BisonParser::location_type &loc);
-
-#line 59 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:408
+#line 58 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:408
 
 
 #ifndef YY_
@@ -139,9 +138,9 @@ static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::Bis
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:474
-namespace OSM {
-#line 145 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:474
+#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:474
+namespace tag_filter {
+#line 144 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:474
 
   /* Return YYSTR after stripping away unnecessary quotes and
      backslashes, so that it's suitable for yyerror.  The heuristic is
@@ -149,7 +148,7 @@ namespace OSM {
      apostrophe, a comma, or backslash (other than backslash-backslash).
      YYSTR is taken from yytname.  */
   std::string
-  BisonParser::yytnamerr_ (const char *yystr)
+  Parser::yytnamerr_ (const char *yystr)
   {
     if (*yystr == '"')
       {
@@ -182,7 +181,7 @@ namespace OSM {
 
 
   /// Build a parser object.
-  BisonParser::BisonParser (OSM::Filter::Parser &driver_yyarg, OSM::BisonParser::location_type &loc_yyarg)
+  Parser::Parser (TagFilterConfigParser &driver_yyarg, tag_filter::Parser::location_type &loc_yyarg)
     :
 #if YYDEBUG
       yydebug_ (false),
@@ -192,7 +191,7 @@ namespace OSM {
       loc (loc_yyarg)
   {}
 
-  BisonParser::~BisonParser ()
+  Parser::~Parser ()
   {}
 
 
@@ -204,58 +203,68 @@ namespace OSM {
 
   // by_state.
   inline
-  BisonParser::by_state::by_state ()
+  Parser::by_state::by_state ()
     : state (empty)
   {}
 
   inline
-  BisonParser::by_state::by_state (const by_state& other)
+  Parser::by_state::by_state (const by_state& other)
     : state (other.state)
   {}
 
   inline
   void
-  BisonParser::by_state::move (by_state& that)
+  Parser::by_state::move (by_state& that)
   {
     state = that.state;
     that.state = empty;
   }
 
   inline
-  BisonParser::by_state::by_state (state_type s)
+  Parser::by_state::by_state (state_type s)
     : state (s)
   {}
 
   inline
-  BisonParser::symbol_number_type
-  BisonParser::by_state::type_get () const
+  Parser::symbol_number_type
+  Parser::by_state::type_get () const
   {
     return state == empty ? 0 : yystos_[state];
   }
 
   inline
-  BisonParser::stack_symbol_type::stack_symbol_type ()
+  Parser::stack_symbol_type::stack_symbol_type ()
   {}
 
 
   inline
-  BisonParser::stack_symbol_type::stack_symbol_type (state_type s, symbol_type& that)
+  Parser::stack_symbol_type::stack_symbol_type (state_type s, symbol_type& that)
     : super_type (s, that.location)
   {
       switch (that.type_get ())
     {
+      case 42: // "number"
+        value.move< double > (that.value);
+        break;
+
+      case 41: // "identifier"
+      case 43: // "string literal"
+      case 44: // "LUA script"
+        value.move< std::string > (that.value);
+        break;
+
       case 51: // action_block
       case 52: // command_list
-        value.move< OSM::Filter::CommandListPtr > (that.value);
+        value.move< tag_filter::CommandListPtr > (that.value);
         break;
 
       case 57: // command
-        value.move< OSM::Filter::CommandPtr > (that.value);
+        value.move< tag_filter::CommandPtr > (that.value);
         break;
 
       case 67: // literal_list
       case 72: // function_argument_list
-        value.move< OSM::Filter::ExpressionListPtr > (that.value);
+        value.move< tag_filter::ExpressionListPtr > (that.value);
         break;
 
       case 58: // boolean_value_expression
@@ -277,41 +286,31 @@ namespace OSM {
       case 76: // boolean_literal
       case 77: // numeric_literal
       case 78: // attribute
-        value.move< OSM::Filter::ExpressionNodePtr > (that.value);
+        value.move< tag_filter::ExpressionNodePtr > (that.value);
         break;
 
       case 49: // rule_list
-        value.move< OSM::Filter::RuleListPtr > (that.value);
+        value.move< tag_filter::RuleListPtr > (that.value);
         break;
 
       case 50: // rule
-        value.move< OSM::Filter::RulePtr > (that.value);
+        value.move< tag_filter::RulePtr > (that.value);
         break;
 
       case 56: // tag_decl_list
-        value.move< OSM::Filter::TagDeclarationListPtr > (that.value);
+        value.move< tag_filter::TagDeclarationListPtr > (that.value);
         break;
 
       case 54: // tag_decl
-        value.move< OSM::Filter::TagDeclarationPtr > (that.value);
+        value.move< tag_filter::TagDeclarationPtr > (that.value);
         break;
 
       case 55: // tag_list
-        value.move< OSM::Filter::TagListPtr > (that.value);
+        value.move< tag_filter::TagListPtr > (that.value);
         break;
 
       case 53: // zoom_range
-        value.move< OSM::Filter::ZoomRangePtr > (that.value);
-        break;
-
-      case 42: // "number"
-        value.move< double > (that.value);
-        break;
-
-      case 41: // "identifier"
-      case 43: // "string literal"
-      case 44: // "LUA script"
-        value.move< std::string > (that.value);
+        value.move< tag_filter::ZoomRangePtr > (that.value);
         break;
 
       case 45: // "zoom specifier"
@@ -327,24 +326,34 @@ namespace OSM {
   }
 
   inline
-  BisonParser::stack_symbol_type&
-  BisonParser::stack_symbol_type::operator= (const stack_symbol_type& that)
+  Parser::stack_symbol_type&
+  Parser::stack_symbol_type::operator= (const stack_symbol_type& that)
   {
     state = that.state;
       switch (that.type_get ())
     {
+      case 42: // "number"
+        value.copy< double > (that.value);
+        break;
+
+      case 41: // "identifier"
+      case 43: // "string literal"
+      case 44: // "LUA script"
+        value.copy< std::string > (that.value);
+        break;
+
       case 51: // action_block
       case 52: // command_list
-        value.copy< OSM::Filter::CommandListPtr > (that.value);
+        value.copy< tag_filter::CommandListPtr > (that.value);
         break;
 
       case 57: // command
-        value.copy< OSM::Filter::CommandPtr > (that.value);
+        value.copy< tag_filter::CommandPtr > (that.value);
         break;
 
       case 67: // literal_list
       case 72: // function_argument_list
-        value.copy< OSM::Filter::ExpressionListPtr > (that.value);
+        value.copy< tag_filter::ExpressionListPtr > (that.value);
         break;
 
       case 58: // boolean_value_expression
@@ -366,41 +375,31 @@ namespace OSM {
       case 76: // boolean_literal
       case 77: // numeric_literal
       case 78: // attribute
-        value.copy< OSM::Filter::ExpressionNodePtr > (that.value);
+        value.copy< tag_filter::ExpressionNodePtr > (that.value);
         break;
 
       case 49: // rule_list
-        value.copy< OSM::Filter::RuleListPtr > (that.value);
+        value.copy< tag_filter::RuleListPtr > (that.value);
         break;
 
       case 50: // rule
-        value.copy< OSM::Filter::RulePtr > (that.value);
+        value.copy< tag_filter::RulePtr > (that.value);
         break;
 
       case 56: // tag_decl_list
-        value.copy< OSM::Filter::TagDeclarationListPtr > (that.value);
+        value.copy< tag_filter::TagDeclarationListPtr > (that.value);
         break;
 
       case 54: // tag_decl
-        value.copy< OSM::Filter::TagDeclarationPtr > (that.value);
+        value.copy< tag_filter::TagDeclarationPtr > (that.value);
         break;
 
       case 55: // tag_list
-        value.copy< OSM::Filter::TagListPtr > (that.value);
+        value.copy< tag_filter::TagListPtr > (that.value);
         break;
 
       case 53: // zoom_range
-        value.copy< OSM::Filter::ZoomRangePtr > (that.value);
-        break;
-
-      case 42: // "number"
-        value.copy< double > (that.value);
-        break;
-
-      case 41: // "identifier"
-      case 43: // "string literal"
-      case 44: // "LUA script"
-        value.copy< std::string > (that.value);
+        value.copy< tag_filter::ZoomRangePtr > (that.value);
         break;
 
       case 45: // "zoom specifier"
@@ -419,7 +418,7 @@ namespace OSM {
   template <typename Base>
   inline
   void
-  BisonParser::yy_destroy_ (const char* yymsg, basic_symbol<Base>& yysym) const
+  Parser::yy_destroy_ (const char* yymsg, basic_symbol<Base>& yysym) const
   {
     if (yymsg)
       YY_SYMBOL_PRINT (yymsg, yysym);
@@ -428,7 +427,7 @@ namespace OSM {
 #if YYDEBUG
   template <typename Base>
   void
-  BisonParser::yy_print_ (std::ostream& yyo,
+  Parser::yy_print_ (std::ostream& yyo,
                                      const basic_symbol<Base>& yysym) const
   {
     std::ostream& yyoutput = yyo;
@@ -444,7 +443,7 @@ namespace OSM {
 
   inline
   void
-  BisonParser::yypush_ (const char* m, state_type s, symbol_type& sym)
+  Parser::yypush_ (const char* m, state_type s, symbol_type& sym)
   {
     stack_symbol_type t (s, sym);
     yypush_ (m, t);
@@ -452,7 +451,7 @@ namespace OSM {
 
   inline
   void
-  BisonParser::yypush_ (const char* m, stack_symbol_type& s)
+  Parser::yypush_ (const char* m, stack_symbol_type& s)
   {
     if (m)
       YY_SYMBOL_PRINT (m, s);
@@ -461,40 +460,40 @@ namespace OSM {
 
   inline
   void
-  BisonParser::yypop_ (unsigned int n)
+  Parser::yypop_ (unsigned int n)
   {
     yystack_.pop (n);
   }
 
 #if YYDEBUG
   std::ostream&
-  BisonParser::debug_stream () const
+  Parser::debug_stream () const
   {
     return *yycdebug_;
   }
 
   void
-  BisonParser::set_debug_stream (std::ostream& o)
+  Parser::set_debug_stream (std::ostream& o)
   {
     yycdebug_ = &o;
   }
 
 
-  BisonParser::debug_level_type
-  BisonParser::debug_level () const
+  Parser::debug_level_type
+  Parser::debug_level () const
   {
     return yydebug_;
   }
 
   void
-  BisonParser::set_debug_level (debug_level_type l)
+  Parser::set_debug_level (debug_level_type l)
   {
     yydebug_ = l;
   }
 #endif // YYDEBUG
 
-  inline BisonParser::state_type
-  BisonParser::yy_lr_goto_state_ (state_type yystate, int yysym)
+  inline Parser::state_type
+  Parser::yy_lr_goto_state_ (state_type yystate, int yysym)
   {
     int yyr = yypgoto_[yysym - yyntokens_] + yystate;
     if (0 <= yyr && yyr <= yylast_ && yycheck_[yyr] == yystate)
@@ -504,19 +503,19 @@ namespace OSM {
   }
 
   inline bool
-  BisonParser::yy_pact_value_is_default_ (int yyvalue)
+  Parser::yy_pact_value_is_default_ (int yyvalue)
   {
     return yyvalue == yypact_ninf_;
   }
 
   inline bool
-  BisonParser::yy_table_value_is_error_ (int yyvalue)
+  Parser::yy_table_value_is_error_ (int yyvalue)
   {
     return yyvalue == yytable_ninf_;
   }
 
   int
-  BisonParser::parse ()
+  Parser::parse ()
   {
     /// Whether yyla contains a lookahead.
     bool yyempty = true;
@@ -638,18 +637,28 @@ namespace OSM {
          when using variants.  */
         switch (yyr1_[yyn])
     {
+      case 42: // "number"
+        yylhs.value.build< double > ();
+        break;
+
+      case 41: // "identifier"
+      case 43: // "string literal"
+      case 44: // "LUA script"
+        yylhs.value.build< std::string > ();
+        break;
+
       case 51: // action_block
       case 52: // command_list
-        yylhs.value.build< OSM::Filter::CommandListPtr > ();
+        yylhs.value.build< tag_filter::CommandListPtr > ();
         break;
 
       case 57: // command
-        yylhs.value.build< OSM::Filter::CommandPtr > ();
+        yylhs.value.build< tag_filter::CommandPtr > ();
         break;
 
       case 67: // literal_list
       case 72: // function_argument_list
-        yylhs.value.build< OSM::Filter::ExpressionListPtr > ();
+        yylhs.value.build< tag_filter::ExpressionListPtr > ();
         break;
 
       case 58: // boolean_value_expression
@@ -671,41 +680,31 @@ namespace OSM {
       case 76: // boolean_literal
       case 77: // numeric_literal
       case 78: // attribute
-        yylhs.value.build< OSM::Filter::ExpressionNodePtr > ();
+        yylhs.value.build< tag_filter::ExpressionNodePtr > ();
         break;
 
       case 49: // rule_list
-        yylhs.value.build< OSM::Filter::RuleListPtr > ();
+        yylhs.value.build< tag_filter::RuleListPtr > ();
         break;
 
       case 50: // rule
-        yylhs.value.build< OSM::Filter::RulePtr > ();
+        yylhs.value.build< tag_filter::RulePtr > ();
         break;
 
       case 56: // tag_decl_list
-        yylhs.value.build< OSM::Filter::TagDeclarationListPtr > ();
+        yylhs.value.build< tag_filter::TagDeclarationListPtr > ();
         break;
 
       case 54: // tag_decl
-        yylhs.value.build< OSM::Filter::TagDeclarationPtr > ();
+        yylhs.value.build< tag_filter::TagDeclarationPtr > ();
         break;
 
       case 55: // tag_list
-        yylhs.value.build< OSM::Filter::TagListPtr > ();
+        yylhs.value.build< tag_filter::TagListPtr > ();
         break;
 
       case 53: // zoom_range
-        yylhs.value.build< OSM::Filter::ZoomRangePtr > ();
-        break;
-
-      case 42: // "number"
-        yylhs.value.build< double > ();
-        break;
-
-      case 41: // "identifier"
-      case 43: // "string literal"
-      case 44: // "LUA script"
-        yylhs.value.build< std::string > ();
+        yylhs.value.build< tag_filter::ZoomRangePtr > ();
         break;
 
       case 45: // "zoom specifier"
@@ -730,496 +729,496 @@ namespace OSM {
           switch (yyn)
             {
   case 3:
-#line 109 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
+#line 105 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
     { driver.script_ = yystack_[1].value.as< std::string > () ; }
-#line 736 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 735 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 4:
-#line 111 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { driver.rules_.push_back(yystack_[0].value.as< OSM::Filter::RulePtr > ()) ; }
-#line 742 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 107 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { driver.rules_.push_back(yystack_[0].value.as< tag_filter::RulePtr > ()) ; }
+#line 741 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 5:
-#line 112 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { driver.rules_.push_front(yystack_[1].value.as< OSM::Filter::RulePtr > ()) ; }
-#line 748 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 108 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { driver.rules_.push_front(yystack_[1].value.as< tag_filter::RulePtr > ()) ; }
+#line 747 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 6:
-#line 115 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::RulePtr > () = std::make_shared<OSM::Filter::Rule>(yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::CommandListPtr > ()->commands_) ; }
-#line 754 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 111 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::RulePtr > () = std::make_shared<tag_filter::Rule>(yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::CommandListPtr > ()->commands_) ; }
+#line 753 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 7:
-#line 116 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::RulePtr > () = std::make_shared<OSM::Filter::Rule>(nullptr, yystack_[0].value.as< OSM::Filter::CommandListPtr > ()->commands_) ; }
-#line 760 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 112 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::RulePtr > () = std::make_shared<tag_filter::Rule>(nullptr, yystack_[0].value.as< tag_filter::CommandListPtr > ()->commands_) ; }
+#line 759 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 8:
-#line 121 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandListPtr > () = yystack_[1].value.as< OSM::Filter::CommandListPtr > () ; }
-#line 766 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 117 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandListPtr > () = yystack_[1].value.as< tag_filter::CommandListPtr > () ; }
+#line 765 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 9:
-#line 126 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandListPtr > () = std::make_shared<OSM::Filter::CommandList>() ; yylhs.value.as< OSM::Filter::CommandListPtr > ()->commands_.push_back(yystack_[0].value.as< OSM::Filter::CommandPtr > ()) ;  }
-#line 772 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 122 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandListPtr > () = std::make_shared<tag_filter::CommandList>() ; yylhs.value.as< tag_filter::CommandListPtr > ()->commands_.push_back(yystack_[0].value.as< tag_filter::CommandPtr > ()) ;  }
+#line 771 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 10:
-#line 127 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandListPtr > () = yystack_[0].value.as< OSM::Filter::CommandListPtr > () ; yylhs.value.as< OSM::Filter::CommandListPtr > ()->commands_.push_front(yystack_[1].value.as< OSM::Filter::CommandPtr > ()) ; }
-#line 778 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 123 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandListPtr > () = yystack_[0].value.as< tag_filter::CommandListPtr > () ; yylhs.value.as< tag_filter::CommandListPtr > ()->commands_.push_front(yystack_[1].value.as< tag_filter::CommandPtr > ()) ; }
+#line 777 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 11:
-#line 131 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ZoomRangePtr > () = std::make_shared<OSM::Filter::ZoomRange>(yystack_[1].value.as< uint8_t > (), 255) ; }
-#line 784 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 127 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ZoomRangePtr > () = std::make_shared<tag_filter::ZoomRange>(yystack_[1].value.as< uint8_t > (), 255) ; }
+#line 783 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 12:
-#line 132 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ZoomRangePtr > () = std::make_shared<OSM::Filter::ZoomRange>(yystack_[3].value.as< uint8_t > (), yystack_[1].value.as< uint8_t > ()); }
-#line 790 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 128 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ZoomRangePtr > () = std::make_shared<tag_filter::ZoomRange>(yystack_[3].value.as< uint8_t > (), yystack_[1].value.as< uint8_t > ()); }
+#line 789 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 13:
-#line 133 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ZoomRangePtr > () = std::make_shared<OSM::Filter::ZoomRange>(yystack_[2].value.as< uint8_t > (), 255); }
-#line 796 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 129 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ZoomRangePtr > () = std::make_shared<tag_filter::ZoomRange>(yystack_[2].value.as< uint8_t > (), 255); }
+#line 795 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 14:
-#line 134 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ZoomRangePtr > () = std::make_shared<OSM::Filter::ZoomRange>(0, yystack_[1].value.as< uint8_t > ()); }
-#line 802 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 130 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ZoomRangePtr > () = std::make_shared<tag_filter::ZoomRange>(0, yystack_[1].value.as< uint8_t > ()); }
+#line 801 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 15:
-#line 137 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::TagDeclarationPtr > () = std::make_shared<OSM::Filter::TagDeclaration>(yystack_[0].value.as< std::string > (), nullptr); }
-#line 808 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 133 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::TagDeclarationPtr > () = std::make_shared<tag_filter::TagDeclaration>(yystack_[0].value.as< std::string > (), nullptr); }
+#line 807 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 16:
-#line 138 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::TagDeclarationPtr > () = std::make_shared<OSM::Filter::TagDeclaration>(yystack_[2].value.as< std::string > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()); }
-#line 814 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 134 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::TagDeclarationPtr > () = std::make_shared<tag_filter::TagDeclaration>(yystack_[2].value.as< std::string > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()); }
+#line 813 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 17:
-#line 141 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::TagListPtr > () = std::make_shared<OSM::Filter::TagList>() ; yylhs.value.as< OSM::Filter::TagListPtr > ()->tags_.push_back(yystack_[0].value.as< std::string > ()) ; }
-#line 820 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 137 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::TagListPtr > () = std::make_shared<tag_filter::TagList>() ; yylhs.value.as< tag_filter::TagListPtr > ()->tags_.push_back(yystack_[0].value.as< std::string > ()) ; }
+#line 819 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 18:
-#line 142 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::TagListPtr > () = yystack_[2].value.as< OSM::Filter::TagListPtr > () ; yylhs.value.as< OSM::Filter::TagListPtr > ()->tags_.push_back(yystack_[0].value.as< std::string > ()) ; }
-#line 826 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 138 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::TagListPtr > () = yystack_[2].value.as< tag_filter::TagListPtr > () ; yylhs.value.as< tag_filter::TagListPtr > ()->tags_.push_back(yystack_[0].value.as< std::string > ()) ; }
+#line 825 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 19:
-#line 145 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::TagDeclarationListPtr > () = std::make_shared<OSM::Filter::TagDeclarationList>() ; yylhs.value.as< OSM::Filter::TagDeclarationListPtr > ()->tags_.push_back(yystack_[0].value.as< OSM::Filter::TagDeclarationPtr > ()) ; }
-#line 832 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 141 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::TagDeclarationListPtr > () = std::make_shared<tag_filter::TagDeclarationList>() ; yylhs.value.as< tag_filter::TagDeclarationListPtr > ()->tags_.push_back(yystack_[0].value.as< tag_filter::TagDeclarationPtr > ()) ; }
+#line 831 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 20:
-#line 146 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::TagDeclarationListPtr > () = yystack_[2].value.as< OSM::Filter::TagDeclarationListPtr > () ; yylhs.value.as< OSM::Filter::TagDeclarationListPtr > ()->tags_.push_back(yystack_[0].value.as< OSM::Filter::TagDeclarationPtr > ()) ; }
-#line 838 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 142 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::TagDeclarationListPtr > () = yystack_[2].value.as< tag_filter::TagDeclarationListPtr > () ; yylhs.value.as< tag_filter::TagDeclarationListPtr > ()->tags_.push_back(yystack_[0].value.as< tag_filter::TagDeclarationPtr > ()) ; }
+#line 837 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 21:
-#line 150 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::SimpleCommand>(OSM::Filter::Command::Add, yystack_[3].value.as< std::string > (), yystack_[1].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 844 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 146 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::SimpleCommand>(tag_filter::Command::Add, yystack_[3].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 843 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 22:
-#line 152 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::SimpleCommand>(OSM::Filter::Command::Set, yystack_[3].value.as< std::string > (), yystack_[1].value.as< OSM::Filter::ExpressionNodePtr > ()) ;}
-#line 850 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 148 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::SimpleCommand>(tag_filter::Command::Set, yystack_[3].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionNodePtr > ()) ;}
+#line 849 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 23:
-#line 154 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::SimpleCommand>(OSM::Filter::Command::Delete, yystack_[1].value.as< std::string > ()) ; }
-#line 856 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 150 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::SimpleCommand>(tag_filter::Command::Delete, yystack_[1].value.as< std::string > ()) ; }
+#line 855 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 24:
-#line 156 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::WriteCommand>(*yystack_[2].value.as< OSM::Filter::ZoomRangePtr > (), *yystack_[1].value.as< OSM::Filter::TagDeclarationListPtr > ()) ; }
-#line 862 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 152 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::WriteCommand>(*yystack_[2].value.as< tag_filter::ZoomRangePtr > (), *yystack_[1].value.as< tag_filter::TagDeclarationListPtr > ()) ; }
+#line 861 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 25:
-#line 157 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::AttachCommand>(*yystack_[1].value.as< OSM::Filter::TagListPtr > ()) ; }
-#line 868 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 153 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::AttachCommand>(*yystack_[1].value.as< tag_filter::TagListPtr > ()) ; }
+#line 867 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 26:
-#line 158 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::WriteCommand>( OSM::Filter::ZoomRange(0, 255), *yystack_[1].value.as< OSM::Filter::TagDeclarationListPtr > ()) ; }
-#line 874 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 154 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::WriteCommand>( tag_filter::ZoomRange(0, 255), *yystack_[1].value.as< tag_filter::TagDeclarationListPtr > ()) ; }
+#line 873 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 27:
-#line 160 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::WriteAllCommand>(*yystack_[1].value.as< OSM::Filter::ZoomRangePtr > ()) ; }
-#line 880 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 156 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::WriteAllCommand>(*yystack_[1].value.as< tag_filter::ZoomRangePtr > ()) ; }
+#line 879 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 28:
-#line 161 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::WriteAllCommand>( OSM::Filter::ZoomRange(0, 255)) ; }
-#line 886 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 157 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::WriteAllCommand>( tag_filter::ZoomRange(0, 255)) ; }
+#line 885 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 29:
-#line 163 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::ExcludeCommand>(*yystack_[2].value.as< OSM::Filter::ZoomRangePtr > (), *yystack_[1].value.as< OSM::Filter::TagListPtr > ()) ; }
-#line 892 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 159 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::ExcludeCommand>(*yystack_[2].value.as< tag_filter::ZoomRangePtr > (), *yystack_[1].value.as< tag_filter::TagListPtr > ()) ; }
+#line 891 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 30:
-#line 164 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::ExcludeCommand>( OSM::Filter::ZoomRange(0, 255), *yystack_[1].value.as< OSM::Filter::TagListPtr > ()) ; }
-#line 898 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 160 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::ExcludeCommand>( tag_filter::ZoomRange(0, 255), *yystack_[1].value.as< tag_filter::TagListPtr > ()) ; }
+#line 897 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 31:
-#line 166 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::SimpleCommand>( OSM::Filter::SimpleCommand::Continue) ;}
-#line 904 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 162 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::SimpleCommand>( tag_filter::SimpleCommand::Continue) ;}
+#line 903 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 32:
-#line 168 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::RuleCommand>( yystack_[0].value.as< OSM::Filter::RulePtr > ()) ;}
-#line 910 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 164 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::RuleCommand>( yystack_[0].value.as< tag_filter::RulePtr > ()) ;}
+#line 909 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 33:
-#line 169 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::CommandPtr > () = std::make_shared<OSM::Filter::FunctionCommand>(yystack_[1].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 916 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 165 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::FunctionCommand>(yystack_[1].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 915 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 34:
-#line 174 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 922 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 170 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 921 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 35:
-#line 175 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::BooleanOperator>( OSM::Filter::BooleanOperator::Or, yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 928 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 171 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BooleanOperator>( tag_filter::BooleanOperator::Or, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 927 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 36:
-#line 179 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 934 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 175 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 933 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 37:
-#line 180 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::BooleanOperator>( OSM::Filter::BooleanOperator::And, yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 940 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 176 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BooleanOperator>( tag_filter::BooleanOperator::And, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 939 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 38:
-#line 184 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 946 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 180 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 945 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 39:
-#line 185 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::BooleanOperator>( OSM::Filter::BooleanOperator::Not, yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > (), nullptr) ; }
-#line 952 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 181 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BooleanOperator>( tag_filter::BooleanOperator::Not, yystack_[0].value.as< tag_filter::ExpressionNodePtr > (), nullptr) ; }
+#line 951 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 40:
-#line 189 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 958 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 185 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 957 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 41:
-#line 190 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[1].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 964 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 186 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[1].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 963 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 42:
-#line 194 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 970 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 190 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 969 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 43:
-#line 195 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 976 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 191 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 975 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 44:
-#line 196 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 982 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 192 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 981 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 45:
-#line 197 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 988 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 193 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 987 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 46:
-#line 201 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::UnaryPredicate>( yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ) ;}
-#line 994 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 197 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::UnaryPredicate>( yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ;}
+#line 993 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 47:
-#line 204 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::Equal, yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ) ; }
-#line 1000 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 200 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::Equal, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
+#line 999 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 48:
-#line 205 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::NotEqual, yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ) ; }
-#line 1006 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 201 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::NotEqual, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
+#line 1005 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 49:
-#line 206 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::Less, yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ) ; }
-#line 1012 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 202 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::Less, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
+#line 1011 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 50:
-#line 207 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::Greater, yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ) ; }
-#line 1018 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 203 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::Greater, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
+#line 1017 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 51:
-#line 208 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::LessOrEqual, yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ) ; }
-#line 1024 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 204 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::LessOrEqual, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
+#line 1023 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 52:
-#line 209 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::ComparisonPredicate>( OSM::Filter::ComparisonPredicate::GreaterOrEqual, yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ) ; }
-#line 1030 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 205 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::GreaterOrEqual, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
+#line 1029 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 53:
-#line 213 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::LikeTextPredicate>(yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< std::string > (), true) ; }
-#line 1036 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 209 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LikeTextPredicate>(yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< std::string > (), true) ; }
+#line 1035 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 54:
-#line 214 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::LikeTextPredicate>(yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< std::string > (), false) ; }
-#line 1042 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 210 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LikeTextPredicate>(yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< std::string > (), false) ; }
+#line 1041 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 55:
-#line 218 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::ListPredicate>(yystack_[4].value.as< std::string > (), yystack_[1].value.as< OSM::Filter::ExpressionListPtr > ()->children(), true) ; }
-#line 1048 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 214 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ListPredicate>(yystack_[4].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionListPtr > ()->children(), true) ; }
+#line 1047 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 56:
-#line 219 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::ListPredicate>(yystack_[5].value.as< std::string > (), yystack_[1].value.as< OSM::Filter::ExpressionListPtr > ()->children(), false) ; }
-#line 1054 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 215 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ListPredicate>(yystack_[5].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionListPtr > ()->children(), false) ; }
+#line 1053 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 57:
-#line 223 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionListPtr > () = std::make_shared<OSM::Filter::ExpressionList>() ;  yylhs.value.as< OSM::Filter::ExpressionListPtr > ()->append(yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ;  }
-#line 1060 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 219 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionListPtr > () = std::make_shared<tag_filter::ExpressionList>() ;  yylhs.value.as< tag_filter::ExpressionListPtr > ()->append(yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ;  }
+#line 1059 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 58:
-#line 224 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionListPtr > () = yystack_[0].value.as< OSM::Filter::ExpressionListPtr > () ; yystack_[0].value.as< OSM::Filter::ExpressionListPtr > ()->prepend(yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 1066 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 220 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionListPtr > () = yystack_[0].value.as< tag_filter::ExpressionListPtr > () ; yystack_[0].value.as< tag_filter::ExpressionListPtr > ()->prepend(yystack_[2].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 1065 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 59:
-#line 228 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1072 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 224 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1071 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 60:
-#line 229 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::BinaryOperator>('+',yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 1078 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 225 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('+',yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 1077 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 61:
-#line 230 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::BinaryOperator>('.',yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 1084 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 226 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('.',yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 1083 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 62:
-#line 231 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::BinaryOperator>('-', yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 1090 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 227 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('-', yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 1089 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 63:
-#line 235 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1096 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 231 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1095 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 64:
-#line 236 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::BinaryOperator>('*', yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 1102 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 232 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('*', yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 1101 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 65:
-#line 237 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::BinaryOperator>('/', yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > (), yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 1108 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 233 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('/', yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 1107 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 66:
-#line 241 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1114 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 237 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1113 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 67:
-#line 242 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1120 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 238 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1119 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 68:
-#line 243 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1126 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 239 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1125 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 69:
-#line 244 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[1].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1132 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 240 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[1].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1131 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 70:
-#line 248 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::Function>(yystack_[2].value.as< std::string > (), &driver.lua_) ; }
-#line 1138 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 244 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::Function>(yystack_[2].value.as< std::string > (), &driver.lua_) ; }
+#line 1137 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 71:
-#line 249 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
+#line 245 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
     {
-			yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::Function>(yystack_[3].value.as< std::string > (), yystack_[1].value.as< OSM::Filter::ExpressionListPtr > ()->children(), &driver.lua_) ;
+                        yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::Function>(yystack_[3].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionListPtr > ()->children(), &driver.lua_) ;
 		 }
-#line 1146 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 1145 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 72:
-#line 255 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
+#line 251 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
     {
-				yylhs.value.as< OSM::Filter::ExpressionListPtr > () = std::make_shared<OSM::Filter::ExpressionList>() ;
-				yylhs.value.as< OSM::Filter::ExpressionListPtr > ()->append(yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > ()) ;
+                                yylhs.value.as< tag_filter::ExpressionListPtr > () = std::make_shared<tag_filter::ExpressionList>() ;
+				yylhs.value.as< tag_filter::ExpressionListPtr > ()->append(yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ;
 			}
-#line 1155 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 1154 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 73:
-#line 259 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionListPtr > () = yystack_[0].value.as< OSM::Filter::ExpressionListPtr > () ; yystack_[0].value.as< OSM::Filter::ExpressionListPtr > ()->prepend(yystack_[2].value.as< OSM::Filter::ExpressionNodePtr > ()) ; }
-#line 1161 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 255 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionListPtr > () = yystack_[0].value.as< tag_filter::ExpressionListPtr > () ; yystack_[0].value.as< tag_filter::ExpressionListPtr > ()->prepend(yystack_[2].value.as< tag_filter::ExpressionNodePtr > ()) ; }
+#line 1160 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 74:
-#line 263 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1167 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 259 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1166 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 75:
-#line 267 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1173 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 263 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1172 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 76:
-#line 268 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1179 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 264 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1178 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 77:
-#line 272 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::LiteralExpressionNode>(yystack_[0].value.as< std::string > ()) ; }
-#line 1185 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 268 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LiteralExpressionNode>(yystack_[0].value.as< std::string > ()) ; }
+#line 1184 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 78:
-#line 273 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = yystack_[0].value.as< OSM::Filter::ExpressionNodePtr > () ; }
-#line 1191 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 269 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
+#line 1190 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 79:
-#line 278 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::LiteralExpressionNode>(true) ; }
-#line 1197 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 274 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LiteralExpressionNode>(true) ; }
+#line 1196 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 80:
-#line 279 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
-    { yylhs.value.as< OSM::Filter::ExpressionNodePtr > () =  std::make_shared<OSM::Filter::LiteralExpressionNode>(false) ; }
-#line 1203 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 275 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
+    { yylhs.value.as< tag_filter::ExpressionNodePtr > () =  std::make_shared<tag_filter::LiteralExpressionNode>(false) ; }
+#line 1202 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 81:
-#line 283 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
+#line 279 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
     {
-		yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::LiteralExpressionNode>((double)yystack_[0].value.as< double > ()) ;
+                yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LiteralExpressionNode>((double)yystack_[0].value.as< double > ()) ;
 	}
-#line 1211 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 1210 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 82:
-#line 289 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:847
+#line 285 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:847
     {
-		yylhs.value.as< OSM::Filter::ExpressionNodePtr > () = std::make_shared<OSM::Filter::Attribute>(yystack_[0].value.as< std::string > ()) ;
+                yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::Attribute>(yystack_[0].value.as< std::string > ()) ;
 	}
-#line 1219 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 1218 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
 
-#line 1223 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:847
+#line 1222 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
             default:
               break;
             }
@@ -1373,14 +1372,14 @@ namespace OSM {
   }
 
   void
-  BisonParser::error (const syntax_error& yyexc)
+  Parser::error (const syntax_error& yyexc)
   {
     error (yyexc.location, yyexc.what());
   }
 
   // Generate an error message.
   std::string
-  BisonParser::yysyntax_error_ (state_type yystate, symbol_number_type yytoken) const
+  Parser::yysyntax_error_ (state_type yystate, symbol_number_type yytoken) const
   {
     std::string yyres;
     // Number of reported tokens (one for the "unexpected", one per
@@ -1474,12 +1473,12 @@ namespace OSM {
   }
 
 
-  const short int BisonParser::yypact_ninf_ = -138;
+  const short int Parser::yypact_ninf_ = -138;
 
-  const signed char BisonParser::yytable_ninf_ = -1;
+  const signed char Parser::yytable_ninf_ = -1;
 
   const short int
-  BisonParser::yypact_[] =
+  Parser::yypact_[] =
   {
       42,    64,     5,    94,     9,  -138,    94,  -138,   -23,   -13,
        3,    37,    87,    46,   104,    31,    71,  -138,   106,    64,
@@ -1500,7 +1499,7 @@ namespace OSM {
   };
 
   const unsigned char
-  BisonParser::yydefact_[] =
+  Parser::yydefact_[] =
   {
        0,     0,     0,     0,     0,     2,     4,     7,     0,     0,
        0,     0,     0,     0,     0,     0,     0,    32,     0,     9,
@@ -1521,7 +1520,7 @@ namespace OSM {
   };
 
   const short int
-  BisonParser::yypgoto_[] =
+  Parser::yypgoto_[] =
   {
     -138,  -138,   112,    11,    89,   145,   121,    72,   -14,   116,
     -138,   142,    96,    92,   150,  -138,  -138,  -138,  -138,  -138,
@@ -1530,7 +1529,7 @@ namespace OSM {
   };
 
   const short int
-  BisonParser::yydefgoto_[] =
+  Parser::yydefgoto_[] =
   {
       -1,     4,     5,     6,     7,    18,    54,    55,    60,    56,
       19,    28,    29,    30,    31,    32,    33,    34,    35,    36,
@@ -1539,7 +1538,7 @@ namespace OSM {
   };
 
   const unsigned char
-  BisonParser::yytable_[] =
+  Parser::yytable_[] =
   {
       70,    63,   144,    71,    73,   151,    22,    23,    21,    47,
       22,    23,    17,   103,   104,    92,   156,    24,    49,    22,
@@ -1562,7 +1561,7 @@ namespace OSM {
   };
 
   const short int
-  BisonParser::yycheck_[] =
+  Parser::yycheck_[] =
   {
       24,    15,   112,     3,     5,   142,    14,    15,     3,     0,
       14,    15,     1,    21,    22,    18,   153,    21,    41,    14,
@@ -1585,7 +1584,7 @@ namespace OSM {
   };
 
   const unsigned char
-  BisonParser::yystos_[] =
+  Parser::yystos_[] =
   {
        0,    25,    27,    44,    48,    49,    50,    51,    30,    31,
       32,    33,    34,    38,    39,    40,    41,    50,    52,    57,
@@ -1606,7 +1605,7 @@ namespace OSM {
   };
 
   const unsigned char
-  BisonParser::yyr1_[] =
+  Parser::yyr1_[] =
   {
        0,    47,    48,    48,    49,    49,    50,    50,    51,    52,
       52,    53,    53,    53,    53,    54,    54,    55,    55,    56,
@@ -1620,7 +1619,7 @@ namespace OSM {
   };
 
   const unsigned char
-  BisonParser::yyr2_[] =
+  Parser::yyr2_[] =
   {
        0,     2,     1,     2,     1,     2,     4,     1,     3,     1,
        2,     3,     5,     4,     4,     1,     3,     1,     3,     1,
@@ -1638,7 +1637,7 @@ namespace OSM {
   // YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
   // First, the terminals, then, starting at \a yyntokens_, nonterminals.
   const char*
-  const BisonParser::yytname_[] =
+  const Parser::yytname_[] =
   {
   "\"end of file\"", "error", "$undefined", "\"!\"", "\"&&\"", "\"||\"",
   "\"~\"", "\"!~\"", "\"==\"", "\"!=\"", "\"<\"", "\">\"", "\"<=\"",
@@ -1660,22 +1659,22 @@ namespace OSM {
 
 #if YYDEBUG
   const unsigned short int
-  BisonParser::yyrline_[] =
+  Parser::yyrline_[] =
   {
-       0,   108,   108,   109,   111,   112,   115,   116,   121,   126,
-     127,   131,   132,   133,   134,   137,   138,   141,   142,   145,
-     146,   150,   152,   154,   156,   157,   158,   160,   161,   163,
-     164,   166,   168,   169,   174,   175,   179,   180,   184,   185,
-     189,   190,   194,   195,   196,   197,   201,   204,   205,   206,
-     207,   208,   209,   213,   214,   218,   219,   223,   224,   228,
-     229,   230,   231,   235,   236,   237,   241,   242,   243,   244,
-     248,   249,   255,   259,   263,   267,   268,   272,   273,   278,
-     279,   283,   289
+       0,   104,   104,   105,   107,   108,   111,   112,   117,   122,
+     123,   127,   128,   129,   130,   133,   134,   137,   138,   141,
+     142,   146,   148,   150,   152,   153,   154,   156,   157,   159,
+     160,   162,   164,   165,   170,   171,   175,   176,   180,   181,
+     185,   186,   190,   191,   192,   193,   197,   200,   201,   202,
+     203,   204,   205,   209,   210,   214,   215,   219,   220,   224,
+     225,   226,   227,   231,   232,   233,   237,   238,   239,   240,
+     244,   245,   251,   255,   259,   263,   264,   268,   269,   274,
+     275,   279,   285
   };
 
   // Print the state stack on the debug stream.
   void
-  BisonParser::yystack_print_ ()
+  Parser::yystack_print_ ()
   {
     *yycdebug_ << "Stack now";
     for (stack_type::const_iterator
@@ -1688,7 +1687,7 @@ namespace OSM {
 
   // Report on the debug stream that the rule \a yyrule is going to be reduced.
   void
-  BisonParser::yy_reduce_print_ (int yyrule)
+  Parser::yy_reduce_print_ (int yyrule)
   {
     unsigned int yylno = yyrline_[yyrule];
     int yynrhs = yyr2_[yyrule];
@@ -1703,25 +1702,24 @@ namespace OSM {
 #endif // YYDEBUG
 
 
-#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:1155
-} // OSM
-#line 1709 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.cpp" // lalr1.cc:1155
-#line 294 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:1156
+#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:1155
+} // tag_filter
+#line 1708 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:1155
+#line 290 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:1156
 
 #define YYDEBUG 1
 
-#include <osm_rule_scanner.hpp>
+#include "tag_filter_config_scanner.hpp"
 
 // We have to implement the error function
-void OSM::BisonParser::error(const OSM::BisonParser::location_type &loc, const std::string &msg) {
-
+void tag_filter::Parser::error(const tag_filter::Parser::location_type &loc, const std::string &msg) {
 	driver.error(loc, msg) ;
 }
 
 // Now that we have the Parser declared, we can declare the Scanner and implement
 // the yylex function
 
-static OSM::BisonParser::symbol_type yylex(OSM::Filter::Parser &driver, OSM::BisonParser::location_type &loc) {
+static tag_filter::Parser::symbol_type yylex(TagFilterConfigParser &driver, tag_filter::Parser::location_type &loc) {
 	return  driver.scanner_.lex(&loc);
 }
 

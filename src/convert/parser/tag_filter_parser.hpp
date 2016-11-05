@@ -31,25 +31,21 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp
- ** Define the OSM::parser class.
+ ** \file /home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.hpp
+ ** Define the tag_filter::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_OSM_PARSER_HPP_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_OSM_PARSER_HPP_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED
 // //                    "%code requires" blocks.
-#line 18 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
+#line 19 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:372
 
-#include "osm_filter_rule.hpp"
-namespace OSM {
-	namespace Filter {
-		class Parser ;
-	}
-}
+#include "tag_filter_rule.hpp"
+class TagFilterConfigParser ;
 
-#line 53 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
+#line 49 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:372
 
 
 # include <vector>
@@ -123,9 +119,9 @@ namespace OSM {
 # define YYDEBUG 1
 #endif
 
-#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
-namespace OSM {
-#line 129 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
+#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:372
+namespace tag_filter {
+#line 125 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:372
 
 
 
@@ -265,23 +261,31 @@ namespace OSM {
 
 
   /// A Bison parser.
-  class BisonParser
+  class Parser
   {
   public:
 #ifndef YYSTYPE
     /// An auxiliary type to compute the largest semantic type.
     union union_type
     {
+      // "number"
+      char dummy1[sizeof(double)];
+
+      // "identifier"
+      // "string literal"
+      // "LUA script"
+      char dummy2[sizeof(std::string)];
+
       // action_block
       // command_list
-      char dummy1[sizeof(OSM::Filter::CommandListPtr)];
+      char dummy3[sizeof(tag_filter::CommandListPtr)];
 
       // command
-      char dummy2[sizeof(OSM::Filter::CommandPtr)];
+      char dummy4[sizeof(tag_filter::CommandPtr)];
 
       // literal_list
       // function_argument_list
-      char dummy3[sizeof(OSM::Filter::ExpressionListPtr)];
+      char dummy5[sizeof(tag_filter::ExpressionListPtr)];
 
       // boolean_value_expression
       // boolean_term
@@ -302,33 +306,25 @@ namespace OSM {
       // boolean_literal
       // numeric_literal
       // attribute
-      char dummy4[sizeof(OSM::Filter::ExpressionNodePtr)];
+      char dummy6[sizeof(tag_filter::ExpressionNodePtr)];
 
       // rule_list
-      char dummy5[sizeof(OSM::Filter::RuleListPtr)];
+      char dummy7[sizeof(tag_filter::RuleListPtr)];
 
       // rule
-      char dummy6[sizeof(OSM::Filter::RulePtr)];
+      char dummy8[sizeof(tag_filter::RulePtr)];
 
       // tag_decl_list
-      char dummy7[sizeof(OSM::Filter::TagDeclarationListPtr)];
+      char dummy9[sizeof(tag_filter::TagDeclarationListPtr)];
 
       // tag_decl
-      char dummy8[sizeof(OSM::Filter::TagDeclarationPtr)];
+      char dummy10[sizeof(tag_filter::TagDeclarationPtr)];
 
       // tag_list
-      char dummy9[sizeof(OSM::Filter::TagListPtr)];
+      char dummy11[sizeof(tag_filter::TagListPtr)];
 
       // zoom_range
-      char dummy10[sizeof(OSM::Filter::ZoomRangePtr)];
-
-      // "number"
-      char dummy11[sizeof(double)];
-
-      // "identifier"
-      // "string literal"
-      // "LUA script"
-      char dummy12[sizeof(std::string)];
+      char dummy12[sizeof(tag_filter::ZoomRangePtr)];
 
       // "zoom specifier"
       char dummy13[sizeof(uint8_t)];
@@ -433,29 +429,29 @@ namespace OSM {
 
   basic_symbol (typename Base::kind_type t, const location_type& l);
 
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::CommandListPtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::CommandPtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::ExpressionListPtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::ExpressionNodePtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::RuleListPtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::RulePtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::TagDeclarationListPtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::TagDeclarationPtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::TagListPtr v, const location_type& l);
-
-  basic_symbol (typename Base::kind_type t, const OSM::Filter::ZoomRangePtr v, const location_type& l);
-
   basic_symbol (typename Base::kind_type t, const double v, const location_type& l);
 
   basic_symbol (typename Base::kind_type t, const std::string v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::CommandListPtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::CommandPtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::ExpressionListPtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::ExpressionNodePtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::RuleListPtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::RulePtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::TagDeclarationListPtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::TagDeclarationPtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::TagListPtr v, const location_type& l);
+
+  basic_symbol (typename Base::kind_type t, const tag_filter::ZoomRangePtr v, const location_type& l);
 
   basic_symbol (typename Base::kind_type t, const uint8_t v, const location_type& l);
 
@@ -699,8 +695,8 @@ namespace OSM {
 
 
     /// Build a parser object.
-    BisonParser (OSM::Filter::Parser &driver_yyarg, OSM::BisonParser::location_type &loc_yyarg);
-    virtual ~BisonParser ();
+    Parser (TagFilterConfigParser &driver_yyarg, tag_filter::Parser::location_type &loc_yyarg);
+    virtual ~Parser ();
 
     /// Parse.
     /// \returns  0 iff parsing succeeded.
@@ -730,8 +726,8 @@ namespace OSM {
 
   private:
     /// This class is not copyable.
-    BisonParser (const BisonParser&);
-    BisonParser& operator= (const BisonParser&);
+    Parser (const Parser&);
+    Parser& operator= (const Parser&);
 
     /// State numbers.
     typedef int state_type;
@@ -908,14 +904,14 @@ namespace OSM {
 
 
     // User arguments.
-    OSM::Filter::Parser &driver;
-    OSM::BisonParser::location_type &loc;
+    TagFilterConfigParser &driver;
+    tag_filter::Parser::location_type &loc;
   };
 
   // Symbol number corresponding to token number t.
   inline
-  BisonParser::token_number_type
-  BisonParser::yytranslate_ (token_type t)
+  Parser::token_number_type
+  Parser::yytranslate_ (token_type t)
   {
     static
     const token_number_type
@@ -965,7 +961,7 @@ namespace OSM {
   }
 
   inline
-  BisonParser::syntax_error::syntax_error (const location_type& l, const std::string& m)
+  Parser::syntax_error::syntax_error (const location_type& l, const std::string& m)
     : std::runtime_error (m)
     , location (l)
   {}
@@ -973,31 +969,41 @@ namespace OSM {
   // basic_symbol.
   template <typename Base>
   inline
-  BisonParser::basic_symbol<Base>::basic_symbol ()
+  Parser::basic_symbol<Base>::basic_symbol ()
     : value ()
   {}
 
   template <typename Base>
   inline
-  BisonParser::basic_symbol<Base>::basic_symbol (const basic_symbol& other)
+  Parser::basic_symbol<Base>::basic_symbol (const basic_symbol& other)
     : Base (other)
     , value ()
     , location (other.location)
   {
       switch (other.type_get ())
     {
+      case 42: // "number"
+        value.copy< double > (other.value);
+        break;
+
+      case 41: // "identifier"
+      case 43: // "string literal"
+      case 44: // "LUA script"
+        value.copy< std::string > (other.value);
+        break;
+
       case 51: // action_block
       case 52: // command_list
-        value.copy< OSM::Filter::CommandListPtr > (other.value);
+        value.copy< tag_filter::CommandListPtr > (other.value);
         break;
 
       case 57: // command
-        value.copy< OSM::Filter::CommandPtr > (other.value);
+        value.copy< tag_filter::CommandPtr > (other.value);
         break;
 
       case 67: // literal_list
       case 72: // function_argument_list
-        value.copy< OSM::Filter::ExpressionListPtr > (other.value);
+        value.copy< tag_filter::ExpressionListPtr > (other.value);
         break;
 
       case 58: // boolean_value_expression
@@ -1019,41 +1025,31 @@ namespace OSM {
       case 76: // boolean_literal
       case 77: // numeric_literal
       case 78: // attribute
-        value.copy< OSM::Filter::ExpressionNodePtr > (other.value);
+        value.copy< tag_filter::ExpressionNodePtr > (other.value);
         break;
 
       case 49: // rule_list
-        value.copy< OSM::Filter::RuleListPtr > (other.value);
+        value.copy< tag_filter::RuleListPtr > (other.value);
         break;
 
       case 50: // rule
-        value.copy< OSM::Filter::RulePtr > (other.value);
+        value.copy< tag_filter::RulePtr > (other.value);
         break;
 
       case 56: // tag_decl_list
-        value.copy< OSM::Filter::TagDeclarationListPtr > (other.value);
+        value.copy< tag_filter::TagDeclarationListPtr > (other.value);
         break;
 
       case 54: // tag_decl
-        value.copy< OSM::Filter::TagDeclarationPtr > (other.value);
+        value.copy< tag_filter::TagDeclarationPtr > (other.value);
         break;
 
       case 55: // tag_list
-        value.copy< OSM::Filter::TagListPtr > (other.value);
+        value.copy< tag_filter::TagListPtr > (other.value);
         break;
 
       case 53: // zoom_range
-        value.copy< OSM::Filter::ZoomRangePtr > (other.value);
-        break;
-
-      case 42: // "number"
-        value.copy< double > (other.value);
-        break;
-
-      case 41: // "identifier"
-      case 43: // "string literal"
-      case 44: // "LUA script"
-        value.copy< std::string > (other.value);
+        value.copy< tag_filter::ZoomRangePtr > (other.value);
         break;
 
       case 45: // "zoom specifier"
@@ -1069,7 +1065,7 @@ namespace OSM {
 
   template <typename Base>
   inline
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const semantic_type& v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const semantic_type& v, const location_type& l)
     : Base (t)
     , value ()
     , location (l)
@@ -1077,18 +1073,28 @@ namespace OSM {
     (void) v;
       switch (this->type_get ())
     {
+      case 42: // "number"
+        value.copy< double > (v);
+        break;
+
+      case 41: // "identifier"
+      case 43: // "string literal"
+      case 44: // "LUA script"
+        value.copy< std::string > (v);
+        break;
+
       case 51: // action_block
       case 52: // command_list
-        value.copy< OSM::Filter::CommandListPtr > (v);
+        value.copy< tag_filter::CommandListPtr > (v);
         break;
 
       case 57: // command
-        value.copy< OSM::Filter::CommandPtr > (v);
+        value.copy< tag_filter::CommandPtr > (v);
         break;
 
       case 67: // literal_list
       case 72: // function_argument_list
-        value.copy< OSM::Filter::ExpressionListPtr > (v);
+        value.copy< tag_filter::ExpressionListPtr > (v);
         break;
 
       case 58: // boolean_value_expression
@@ -1110,41 +1116,31 @@ namespace OSM {
       case 76: // boolean_literal
       case 77: // numeric_literal
       case 78: // attribute
-        value.copy< OSM::Filter::ExpressionNodePtr > (v);
+        value.copy< tag_filter::ExpressionNodePtr > (v);
         break;
 
       case 49: // rule_list
-        value.copy< OSM::Filter::RuleListPtr > (v);
+        value.copy< tag_filter::RuleListPtr > (v);
         break;
 
       case 50: // rule
-        value.copy< OSM::Filter::RulePtr > (v);
+        value.copy< tag_filter::RulePtr > (v);
         break;
 
       case 56: // tag_decl_list
-        value.copy< OSM::Filter::TagDeclarationListPtr > (v);
+        value.copy< tag_filter::TagDeclarationListPtr > (v);
         break;
 
       case 54: // tag_decl
-        value.copy< OSM::Filter::TagDeclarationPtr > (v);
+        value.copy< tag_filter::TagDeclarationPtr > (v);
         break;
 
       case 55: // tag_list
-        value.copy< OSM::Filter::TagListPtr > (v);
+        value.copy< tag_filter::TagListPtr > (v);
         break;
 
       case 53: // zoom_range
-        value.copy< OSM::Filter::ZoomRangePtr > (v);
-        break;
-
-      case 42: // "number"
-        value.copy< double > (v);
-        break;
-
-      case 41: // "identifier"
-      case 43: // "string literal"
-      case 44: // "LUA script"
-        value.copy< std::string > (v);
+        value.copy< tag_filter::ZoomRangePtr > (v);
         break;
 
       case 45: // "zoom specifier"
@@ -1160,98 +1156,98 @@ namespace OSM {
   // Implementation of basic_symbol constructor for each type.
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const location_type& l)
     : Base (t)
     , value ()
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::CommandListPtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const double v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::CommandPtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const std::string v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::ExpressionListPtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::CommandListPtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::ExpressionNodePtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::CommandPtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::RuleListPtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::ExpressionListPtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::RulePtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::ExpressionNodePtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::TagDeclarationListPtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::RuleListPtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::TagDeclarationPtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::RulePtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::TagListPtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::TagDeclarationListPtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const OSM::Filter::ZoomRangePtr v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::TagDeclarationPtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const double v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::TagListPtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const std::string v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const tag_filter::ZoomRangePtr v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
   {}
 
   template <typename Base>
-  BisonParser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const uint8_t v, const location_type& l)
+  Parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, const uint8_t v, const location_type& l)
     : Base (t)
     , value (v)
     , location (l)
@@ -1260,7 +1256,7 @@ namespace OSM {
 
   template <typename Base>
   inline
-  BisonParser::basic_symbol<Base>::~basic_symbol ()
+  Parser::basic_symbol<Base>::~basic_symbol ()
   {
     // User destructor.
     symbol_number_type yytype = this->type_get ();
@@ -1273,18 +1269,28 @@ namespace OSM {
     // Type destructor.
     switch (yytype)
     {
+      case 42: // "number"
+        value.template destroy< double > ();
+        break;
+
+      case 41: // "identifier"
+      case 43: // "string literal"
+      case 44: // "LUA script"
+        value.template destroy< std::string > ();
+        break;
+
       case 51: // action_block
       case 52: // command_list
-        value.template destroy< OSM::Filter::CommandListPtr > ();
+        value.template destroy< tag_filter::CommandListPtr > ();
         break;
 
       case 57: // command
-        value.template destroy< OSM::Filter::CommandPtr > ();
+        value.template destroy< tag_filter::CommandPtr > ();
         break;
 
       case 67: // literal_list
       case 72: // function_argument_list
-        value.template destroy< OSM::Filter::ExpressionListPtr > ();
+        value.template destroy< tag_filter::ExpressionListPtr > ();
         break;
 
       case 58: // boolean_value_expression
@@ -1306,41 +1312,31 @@ namespace OSM {
       case 76: // boolean_literal
       case 77: // numeric_literal
       case 78: // attribute
-        value.template destroy< OSM::Filter::ExpressionNodePtr > ();
+        value.template destroy< tag_filter::ExpressionNodePtr > ();
         break;
 
       case 49: // rule_list
-        value.template destroy< OSM::Filter::RuleListPtr > ();
+        value.template destroy< tag_filter::RuleListPtr > ();
         break;
 
       case 50: // rule
-        value.template destroy< OSM::Filter::RulePtr > ();
+        value.template destroy< tag_filter::RulePtr > ();
         break;
 
       case 56: // tag_decl_list
-        value.template destroy< OSM::Filter::TagDeclarationListPtr > ();
+        value.template destroy< tag_filter::TagDeclarationListPtr > ();
         break;
 
       case 54: // tag_decl
-        value.template destroy< OSM::Filter::TagDeclarationPtr > ();
+        value.template destroy< tag_filter::TagDeclarationPtr > ();
         break;
 
       case 55: // tag_list
-        value.template destroy< OSM::Filter::TagListPtr > ();
+        value.template destroy< tag_filter::TagListPtr > ();
         break;
 
       case 53: // zoom_range
-        value.template destroy< OSM::Filter::ZoomRangePtr > ();
-        break;
-
-      case 42: // "number"
-        value.template destroy< double > ();
-        break;
-
-      case 41: // "identifier"
-      case 43: // "string literal"
-      case 44: // "LUA script"
-        value.template destroy< std::string > ();
+        value.template destroy< tag_filter::ZoomRangePtr > ();
         break;
 
       case 45: // "zoom specifier"
@@ -1356,23 +1352,33 @@ namespace OSM {
   template <typename Base>
   inline
   void
-  BisonParser::basic_symbol<Base>::move (basic_symbol& s)
+  Parser::basic_symbol<Base>::move (basic_symbol& s)
   {
     super_type::move(s);
       switch (this->type_get ())
     {
+      case 42: // "number"
+        value.move< double > (s.value);
+        break;
+
+      case 41: // "identifier"
+      case 43: // "string literal"
+      case 44: // "LUA script"
+        value.move< std::string > (s.value);
+        break;
+
       case 51: // action_block
       case 52: // command_list
-        value.move< OSM::Filter::CommandListPtr > (s.value);
+        value.move< tag_filter::CommandListPtr > (s.value);
         break;
 
       case 57: // command
-        value.move< OSM::Filter::CommandPtr > (s.value);
+        value.move< tag_filter::CommandPtr > (s.value);
         break;
 
       case 67: // literal_list
       case 72: // function_argument_list
-        value.move< OSM::Filter::ExpressionListPtr > (s.value);
+        value.move< tag_filter::ExpressionListPtr > (s.value);
         break;
 
       case 58: // boolean_value_expression
@@ -1394,41 +1400,31 @@ namespace OSM {
       case 76: // boolean_literal
       case 77: // numeric_literal
       case 78: // attribute
-        value.move< OSM::Filter::ExpressionNodePtr > (s.value);
+        value.move< tag_filter::ExpressionNodePtr > (s.value);
         break;
 
       case 49: // rule_list
-        value.move< OSM::Filter::RuleListPtr > (s.value);
+        value.move< tag_filter::RuleListPtr > (s.value);
         break;
 
       case 50: // rule
-        value.move< OSM::Filter::RulePtr > (s.value);
+        value.move< tag_filter::RulePtr > (s.value);
         break;
 
       case 56: // tag_decl_list
-        value.move< OSM::Filter::TagDeclarationListPtr > (s.value);
+        value.move< tag_filter::TagDeclarationListPtr > (s.value);
         break;
 
       case 54: // tag_decl
-        value.move< OSM::Filter::TagDeclarationPtr > (s.value);
+        value.move< tag_filter::TagDeclarationPtr > (s.value);
         break;
 
       case 55: // tag_list
-        value.move< OSM::Filter::TagListPtr > (s.value);
+        value.move< tag_filter::TagListPtr > (s.value);
         break;
 
       case 53: // zoom_range
-        value.move< OSM::Filter::ZoomRangePtr > (s.value);
-        break;
-
-      case 42: // "number"
-        value.move< double > (s.value);
-        break;
-
-      case 41: // "identifier"
-      case 43: // "string literal"
-      case 44: // "LUA script"
-        value.move< std::string > (s.value);
+        value.move< tag_filter::ZoomRangePtr > (s.value);
         break;
 
       case 45: // "zoom specifier"
@@ -1444,23 +1440,23 @@ namespace OSM {
 
   // by_type.
   inline
-  BisonParser::by_type::by_type ()
+  Parser::by_type::by_type ()
      : type (empty)
   {}
 
   inline
-  BisonParser::by_type::by_type (const by_type& other)
+  Parser::by_type::by_type (const by_type& other)
     : type (other.type)
   {}
 
   inline
-  BisonParser::by_type::by_type (token_type t)
+  Parser::by_type::by_type (token_type t)
     : type (yytranslate_ (t))
   {}
 
   inline
   void
-  BisonParser::by_type::move (by_type& that)
+  Parser::by_type::move (by_type& that)
   {
     type = that.type;
     that.type = empty;
@@ -1468,14 +1464,14 @@ namespace OSM {
 
   inline
   int
-  BisonParser::by_type::type_get () const
+  Parser::by_type::type_get () const
   {
     return type;
   }
 
   inline
-  BisonParser::token_type
-  BisonParser::by_type::token () const
+  Parser::token_type
+  Parser::by_type::token () const
   {
     // YYTOKNUM[NUM] -- (External) token number corresponding to the
     // (internal) symbol number NUM (which must be that of a token).  */
@@ -1492,282 +1488,282 @@ namespace OSM {
     return static_cast<token_type> (yytoken_number_[type]);
   }
   // Implementation of make_symbol for each symbol type.
-  BisonParser::symbol_type
-  BisonParser::make_END (const location_type& l)
+  Parser::symbol_type
+  Parser::make_END (const location_type& l)
   {
     return symbol_type (token::TOK_END, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_NOT (const location_type& l)
+  Parser::symbol_type
+  Parser::make_NOT (const location_type& l)
   {
     return symbol_type (token::TOK_NOT, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_AND (const location_type& l)
+  Parser::symbol_type
+  Parser::make_AND (const location_type& l)
   {
     return symbol_type (token::TOK_AND, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_OR (const location_type& l)
+  Parser::symbol_type
+  Parser::make_OR (const location_type& l)
   {
     return symbol_type (token::TOK_OR, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_MATCHES (const location_type& l)
+  Parser::symbol_type
+  Parser::make_MATCHES (const location_type& l)
   {
     return symbol_type (token::TOK_MATCHES, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_NOT_MATCHES (const location_type& l)
+  Parser::symbol_type
+  Parser::make_NOT_MATCHES (const location_type& l)
   {
     return symbol_type (token::TOK_NOT_MATCHES, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_EQUAL (const location_type& l)
+  Parser::symbol_type
+  Parser::make_EQUAL (const location_type& l)
   {
     return symbol_type (token::TOK_EQUAL, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_NOT_EQUAL (const location_type& l)
+  Parser::symbol_type
+  Parser::make_NOT_EQUAL (const location_type& l)
   {
     return symbol_type (token::TOK_NOT_EQUAL, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_LESS_THAN (const location_type& l)
+  Parser::symbol_type
+  Parser::make_LESS_THAN (const location_type& l)
   {
     return symbol_type (token::TOK_LESS_THAN, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_GREATER_THAN (const location_type& l)
+  Parser::symbol_type
+  Parser::make_GREATER_THAN (const location_type& l)
   {
     return symbol_type (token::TOK_GREATER_THAN, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_LESS_THAN_OR_EQUAL (const location_type& l)
+  Parser::symbol_type
+  Parser::make_LESS_THAN_OR_EQUAL (const location_type& l)
   {
     return symbol_type (token::TOK_LESS_THAN_OR_EQUAL, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_GREATER_THAN_OR_EQUAL (const location_type& l)
+  Parser::symbol_type
+  Parser::make_GREATER_THAN_OR_EQUAL (const location_type& l)
   {
     return symbol_type (token::TOK_GREATER_THAN_OR_EQUAL, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_TRUEX (const location_type& l)
+  Parser::symbol_type
+  Parser::make_TRUEX (const location_type& l)
   {
     return symbol_type (token::TOK_TRUEX, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_FALSEX (const location_type& l)
+  Parser::symbol_type
+  Parser::make_FALSEX (const location_type& l)
   {
     return symbol_type (token::TOK_FALSEX, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_EXISTS (const location_type& l)
+  Parser::symbol_type
+  Parser::make_EXISTS (const location_type& l)
   {
     return symbol_type (token::TOK_EXISTS, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_PLUS (const location_type& l)
+  Parser::symbol_type
+  Parser::make_PLUS (const location_type& l)
   {
     return symbol_type (token::TOK_PLUS, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_MINUS (const location_type& l)
+  Parser::symbol_type
+  Parser::make_MINUS (const location_type& l)
   {
     return symbol_type (token::TOK_MINUS, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_STAR (const location_type& l)
+  Parser::symbol_type
+  Parser::make_STAR (const location_type& l)
   {
     return symbol_type (token::TOK_STAR, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_DIV (const location_type& l)
+  Parser::symbol_type
+  Parser::make_DIV (const location_type& l)
   {
     return symbol_type (token::TOK_DIV, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_LPAR (const location_type& l)
+  Parser::symbol_type
+  Parser::make_LPAR (const location_type& l)
   {
     return symbol_type (token::TOK_LPAR, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_RPAR (const location_type& l)
+  Parser::symbol_type
+  Parser::make_RPAR (const location_type& l)
   {
     return symbol_type (token::TOK_RPAR, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_COMMA (const location_type& l)
+  Parser::symbol_type
+  Parser::make_COMMA (const location_type& l)
   {
     return symbol_type (token::TOK_COMMA, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_DOT (const location_type& l)
+  Parser::symbol_type
+  Parser::make_DOT (const location_type& l)
   {
     return symbol_type (token::TOK_DOT, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_LEFT_BRACE (const location_type& l)
+  Parser::symbol_type
+  Parser::make_LEFT_BRACE (const location_type& l)
   {
     return symbol_type (token::TOK_LEFT_BRACE, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_RIGHT_BRACE (const location_type& l)
+  Parser::symbol_type
+  Parser::make_RIGHT_BRACE (const location_type& l)
   {
     return symbol_type (token::TOK_RIGHT_BRACE, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_LEFT_BRACKET (const location_type& l)
+  Parser::symbol_type
+  Parser::make_LEFT_BRACKET (const location_type& l)
   {
     return symbol_type (token::TOK_LEFT_BRACKET, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_RIGHT_BRACKET (const location_type& l)
+  Parser::symbol_type
+  Parser::make_RIGHT_BRACKET (const location_type& l)
   {
     return symbol_type (token::TOK_RIGHT_BRACKET, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_COLON (const location_type& l)
+  Parser::symbol_type
+  Parser::make_COLON (const location_type& l)
   {
     return symbol_type (token::TOK_COLON, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_ADD_CMD (const location_type& l)
+  Parser::symbol_type
+  Parser::make_ADD_CMD (const location_type& l)
   {
     return symbol_type (token::TOK_ADD_CMD, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_SET_CMD (const location_type& l)
+  Parser::symbol_type
+  Parser::make_SET_CMD (const location_type& l)
   {
     return symbol_type (token::TOK_SET_CMD, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_DELETE_CMD (const location_type& l)
+  Parser::symbol_type
+  Parser::make_DELETE_CMD (const location_type& l)
   {
     return symbol_type (token::TOK_DELETE_CMD, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_WRITE_CMD (const location_type& l)
+  Parser::symbol_type
+  Parser::make_WRITE_CMD (const location_type& l)
   {
     return symbol_type (token::TOK_WRITE_CMD, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_CONTINUE_CMD (const location_type& l)
+  Parser::symbol_type
+  Parser::make_CONTINUE_CMD (const location_type& l)
   {
     return symbol_type (token::TOK_CONTINUE_CMD, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_ASSIGN (const location_type& l)
+  Parser::symbol_type
+  Parser::make_ASSIGN (const location_type& l)
   {
     return symbol_type (token::TOK_ASSIGN, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_IN (const location_type& l)
+  Parser::symbol_type
+  Parser::make_IN (const location_type& l)
   {
     return symbol_type (token::TOK_IN, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_LAYER (const location_type& l)
+  Parser::symbol_type
+  Parser::make_LAYER (const location_type& l)
   {
     return symbol_type (token::TOK_LAYER, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_EXCLUDE_CMD (const location_type& l)
+  Parser::symbol_type
+  Parser::make_EXCLUDE_CMD (const location_type& l)
   {
     return symbol_type (token::TOK_EXCLUDE_CMD, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_WRITE_ALL_CMD (const location_type& l)
+  Parser::symbol_type
+  Parser::make_WRITE_ALL_CMD (const location_type& l)
   {
     return symbol_type (token::TOK_WRITE_ALL_CMD, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_ATTACH_CMD (const location_type& l)
+  Parser::symbol_type
+  Parser::make_ATTACH_CMD (const location_type& l)
   {
     return symbol_type (token::TOK_ATTACH_CMD, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_IDENTIFIER (const std::string& v, const location_type& l)
+  Parser::symbol_type
+  Parser::make_IDENTIFIER (const std::string& v, const location_type& l)
   {
     return symbol_type (token::TOK_IDENTIFIER, v, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_NUMBER (const double& v, const location_type& l)
+  Parser::symbol_type
+  Parser::make_NUMBER (const double& v, const location_type& l)
   {
     return symbol_type (token::TOK_NUMBER, v, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_STRING (const std::string& v, const location_type& l)
+  Parser::symbol_type
+  Parser::make_STRING (const std::string& v, const location_type& l)
   {
     return symbol_type (token::TOK_STRING, v, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_LUA_SCRIPT (const std::string& v, const location_type& l)
+  Parser::symbol_type
+  Parser::make_LUA_SCRIPT (const std::string& v, const location_type& l)
   {
     return symbol_type (token::TOK_LUA_SCRIPT, v, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_ZOOM_SPEC (const uint8_t& v, const location_type& l)
+  Parser::symbol_type
+  Parser::make_ZOOM_SPEC (const uint8_t& v, const location_type& l)
   {
     return symbol_type (token::TOK_ZOOM_SPEC, v, l);
   }
 
-  BisonParser::symbol_type
-  BisonParser::make_UMINUS (const location_type& l)
+  Parser::symbol_type
+  Parser::make_UMINUS (const location_type& l)
   {
     return symbol_type (token::TOK_UMINUS, l);
   }
 
 
-#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // lalr1.cc:372
-} // OSM
-#line 1769 "/home/malasiot/source/mftools/src/convert/parser/osm_parser.hpp" // lalr1.cc:372
+#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // lalr1.cc:372
+} // tag_filter
+#line 1765 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:372
 
 
 
 
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_OSM_PARSER_HPP_INCLUDED
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED

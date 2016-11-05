@@ -382,31 +382,6 @@ bool OSMProcessor::addTags(SQLite::Command &cmd, const TagWriteList &tags, const
     }
 }
 
-// find the zoom range of attached tags
-
-static bool normalize_tags(TagWriteList &tags, uint8_t &minz, uint8_t &maxz) {
-    uint n_matched_tags = 0 ;
-    minz = 255 ; maxz = 0;
-
-    for( TagWriteAction &a: tags.actions_ ) {
-        if ( !a.attached_ ) {
-            minz = std::min(minz, a.zoom_min_) ;
-            maxz = std::max(maxz, a.zoom_max_) ;
-            n_matched_tags ++ ;
-        }
-    }
-
-    if ( n_matched_tags == 0 ) return false ;
-
-    for( TagWriteAction &a: tags.actions_ ) {
-        if ( a.attached_ ) {
-            a.zoom_min_ = minz ;
-            a.zoom_max_ = maxz ;
-        }
-    }
-
-    return true ;
-}
 
 static bool member_of_multipolygon_or_boundary(const OSM::Way &way, const OSM::Document &doc) {
     for( uint ridx: way.relations_ ) {
@@ -417,10 +392,11 @@ static bool member_of_multipolygon_or_boundary(const OSM::Way &way, const OSM::D
     return false ;
 }
 
-using namespace OSM::Filter ;
 
-bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
+bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 {
+    using namespace tag_filter ;
+
     // read files from memory and write to spatialite database
 
     SQLite::Database &db = handle() ;
@@ -455,25 +431,13 @@ bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
 
             if ( node.tags_.empty() ) continue ;
 
-            TagWriteList tags ;
-            OSM::Filter::Context ctx(node, k, &doc, &tags) ;
-
-            cfg.lua_.setupContext(ctx) ;
-
-            bool cont = false;
-
-            for( const RulePtr &rule: cfg.rules_ ) {
-                if ( matchRule( rule, ctx, tags, cont) ) {
-                    if ( !cont ) break ;
-                }
-            }
-
-            if ( !normalize_tags(tags,zmin, zmax) ) continue ;
+            TagFilterContext ctx(node, k, &doc) ;
+            if ( !cfg.match(ctx, zmin, zmax) ) continue ;
 
             SQLite::Command cmd_poi(con, insert_feature_sql("pois")) ;
 
             addPointGeometry(cmd_poi, node, zmin, zmax) ;
-            addTags(cmd_tags, tags, node.id_) ;
+            addTags(cmd_tags, ctx.tw_, node.id_) ;
         }
 
         // relations of type route, merge ways into chunks
@@ -484,20 +448,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
 
             string rel_type = relation.tags_.get("type") ;
 
-            OSM::Filter::Context ctx(relation.tags_, relation.id_,  Context::Way) ;
-
-            TagWriteList tags ;
-            bool cont = false;
-
-            cfg.lua_.setupContext(ctx) ;
-
-            for( const RulePtr &rule: cfg.rules_ ) {
-                if ( matchRule( rule, ctx, tags, cont) ) {
-                    if ( !cont ) break ;
-                }
-            }
-
-            if ( !normalize_tags(tags, zmin, zmax) ) continue ;
+            TagFilterContext ctx(relation.tags_, relation.id_,  TagFilterContext::Relation) ;
+            if ( !cfg.match(ctx, zmin, zmax) ) continue ;
 
             if ( rel_type == "route" ) {
 
@@ -508,7 +460,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
 
                 if ( !chunks.empty() ) {
                     addMultiLineGeometry(cmd_rel, doc, chunks, relation.id_, zmin, zmax) ;
-                    addTags(cmd_tags, tags, relation.id_) ;
+                    addTags(cmd_tags, ctx.tw_, relation.id_) ;
                 }
             }
             else if ( rel_type == "multipolygon" || rel_type == "boundary" ) {
@@ -520,7 +472,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
 
                 if ( !polygon.rings_.empty() ) {
                     addPolygonGeometry(cmd_rel, doc, polygon, relation.id_, zmin, zmax) ;
-                    addTags(cmd_tags, tags, relation.id_) ;
+                    addTags(cmd_tags, ctx.tw_, relation.id_) ;
                 }
             }
         }
@@ -537,19 +489,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
 
             // match feature with filter rules
 
-            TagWriteList tags ;
-            OSM::Filter::Context ctx(way, k, &doc, &tags) ;
-            bool cont = false;
-
-            cfg.lua_.setupContext(ctx) ;
-
-            for( const RulePtr &rule: cfg.rules_ ) {
-                if ( matchRule( rule, ctx, tags, cont) ) {
-                    if ( !cont ) break ;
-                }
-            }
-
-            if ( !normalize_tags(tags, zmin, zmax) ) continue ;
+            TagFilterContext ctx(way, k, &doc) ;
+            if ( !cfg.match(ctx, zmin, zmax) ) continue ;
 
             // deal with closed ways, potential polygon geometries (areas) are those indicated by area tag or those other than highway, barrier and contour
 
@@ -568,13 +509,13 @@ bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
                 SQLite::Command cmd_poly(con, insert_feature_sql("polygons", "CompressGeometry(ST_Multi(?))")) ;
 
                 addPolygonGeometry(cmd_poly, doc, poly, way.id_, zmin, zmax) ;
-                addTags(cmd_tags, tags, way.id_) ;
+                addTags(cmd_tags, ctx.tw_, way.id_) ;
             }
             else {
                 SQLite::Command cmd_line(con, insert_feature_sql("lines", "CompressGeometry(ST_Multi(?))")) ;
 
                 addLineGeometry(cmd_line, doc, way, zmin, zmax) ;
-                addTags(cmd_tags, tags, way.id_) ;
+                addTags(cmd_tags, ctx.tw_, way.id_) ;
             }
         }
 
@@ -589,106 +530,6 @@ bool OSMProcessor::processOsmFile(const string &osm_file, FilterConfig &cfg)
     }
 }
 
-bool OSMProcessor::matchRule(const RulePtr &rule, Context &ctx, TagWriteList &tw, bool &cont)
-{
-    cont = false ;
-
-    if ( !rule->condition_ || rule->condition_->eval(ctx).toBoolean() ) {
-
-        bool rcont = true ;
-
-        for ( const CommandPtr &cmd: rule->commands_ ) {
-            if ( cmd->type() == Command::Conditional && rcont ) {
-                RuleCommand *rc = dynamic_cast<RuleCommand *>(cmd.get());
-                bool c = false ;
-                if ( matchRule(rc->rule_, ctx, tw, c) ) {
-                    if ( !c ) rcont = false ;
-                }
-            }
-            else if ( cmd->type() == Command::Set ) {
-                SimpleCommand *rc = dynamic_cast<SimpleCommand *>(cmd.get());
-
-                string val = rc->val_->eval(ctx).toString() ;
-
-                if ( !val.empty() ) {
-                    if ( ctx.has_tag(rc->tag_ ) )
-                        ctx.tags_[rc->tag_] = val ;
-                    else
-                        ctx.tags_.add(rc->tag_, val) ;
-                }
-            }
-            else if ( cmd->type() == Command::Add ) {
-                SimpleCommand *rc = dynamic_cast<SimpleCommand *>(cmd.get());
-                string val = rc->val_->eval(ctx).toString() ;
-                if ( !val.empty() ) ctx.tags_.add(rc->tag_, val) ;
-            }
-            else if ( cmd->type() == Command::Continue ) {
-                cont = true ;
-            }
-            else if ( cmd->type() == Command::Delete ) {
-                SimpleCommand *rc = dynamic_cast<SimpleCommand *>(cmd.get());
-                ctx.tags_.remove(rc->tag_) ;
-            }
-            else if ( cmd->type() == Command::WriteAll ) {
-                WriteAllCommand *rc = dynamic_cast<WriteAllCommand *>(cmd.get());
-                ZoomRange zr = rc->zoom_range_ ;
-                DictionaryIterator it(ctx.tags_) ;
-                while ( it ) {
-                    string val = it.value() ;
-                    tw.actions_.emplace_back(it.key(), val, zr.min_zoom_, zr.max_zoom_) ;
-                    ++it ;
-                }
-            }
-            else if ( cmd->type() == Command::Write ) {
-                WriteCommand *rc = dynamic_cast<WriteCommand *>(cmd.get());
-                ZoomRange zr = rc->zoom_range_ ;
-                for( const TagDeclarationPtr &decl: rc->tags_.tags_ ) {
-                    if ( ctx.has_tag(decl->tag_) ) {
-                        if ( decl->val_ ) {
-                            string val = decl->val_->eval(ctx).toString() ;
-                            if ( !val.empty() )
-                                tw.actions_.emplace_back(decl->tag_, val, zr.min_zoom_, zr.max_zoom_) ;
-                        }
-                        else
-                            tw.actions_.emplace_back(decl->tag_, ctx.value(decl->tag_), zr.min_zoom_, zr.max_zoom_) ;
-                    }
-                }
-            }
-            else if ( cmd->type() == Command::Exclude ) {
-                ExcludeCommand *rc = dynamic_cast<ExcludeCommand *>(cmd.get());
-
-                set<string> exclude(rc->tags_.begin(), rc->tags_.end()) ;
-
-                ZoomRange zr = rc->zoom_range_ ;
-                DictionaryIterator it(ctx.tags_) ;
-                while ( it ) {
-                    if ( exclude.count(it.key()) == 0 )
-                        tw.actions_.emplace_back(it.key(), it.value(), zr.min_zoom_, zr.max_zoom_) ;
-                    ++it ;
-                }
-            }
-            else if ( cmd->type() == Command::Attach ) {
-                AttachCommand *rc = dynamic_cast<AttachCommand *>(cmd.get());
-
-                set<string> tags(rc->tags_.tags_.begin(), rc->tags_.tags_.end()) ;
-
-                DictionaryIterator it(ctx.tags_) ;
-                while ( it ) {
-                    if ( tags.count(it.key()) )
-                        tw.actions_.emplace_back(it.key(), it.value(), 0, 255, true) ;
-                    ++it ;
-                }
-            }
-            else if ( cmd->type() == Command::UserFunction ) {
-                FunctionCommand *rc = dynamic_cast<FunctionCommand *>(cmd.get());
-
-                rc->func_->eval(ctx) ;
-            }
-        }
-        return true ;
-    }
-    else return false ;
-}
 
 struct DBField {
     DBFFieldType type_ ;

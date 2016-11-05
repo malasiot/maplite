@@ -32,7 +32,7 @@
 
 /**
  ** \file /home/malasiot/source/mftools/src/convert/parser/location.hh
- ** Define the OSM::location class.
+ ** Define the tag_filter::location class.
  */
 
 #ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED
@@ -40,8 +40,8 @@
 
 # include "position.hh"
 
-#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // location.cc:291
-namespace OSM {
+#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // location.cc:291
+namespace tag_filter {
 #line 46 "/home/malasiot/source/mftools/src/convert/parser/location.hh" // location.cc:291
   /// Abstract a location.
   class location
@@ -181,7 +181,7 @@ namespace OSM {
     return ostr;
   }
 
-#line 6 "/home/malasiot/source/mftools/src/convert/osm.y" // location.cc:291
-} // OSM
+#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // location.cc:291
+} // tag_filter
 #line 187 "/home/malasiot/source/mftools/src/convert/parser/location.hh" // location.cc:291
 #endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED

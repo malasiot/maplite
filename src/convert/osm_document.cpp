@@ -1,5 +1,5 @@
 #include "osm_document.hpp"
-#include "osm_rule_parser.hpp"
+#include "tag_filter_config_parser.hpp"
 
 #include <stdlib.h>
 
