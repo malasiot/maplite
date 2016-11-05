@@ -3,9 +3,9 @@
 
 extern "C"
 {
-    #include "lua.h"
-    #include "lualib.h"
-    #include "lauxlib.h"
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
 }
 
 #include <string>
@@ -20,24 +20,31 @@ public:
     LuaContext() ;
     ~LuaContext() ;
 
-   bool loadScript(const std::string &script) ;
+    LuaContext(const LuaContext &) = delete;
+    LuaContext& operator = (const LuaContext &) = delete;
 
-   tag_filter::Literal call(const std::string &fname, const std::vector<tag_filter::Literal> &args ) ;
-   void setupContext(TagFilterContext &ctx) ;
+    bool loadScript(const std::string &script) ;
 
+    tag_filter::Literal call(const std::string &fname, const std::vector<tag_filter::Literal> &args ) ;
+    void setupContext(TagFilterContext &ctx) ;
 
-   std::string lastError() const { return error_str_ ; }
-
-private:
-   void error(const std::string &) ;
-   void addDictionary(const Dictionary &dict) ;
+    std::string lastError() const { return error_str_ ; }
 
 private:
+    void error(const std::string &) ;
+    void addDictionary(const Dictionary &dict) ;
+
+private:
 
 
-   TagFilterContext *cproxy_ ;
-   lua_State* state_ ;
-   std::string error_str_ ;
+    TagFilterContext *cproxy_ ;
+    lua_State* state_ ;
+    std::string error_str_ ;
+};
+
+class LuaException: public std::runtime_error {
+public:
+    LuaException(const std::string &msg): std::runtime_error(msg) {}
 };
 
 

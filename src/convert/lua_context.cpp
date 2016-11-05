@@ -8,7 +8,17 @@ using namespace std ;
 LuaContext::LuaContext()
 {
     state_ = luaL_newstate() ;
+
+    if ( state_ == nullptr )
+        throw std::bad_alloc();
+
     luaL_openlibs(state_);
+
+    lua_atpanic(state_, [](lua_State* L) -> int {
+        const std::string str = lua_tostring(L, -1);
+        throw LuaException(str) ;
+        lua_pop(L, 1);
+    });
 }
 
 
@@ -21,20 +31,83 @@ void LuaContext::error(const std::string &msg) {
 
     strm << msg << lua_tostring(state_, -1) ;
 
-    error_str_ = strm.str() ;
+    cerr << strm.str() <<endl ;
+    throw LuaException(strm.str()) ;
 }
 
-static int add_tag(lua_State* L)
+static void stackDump (lua_State *L) {
+    int i;
+    int top = lua_gettop(L);
+    for (i = 1; i <= top; i++) {  /* repeat for each level */
+        int t = lua_type(L, i);
+        switch (t) {
+
+        case LUA_TSTRING:  /* strings */
+            cout << lua_tostring(L, i) ;
+            break;
+
+        case LUA_TBOOLEAN:  /* booleans */
+            cout << lua_toboolean(L, i) ? "true" : "false" ;
+            break;
+
+        case LUA_TNUMBER:  /* numbers */
+            cout << lua_tonumber(L, i) ;
+            break;
+
+        default:  /* other values */
+            cout <<  lua_typename(L, t);
+            break;
+
+        }
+        cout << "  ";  /* put a separator */
+    }
+    cout << endl;  /* end the listing */
+}
+
+
+static int add_tags(lua_State* L)
 {
     TagFilterContext **ctx_proxy = (TagFilterContext **) lua_touserdata(L, lua_upvalueindex(1));
     TagFilterContext *ctx = *ctx_proxy ;
 
-    string val ;
-    string key = lua_tostring(L, 1) ;
-    if ( lua_isnil(L, 2) ) return 0 ;
-    val = lua_tostring(L, 2) ;
+    if ( lua_istable(L, 1) ) {
+        lua_pushnil(L);  /* first key */
 
-    ctx->tags_[key] = val ;
+        while ( lua_next(L, 1) ) {
+            string key = lua_tostring(L, -2) ;
+            string val = lua_tostring(L, -1) ;
+            ctx->tags_[key] = val ;
+            lua_pop(L, 1);
+        }
+    }
+    else {
+        lua_pushstring(L, "add_tags expects table with key/value pairs") ;
+        lua_error(L) ;
+    }
+
+    return 0 ;
+}
+
+static int set_tags(lua_State* L)
+{
+    TagFilterContext **ctx_proxy = (TagFilterContext **) lua_touserdata(L, lua_upvalueindex(1));
+    TagFilterContext *ctx = *ctx_proxy ;
+
+    if ( lua_istable(L, 1) ) {
+        lua_pushnil(L);  /* first key */
+
+        while ( lua_next(L, 1) ) {
+            string key = lua_tostring(L, -2) ;
+            string val = lua_tostring(L, -1) ;
+            if ( ctx->tags_.contains(key) )
+                ctx->tags_[key] = val ;
+            lua_pop(L, 1);
+        }
+    }
+    else {
+        lua_pushstring(L, "set_tags expects table with key/value pairs") ;
+        lua_error(L) ;
+    }
 
     return 0 ;
 }
@@ -48,22 +121,83 @@ static int attach_tags(lua_State* L)
 
     if ( !tw ) return 0 ;
 
-    int argCount = lua_gettop(L);
-
-    for(int i = 1; i <= argCount; i++)
-    {
-        if ( lua_isstring(L, i) ) {
-            string tag = lua_tostring(L, i) ;
-            DictionaryIterator it(ctx->tags_) ;
-            while ( it ) {
-              if ( it.key() == tag )
-              tw->actions_.emplace_back(it.key(), it.value(), 0, 255, true) ;
-              ++it ;
-            }
-
-            break;
+    if ( lua_istable(L, 1) ) {
+        size_t len = lua_rawlen(L, 1) ;
+        for(int i=1 ; i<=len ; i++) {
+            lua_rawgeti (L, 1, i) ;
+            string key = lua_tostring(L, -1) ;
+            if ( ctx->tags_.contains(key) )
+                tw->actions_.emplace_back(key, ctx->tags_.get(key), 0, 255, true) ;
         }
     }
+    else {
+        lua_pushstring(L, "attach_tags expects array of tags") ;
+        lua_error(L) ;
+    }
+
+    return 0 ;
+}
+
+static int delete_tags(lua_State* L)
+{
+    TagFilterContext **ctx_proxy = (TagFilterContext **) lua_touserdata(L, lua_upvalueindex(1));
+
+    TagFilterContext *ctx = *ctx_proxy ;
+
+    if ( lua_istable(L, 1) ) {
+        size_t len = lua_rawlen(L, 1) ;
+        for(int i=1 ; i<=len ; i++) {
+            lua_rawgeti (L, 1, i) ;
+            string key = lua_tostring(L, -1) ;
+            ctx->tags_.remove(key);
+        }
+    }
+    else {
+        lua_pushstring(L, "delete_tags expects array of tags") ;
+        lua_error(L) ;
+    }
+
+    return 0 ;
+}
+
+static int write(lua_State* L)
+{
+    TagFilterContext **ctx_proxy = (TagFilterContext **) lua_touserdata(L, lua_upvalueindex(1));
+    TagFilterContext *ctx = *ctx_proxy ;
+    TagWriteList *tw = &ctx->tw_ ;
+
+    int n = lua_gettop(L);
+
+    if ( n < 3 ) {
+        lua_pushstring(L, "Wrong number of arguments in function `write`") ;
+        lua_error(L) ;
+        return 0 ;
+    }
+
+    int is_num ;
+    uint8_t zmin = lua_tointegerx(L, 1, &is_num) ;
+    if ( !is_num ) {
+        lua_pushstring(L, "Invalid argument zmin in function `write`. Integer expected.") ;
+        lua_error(L) ;
+        return 0 ;
+    }
+
+    uint8_t zmax = lua_tointegerx(L, 2, &is_num) ;
+    if ( !is_num ) {
+        lua_pushstring(L, "Invalid argument zmax in function `write`. Integer expected.") ;
+        lua_error(L) ;
+        return 0  ;
+    }
+
+    string tag = lua_tostring(L, 3) ;
+
+    string val ;
+    if ( n == 4 )
+        val = lua_tostring(L, 4) ;
+    else
+        val = ctx->tags_.get(tag) ;
+
+    tw->actions_.emplace_back(tag, val, zmin, zmax, false) ;
 
     return 0 ;
 }
@@ -104,8 +238,20 @@ bool LuaContext::loadScript(const std::string &script) {
     lua_setglobal(state_, "attach_tags") ;
 
     lua_pushlightuserdata(state_, &cproxy_);
-    lua_pushcclosure(state_, &add_tag, 1);
-    lua_setglobal(state_, "add_tag") ;
+    lua_pushcclosure(state_, &add_tags, 1);
+    lua_setglobal(state_, "add_tags") ;
+
+    lua_pushlightuserdata(state_, &cproxy_);
+    lua_pushcclosure(state_, &set_tags, 1);
+    lua_setglobal(state_, "set_tags") ;
+
+    lua_pushlightuserdata(state_, &cproxy_);
+    lua_pushcclosure(state_, &delete_tags, 1);
+    lua_setglobal(state_, "delete_tags") ;
+
+    lua_pushlightuserdata(state_, &cproxy_);
+    lua_pushcclosure(state_, &write, 1);
+    lua_setglobal(state_, "write") ;
 
     lua_pushlightuserdata(state_, &cproxy_);
     lua_pushcclosure(state_, &is_node, 1);
@@ -121,7 +267,7 @@ bool LuaContext::loadScript(const std::string &script) {
 void LuaContext::addDictionary(const Dictionary &dict)
 {
     // set global variable
-    lua_createtable(state_, 0, dict.count());
+    lua_newtable(state_);
 
     DictionaryIterator it(dict) ;
     while ( it ) {
@@ -152,17 +298,17 @@ tag_filter::Literal LuaContext::call(const string &fname, const std::vector<tag_
 
     /* do the call */
     if (lua_pcall(state_, args.size(), 1, 0) != 0) {
-       error("in function call") ;
-       cerr << error_str_ << endl ;
-       return Literal() ;
+
+        error("Fatal error during call to function (" + fname + "): ") ;
+        return Literal() ;
     }
 
     /* retrieve result */
 
     if ( lua_isstring(state_, -1) ) {
-         string z = lua_tostring(state_, -1);
-         lua_pop(state_, 1);
-         return Literal(z) ;
+        string z = lua_tostring(state_, -1);
+        lua_pop(state_, 1);
+        return Literal(z) ;
     }
     else if ( lua_isboolean(state_, -1) ) {
         bool res = lua_toboolean(state_, -1) ;
@@ -197,6 +343,7 @@ void LuaContext::setupContext(TagFilterContext &ctx)
             lua_pushinteger(state_, count++) ;
             OSM::Relation &rel = ctx.doc_->relations_[idx] ;
             addDictionary(rel.tags_) ;
+            lua_settable(state_, -3);
         }
         lua_setglobal(state_, "_relations_") ;
     }
