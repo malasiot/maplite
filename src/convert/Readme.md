@@ -117,6 +117,7 @@ function is_hk_route()
     local rel = osm.relations[i] ;
     if rel.type == "route" and rel.route == "hiking" then return true end
   end 
+  return false ;
 end
 ```
 - "add_tags" function taking as input a table of key/value pairs to add to each feature.
