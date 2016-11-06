@@ -742,6 +742,9 @@ bool OSMProcessor::addDefaultLandPolygon(const BBox &clip_box)
 
     try {
         string id = "1000000000" ; // we have to take sure that somwhow this unique
+
+        write_box_geometry(con, clip_box, id) ;
+         /*
         unsigned char *blob;
         int blob_size;
 
@@ -769,7 +772,7 @@ bool OSMProcessor::addDefaultLandPolygon(const BBox &clip_box)
         free(blob) ;
 
         cmd.clear() ;
-
+*/
         SQLite::Command cmd_tags(con, "INSERT INTO kv (key, val, osm_id, zoom_min, zoom_max) VALUES (?, ?, ?, 0, 255)") ;
 
         cmd_tags.bind(1, "natural") ;

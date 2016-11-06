@@ -32,6 +32,7 @@ void LuaContext::error(const std::string &msg) {
     strm << msg << lua_tostring(state_, -1) ;
 
     cerr << strm.str() <<endl ;
+
     throw LuaException(strm.str()) ;
 }
 
@@ -226,40 +227,59 @@ static int is_node(lua_State* L)
     return 1 ;
 }
 
+static int is_relation(lua_State* L)
+{
+    TagFilterContext **ctx_proxy = (TagFilterContext **) lua_touserdata(L, lua_upvalueindex(1));
+    TagFilterContext *ctx = *ctx_proxy ;
+
+    bool is_rel = (ctx->type_ == TagFilterContext::Relation) ;
+    lua_pushboolean(L, is_rel) ;
+
+    return 1 ;
+}
 
 bool LuaContext::loadScript(const std::string &script) {
+
     if ( luaL_loadstring(state_, script.c_str()) || lua_pcall(state_, 0, 0, 0) ) {
         error("error parsing Lua script: ") ;
         return false ;
     }
 
+    lua_newtable(state_) ;
+
     lua_pushlightuserdata(state_, &cproxy_);
     lua_pushcclosure(state_, &attach_tags, 1);
-    lua_setglobal(state_, "attach_tags") ;
+    lua_setfield(state_, -2, "attach_tags");
 
     lua_pushlightuserdata(state_, &cproxy_);
     lua_pushcclosure(state_, &add_tags, 1);
-    lua_setglobal(state_, "add_tags") ;
+    lua_setfield(state_, -2, "add_tags");
 
     lua_pushlightuserdata(state_, &cproxy_);
     lua_pushcclosure(state_, &set_tags, 1);
-    lua_setglobal(state_, "set_tags") ;
+    lua_setfield(state_, -2, "set_tags");
 
     lua_pushlightuserdata(state_, &cproxy_);
     lua_pushcclosure(state_, &delete_tags, 1);
-    lua_setglobal(state_, "delete_tags") ;
+    lua_setfield(state_, -2, "delete_tags");
 
     lua_pushlightuserdata(state_, &cproxy_);
     lua_pushcclosure(state_, &write, 1);
-    lua_setglobal(state_, "write") ;
+    lua_setfield(state_, -2, "write");
 
     lua_pushlightuserdata(state_, &cproxy_);
     lua_pushcclosure(state_, &is_node, 1);
-    lua_setglobal(state_, "is_node") ;
+    lua_setfield(state_, -2, "is_node");
 
     lua_pushlightuserdata(state_, &cproxy_);
     lua_pushcclosure(state_, &is_way, 1);
-    lua_setglobal(state_, "is_way") ;
+    lua_setfield(state_, -2, "is_way");
+
+    lua_pushlightuserdata(state_, &cproxy_);
+    lua_pushcclosure(state_, &is_relation, 1);
+    lua_setfield(state_, -2, "is_relation");
+
+    lua_setglobal(state_, "osm") ;
 
     return true ;
 }
@@ -329,12 +349,18 @@ tag_filter::Literal LuaContext::call(const string &fname, const std::vector<tag_
 void LuaContext::setupContext(TagFilterContext &ctx)
 {
     cproxy_ = &ctx ;
+
+    // we fill in the tags table and relations table that all live within the osm table
+
+    lua_getglobal(state_, "osm") ;
+    lua_pushstring(state_, "tags") ;
     addDictionary(ctx.tags_) ;
-    lua_setglobal(state_, "_tags_") ;
+    lua_settable(state_, -3) ;
 
     using namespace tag_filter ;
 
     if ( ctx.type_ == TagFilterContext::Way ) {
+        lua_pushstring(state_, "relations") ;
         OSM::Way &way = ctx.doc_->ways_[ctx.fid_] ;
         lua_newtable(state_) ;
         uint count = 1 ;
@@ -345,6 +371,8 @@ void LuaContext::setupContext(TagFilterContext &ctx)
             addDictionary(rel.tags_) ;
             lua_settable(state_, -3);
         }
-        lua_setglobal(state_, "_relations_") ;
+        lua_settable(state_, -3) ;
     }
+
+    lua_pop(state_, -1) ;
 }

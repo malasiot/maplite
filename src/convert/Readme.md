@@ -68,7 +68,7 @@ An example of a simple filter is as follows:
         [ highway in ('raceway', 'residential', 'road', 'secondary', 'secondary_link', 'tertiary', 'tertiary_link') ] { write [z12] highway ; }
         [ highway == 'steps' ] { write [z16] highway ; }
     }
-```    
+```
 Consider in the example above a way with "highway=secondary" tag given. The first rule "is_way()" matches and the command block
 is visited.
 The first command is a rule with no condition which means that it is always executed. The first command in the subrule is "attach layer".
@@ -99,4 +99,29 @@ attach <tag_list> ;        // append these tags to each write command
 exclude [<zoom_range>] <tag_list> ; // exclude these tags from the output
 continue ;                 // process the next rule in the parent block
 ```
-Well known relation types such as multi-polygons, boundaries and routes are converted into ways by stiching together their member ways.
+Well known relation types such as multi-polygons, boundaries and routes are converted into ways by stiching together their member ways. These should be matched using is_relation() function.
+
+It is also possible to define custom functions in LUA by prepending the script in the config file.
+```
+<?
+...lua code...
+?>
+... rules ...
+```
+All functions declared in the block have access to a global table "osm" that contains:
+- a "tags" field, table containing all key/value pairs of the current feature.
+- a "relations" field, an array of all relations that this feature is part of. Each relation is a table with associated key/value pairs. For example to test if a way is part of a hiking route one may write
+```
+function is_hk_route()
+  for i = 1,#(osm.relations) do
+    local rel = osm.relations[i] ;
+    if rel.type == "route" and rel.route == "hiking" then return true end
+  end 
+end
+```
+- "add_tags" function taking as input a table of key/value pairs to add to each feature.
+- "set_tags" function taking as input a table of key/value pairs to modify in each feature.
+- "delete_tags" function taking as input a list (table) of keys to delete from each feature.
+- "attach_tags" function taking as inpout a list (table) of keys and with same effect as the attach command.
+- "write" function taking 3 to 4 arguments, zmin, zmax, key and optional value with same effect as the write command.
+- "is_way", "is_node", "is_relation" functions that return true if the processed feature is of associated type.
