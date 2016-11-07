@@ -71,6 +71,7 @@ FIND_PATH(LUA_INCLUDE_DIR lua.h
   /opt
 )
 
+
 # Find the lua library
 FIND_LIBRARY(LUA_LIBRARY 
   NAMES ${_POSSIBLE_LUA_LIBRARY}
@@ -88,6 +89,7 @@ FIND_LIBRARY(LUA_LIBRARY
   /opt
 )
 
+
 IF(LUA_LIBRARY)
   # include the math library for Unix
   IF(UNIX AND NOT APPLE)
@@ -99,13 +101,30 @@ IF(LUA_LIBRARY)
   ENDIF(UNIX AND NOT APPLE)
 ENDIF(LUA_LIBRARY)
 
-# Determine Lua version
-IF(LUA_INCLUDE_DIR AND EXISTS "${LUA_INCLUDE_DIR}/lua.h")
-  FILE(STRINGS "${LUA_INCLUDE_DIR}/lua.h" lua_version_str REGEX "^#define[ \t]+LUA_RELEASE[ \t]+\"Lua .+\"")
+if (LUA_INCLUDE_DIR AND EXISTS "${LUA_INCLUDE_DIR}/lua.h")
+	# At least 5.[012] have different ways to express the version
+	# so all of them need to be tested. Lua 5.2 defines LUA_VERSION
+	# and LUA_RELEASE as joined by the C preprocessor, so avoid those.
+	file(STRINGS "${LUA_INCLUDE_DIR}/lua.h" lua_version_strings
+		 REGEX "^#define[ \t]+LUA_(RELEASE[ \t]+\"Lua [0-9]|VERSION([ \t]+\"Lua [0-9]|_[MR])).*")
 
-  STRING(REGEX REPLACE "^#define[ \t]+LUA_RELEASE[ \t]+\"Lua ([^\"]+)\".*" "\\1" LUA_VERSION_STRING "${lua_version_str}")
-  UNSET(lua_version_str)
-ENDIF()
+	string(REGEX REPLACE ".*;#define[ \t]+LUA_VERSION_MAJOR[ \t]+\"([0-9])\"[ \t]*;.*" "\\1" LUA_VERSION_MAJOR ";${lua_version_strings};")
+	if (LUA_VERSION_MAJOR MATCHES "^[0-9]+$")
+		string(REGEX REPLACE ".*;#define[ \t]+LUA_VERSION_MINOR[ \t]+\"([0-9])\"[ \t]*;.*" "\\1" LUA_VERSION_MINOR ";${lua_version_strings};")
+		string(REGEX REPLACE ".*;#define[ \t]+LUA_VERSION_RELEASE[ \t]+\"([0-9])\"[ \t]*;.*" "\\1" LUA_VERSION_PATCH ";${lua_version_strings};")
+		set(LUA_VERSION_STRING "${LUA_VERSION_MAJOR}.${LUA_VERSION_MINOR}.${LUA_VERSION_PATCH}")
+	else ()
+		string(REGEX REPLACE ".*;#define[ \t]+LUA_RELEASE[ \t]+\"Lua ([0-9.]+)\"[ \t]*;.*" "\\1" LUA_VERSION_STRING ";${lua_version_strings};")
+		if (NOT LUA_VERSION_STRING MATCHES "^[0-9.]+$")
+			string(REGEX REPLACE ".*;#define[ \t]+LUA_VERSION[ \t]+\"Lua ([0-9.]+)\"[ \t]*;.*" "\\1" LUA_VERSION_STRING ";${lua_version_strings};")
+		endif ()
+		string(REGEX REPLACE "^([0-9]+)\\.[0-9.]*$" "\\1" LUA_VERSION_MAJOR "${LUA_VERSION_STRING}")
+		string(REGEX REPLACE "^[0-9]+\\.([0-9]+)[0-9.]*$" "\\1" LUA_VERSION_MINOR "${LUA_VERSION_STRING}")
+		string(REGEX REPLACE "^[0-9]+\\.[0-9]+\\.([0-9]).*" "\\1" LUA_VERSION_PATCH "${LUA_VERSION_STRING}")
+	endif ()
+
+	unset(lua_version_strings)
+endif()
 
 INCLUDE(FindPackageHandleStandardArgs)
 # handle the QUIETLY and REQUIRED arguments and set LUA_FOUND to TRUE if 

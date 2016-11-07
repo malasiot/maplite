@@ -1,6 +1,7 @@
 #include "lua_context.hpp"
 #include "tag_filter_context.hpp"
 
+#include <iostream>
 #include <sstream>
 
 using namespace std ;
@@ -30,8 +31,6 @@ void LuaContext::error(const std::string &msg) {
     ostringstream strm ;
 
     strm << msg << lua_tostring(state_, -1) ;
-
-    cerr << strm.str() <<endl ;
 
     throw LuaException(strm.str()) ;
 }
