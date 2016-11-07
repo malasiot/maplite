@@ -8,22 +8,20 @@
 
 #include "dictionary.hpp"
 
+typedef int64_t osm_id_t ;
+
 namespace OSM {
 
 struct Feature {
 
     enum Type { NodeFeature, WayFeature, RelationFeature, PolygonFeature } ;
 
-    Feature(Type type): type_(type), visited_(false) {}
+    Feature(Type type): type_(type) {}
 
-    std::string id_ ; // feature id
+    osm_id_t id_ ; // feature id
     Dictionary tags_ ; // tags associated with this feature
     Type type_ ; // feature type ;
-    bool visited_ ; // used by algorithms ;
 };
-
-class Way ;
-class Relation ;
 
 struct Node: public Feature {
 
@@ -31,8 +29,8 @@ struct Node: public Feature {
 
     double lat_, lon_ ;
 
-    std::vector<uint> ways_ ;      // ways in which this nodes participates
-    std::vector<uint> relations_ ; // relations that this node participates directly
+    std::vector<osm_id_t> ways_ ;      // ways in which this nodes participates
+    std::vector<osm_id_t> relations_ ; // relations that this node participates directly
 } ;
 
 
@@ -40,8 +38,8 @@ struct Way: public Feature {
 
     Way(): Feature(WayFeature) {}
 
-    std::vector<uint> nodes_ ;     // nodes corresponding to this way
-    std::vector<uint> relations_ ; // relations that this way participates
+    std::vector<osm_id_t> nodes_ ;     // nodes corresponding to this way
+    std::vector<osm_id_t> relations_ ; // relations that this way participates
 } ;
 
 
@@ -49,19 +47,19 @@ struct Relation: public Feature {
 
     Relation(): Feature(RelationFeature) {}
 
-    std::vector<uint> nodes_ ;     // node members
-    std::vector<uint> ways_ ;      // way members
-    std::vector<uint> children_ ; // relation members
+    std::vector<osm_id_t> nodes_ ;     // node members
+    std::vector<osm_id_t> ways_ ;      // way members
+    std::vector<osm_id_t> children_ ; // relation members
 
     std::vector<std::string> nodes_role_ ;
     std::vector<std::string> ways_role_ ;
     std::vector<std::string> children_role_ ;
 
-    std::vector<uint> parents_ ;    // parent relations
+    std::vector<osm_id_t> parents_ ;    // parent relations
 };
 
 struct Ring {
-    std::deque<uint> nodes_ ;
+    std::vector<osm_id_t> nodes_ ;
 };
 
 struct Polygon: public Feature {
@@ -71,43 +69,30 @@ struct Polygon: public Feature {
     std::vector<Ring> rings_ ;
 };
 
+class DocumentAccessor ;
 
-class Document {
+class DocumentReader {
 public:
 
     // empty document
-    Document() {}
+    DocumentReader() {}
 
     // open an existing document
-    Document(const std::string &fileName) ;
-
-    // create OSM document by filtering an existing one
-    Document(const Document &other, const std::string &filter) ;
+    DocumentReader(const std::string &fileName) ;
 
     // read Osm file (format determined by extension)
-    bool read(const std::string &fileName) ;
-
-    // write Osm file (format determined by extension)
-    void write(const std::string &fileName) ;
-
-public:
-
-    std::vector<Node> nodes_ ;
-    std::vector<Way> ways_ ;
-    std::vector<Relation> relations_ ;
+    bool read(const std::string &fileName, DocumentAccessor &acc) ;
 
 protected:
 
-    bool readXML(std::istream &strm) ;
-    void writeXML(std::ostream &strm);
-
-    bool readPBF(const std::string &fileName) ;
-    bool isPBF(const std::string &fileName) ;
+    bool readXML(std::istream &strm, DocumentAccessor &) ;
+    bool readPBF(const std::string &fileName, DocumentAccessor &) ;
+    bool isPBF(const std::string &fileName, DocumentAccessor &) ;
 
 public:
 
-    static bool makePolygonsFromRelation(const Document &doc, const Relation &rel, Polygon &polygon) ;
-    static bool makeWaysFromRelation(const Document &doc, const Relation &rel, std::vector<Way> &ways) ;
+    static bool makePolygonsFromRelation(DocumentAccessor &doc, const Relation &rel, Polygon &polygon) ;
+    static bool makeWaysFromRelation(DocumentAccessor &doc, const Relation &rel, std::vector<Way> &ways) ;
 
 };
 

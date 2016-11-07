@@ -24,22 +24,22 @@ public:
     enum FeatureType { Way, Node, Relation } ;
 
     TagFilterContext() {}
-    TagFilterContext(const OSM::Node &node, uint64_t fid, OSM::Document *doc):
+    TagFilterContext(const OSM::Node &node, uint64_t fid, OSM::DocumentAccessor *doc):
         tags_(node.tags_), id_(node.id_), type_(Node), fid_(fid), doc_(doc) {}
-    TagFilterContext(const OSM::Way &way, uint64_t fid, OSM::Document *doc):
+    TagFilterContext(const OSM::Way &way, uint64_t fid, OSM::DocumentAccessor *doc):
         tags_(way.tags_), id_(way.id_), type_(Way), fid_(fid), doc_(doc) {}
-    TagFilterContext(const Dictionary &tags, const std::string &id, FeatureType t): tags_(tags), id_(id), type_(t) {}
+    TagFilterContext(const Dictionary &tags, uint64_t id, FeatureType t): tags_(tags), id_(id), type_(t) {}
 
     FeatureType type() const { return type_ ; }
 
     bool has_tag(const std::string &tag) const { return tags_.contains(tag); }
     std::string value(const std::string &key) const { return tags_.get(key); }
-    std::string id() const { return id_ ; }
+    int64_t id() const { return id_ ; }
 
     Dictionary tags_ ;
-    std::string id_ ;
+    int64_t id_ ;
     FeatureType type_ ;
-    OSM::Document *doc_ ;
+    OSM::DocumentAccessor *doc_ ;
     uint64_t fid_ ;
     TagWriteList tw_ ;
 };

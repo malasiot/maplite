@@ -1,27 +1,34 @@
 SET ( OSM2MAP_SOURCES
 
-        ${SRC_ROOT}/convert/osm2map.cpp
+	${SRC_ROOT}/convert/osm2map.cpp
 
-        ${SRC_ROOT}/convert/tag_filter.cpp
-        ${SRC_ROOT}/convert/tag_filter.hpp
+	${SRC_ROOT}/convert/tag_filter.cpp
+	${SRC_ROOT}/convert/tag_filter.hpp
 
-        ${SRC_ROOT}/convert/tag_filter_context.cpp
-        ${SRC_ROOT}/convert/tag_filter_context.hpp
+	${SRC_ROOT}/convert/tag_filter_context.cpp
+	${SRC_ROOT}/convert/tag_filter_context.hpp
 
-        ${SRC_ROOT}/convert/tag_filter_config_parser.hpp
-        ${SRC_ROOT}/convert/tag_filter_config_parser.cpp
+	${SRC_ROOT}/convert/tag_filter_config_parser.hpp
+	${SRC_ROOT}/convert/tag_filter_config_parser.cpp
 
-        ${SRC_ROOT}/convert/tag_filter_rule.hpp
-        ${SRC_ROOT}/convert/tag_filter_rule.cpp
+	${SRC_ROOT}/convert/tag_filter_rule.hpp
+	${SRC_ROOT}/convert/tag_filter_rule.cpp
 
 	${SRC_ROOT}/convert/osm_processor.cpp
 	${SRC_ROOT}/convert/osm_processor.hpp
 
-        ${SRC_ROOT}/convert/osm_polygon.cpp
+	${SRC_ROOT}/convert/osm_polygon.cpp
 	${SRC_ROOT}/convert/osm_pbf_reader.cpp
+	${SRC_ROOT}/convert/osm_xml_reader.cpp
 
-        ${SRC_ROOT}/convert/osm_document.cpp
-        ${SRC_ROOT}/convert/osm_document.hpp
+	${SRC_ROOT}/convert/osm_document.cpp
+	${SRC_ROOT}/convert/osm_document.hpp
+
+	${SRC_ROOT}/convert/osm_memory_accessor.cpp
+	${SRC_ROOT}/convert/osm_memory_accessor.hpp
+
+	${SRC_ROOT}/convert/osm_sqlite_accessor.cpp
+	${SRC_ROOT}/convert/osm_sqlite_accessor.hpp
 
 	${SRC_ROOT}/convert/lua_context.hpp
 	${SRC_ROOT}/convert/lua_context.cpp

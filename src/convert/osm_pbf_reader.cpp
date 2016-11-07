@@ -101,7 +101,7 @@ static string make_id(int64_t id)
 
 static bool process_osm_data_nodes(vector<Node> &nodes, map<int64_t, uint64_t> &nodeMap, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
 {
-
+#if 0
     for ( unsigned node_id = 0; node_id < group.nodes_size() ; node_id++ )
     {
         const PBF::Node &node = group.nodes(node_id) ;
@@ -127,7 +127,7 @@ static bool process_osm_data_nodes(vector<Node> &nodes, map<int64_t, uint64_t> &
             n.tags_.add(key, val) ;
         }
     }
-
+#endif
     return true ;
 
 }
@@ -152,7 +152,7 @@ static bool process_osm_data_dense_nodes(vector<Node> &nodes, map<int64_t, uint6
         deltalat += dense.lat(node_id);
         deltalon += dense.lon(node_id) ;
 
-        n.id_ = make_id(deltaid) ;
+        n.id_ = deltaid ;
 
         nodeMap.insert(make_pair(deltaid, nodes.size()-1)) ;
 
@@ -194,7 +194,7 @@ static bool process_osm_data_ways(vector<Way> &ways, map<int64_t, uint64_t> &way
         ways.push_back(Way()) ;
         Way &w = ways.back() ;
 
-        w.id_ = make_id(way.id()) ;
+        w.id_ = way.id() ;
 
         wayMap.insert(make_pair(way.id(), ways.size()-1)) ;
 
@@ -237,7 +237,7 @@ static bool process_osm_data_relations(vector<Relation> &relations, map<int64_t,
         relations.push_back(Relation()) ;
         Relation &r = relations.back() ;
 
-        r.id_ = make_id(relation.id()) ;
+        r.id_ = relation.id() ;
 
         relMap.insert(make_pair(relation.id(), relations.size()-1)) ;
 
@@ -302,8 +302,9 @@ static bool process_osm_data_relations(vector<Relation> &relations, map<int64_t,
 
 }
 
-bool Document::readPBF(const string &fileName)
+bool DocumentReader::readPBF(const string &fileName, DocumentAccessor &a)
 {
+#if 0
     map<int64_t, uint64_t> nodeMap, wayMap, relMap ;
     vector< vector<int64_t> > wayNodeMap, relNodeMap, relWayMap, relRelMap ;
     vector< vector<string> > roleNodeMap, roleWayMap, roleRelMap ;
@@ -460,6 +461,8 @@ bool Document::readPBF(const string &fileName)
         }
 
     }
+
+#endif
 
      return true ;
 

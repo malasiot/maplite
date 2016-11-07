@@ -1,4 +1,5 @@
 #include "osm_processor.hpp"
+#include "osm_memory_accessor.hpp"
 
 #include <spatialite.h>
 #include <boost/filesystem.hpp>
@@ -187,7 +188,7 @@ bool OSMProcessor::create(const std::string &name) {
     }
 }
 
-bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const OSM::Way &way, uint8_t zmin, uint8_t zmax)
+bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::DocumentAccessor &doc, const OSM::Way &way, uint8_t zmin, uint8_t zmax)
 {
     try {
         unsigned char *blob;
@@ -199,15 +200,17 @@ bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, con
 
         gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_line, way.nodes_.size());
 
-        for(int j=0 ; j<way.nodes_.size() ; j++)  {
-            const OSM::Node &node = doc.nodes_[way.nodes_[j]] ;
+        vector<OSM::Node> nodes = doc.fetchNodes(way.nodes_) ;
+
+        for(int j=0 ; j<nodes.size() ; j++)  {
+            const OSM::Node &node = nodes[j] ;
             gaiaSetPoint (ls->Coords, j, node.lon_, node.lat_);
         }
 
         gaiaToSpatiaLiteBlobWkb (geo_line, &blob, &blob_size);
 
         cmd.bind(1, blob, blob_size) ;
-        cmd.bind(2, way.id_) ;
+        cmd.bind(2, (long long)way.id_) ;
         cmd.bind(3, (int)zmin) ;
         cmd.bind(4, (int)zmax) ;
         cmd.exec() ;
@@ -226,7 +229,7 @@ bool OSMProcessor::addLineGeometry(SQLite::Command &cmd, OSM::Document &doc, con
     return true ;
 }
 
-bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc, const std::vector<OSM::Way> &ways, const string &id, uint8_t zmin, uint8_t zmax)
+bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::DocumentAccessor &doc, const std::vector<OSM::Way> &ways, int64_t id, uint8_t zmin, uint8_t zmax)
 {
     try {
         unsigned char *blob;
@@ -240,8 +243,10 @@ bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc
 
             gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_mline, way.nodes_.size());
 
-            for(int j=0 ; j<way.nodes_.size() ; j++)  {
-                const OSM::Node &node = doc.nodes_[way.nodes_[j]] ;
+            vector<OSM::Node> nodes = doc.fetchNodes(way.nodes_) ;
+
+            for(int j=0 ; j<nodes.size() ; j++)  {
+                const OSM::Node &node = nodes[j] ;
                 gaiaSetPoint (ls->Coords, j, node.lon_, node.lat_);
             }
         }
@@ -249,7 +254,7 @@ bool OSMProcessor::addMultiLineGeometry(SQLite::Command &cmd, OSM::Document &doc
         gaiaToSpatiaLiteBlobWkb (geo_mline, &blob, &blob_size);
 
         cmd.bind(1, blob, blob_size) ;
-        cmd.bind(2, id) ;
+        cmd.bind(2, (long long)id) ;
         cmd.bind(3, (int)zmin) ;
         cmd.bind(4, (int)zmax) ;
 
@@ -284,7 +289,7 @@ bool OSMProcessor::addPointGeometry(SQLite::Command &cmd, const OSM::Node &poi, 
         gaiaToSpatiaLiteBlobWkb (geo_pt, &blob, &blob_size);
 
         cmd.bind(1, blob, blob_size) ;
-        cmd.bind(2, poi.id_) ;
+        cmd.bind(2, (long long)poi.id_) ;
         cmd.bind(3, (int)zmin) ;
         cmd.bind(4, (int)zmax) ;
 
@@ -303,7 +308,7 @@ bool OSMProcessor::addPointGeometry(SQLite::Command &cmd, const OSM::Node &poi, 
 
 }
 
-bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document &doc, const OSM::Polygon &poly, const string &id,
+bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, OSM::DocumentAccessor &doc, const OSM::Polygon &poly, int64_t id,
                                       uint8_t zmin, uint8_t zmax)
 {
     try {
@@ -319,8 +324,10 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document 
 
         gaiaRingPtr er = g_poly->Exterior ;
 
-        for(int j=0 ; j<poly.rings_[0].nodes_.size() ; j++)  {
-            const OSM::Node &node = doc.nodes_[poly.rings_[0].nodes_[j]] ;
+        vector<OSM::Node> nodes = doc.fetchNodes(poly.rings_[0].nodes_) ;
+
+        for(int j=0 ; j<nodes.size(); j++)  {
+            const OSM::Node &node = nodes[j] ;
             gaiaSetPoint (er->Coords, j, node.lon_, node.lat_);
         }
 
@@ -329,8 +336,10 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document 
             const OSM::Ring &ring = poly.rings_[i] ;
             gaiaRingPtr ir = gaiaAddInteriorRing(g_poly, i-1, ring.nodes_.size()) ;
 
-            for(int j=0 ; j<ring.nodes_.size() ; j++)  {
-                const OSM::Node &node = doc.nodes_[ring.nodes_[j]] ;
+            vector<OSM::Node> nodes = doc.fetchNodes(ring.nodes_) ;
+
+            for(int j=0 ; j<nodes.size() ; j++)  {
+                const OSM::Node &node = nodes[j] ;
                 gaiaSetPoint (ir->Coords, j, node.lon_, node.lat_);
             }
         }
@@ -342,7 +351,7 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document 
         gaiaToSpatiaLiteBlobWkb (geo_poly, &blob, &blob_size);
 
         cmd.bind(1, blob, blob_size) ;
-        cmd.bind(2, id) ;
+        cmd.bind(2, (long long)id) ;
         cmd.bind(3, (int)zmin) ;
         cmd.bind(4, (int)zmax) ;
 
@@ -362,14 +371,14 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Command &cmd, const OSM::Document 
     return true ;
 }
 
-bool OSMProcessor::addTags(SQLite::Command &cmd, const TagWriteList &tags, const string &id)
+bool OSMProcessor::addTags(SQLite::Command &cmd, const TagWriteList &tags, int64_t id)
 {
     try {
         for( const TagWriteAction &kv: tags.actions_) {
 
             cmd.bind(1, kv.key_) ;
             cmd.bind(2, kv.val_) ;
-            cmd.bind(3, id) ;
+            cmd.bind(3, (long long)id) ;
             cmd.bind(4, kv.zoom_min_) ;
             cmd.bind(5, kv.zoom_max_) ;
 
@@ -383,9 +392,9 @@ bool OSMProcessor::addTags(SQLite::Command &cmd, const TagWriteList &tags, const
 }
 
 
-static bool member_of_multipolygon_or_boundary(const OSM::Way &way, const OSM::Document &doc) {
+static bool member_of_multipolygon_or_boundary(const OSM::Way &way, OSM::DocumentAccessor &doc) {
     for( uint ridx: way.relations_ ) {
-        const OSM::Relation &r = doc.relations_[ridx]  ;
+        OSM::Relation r = doc.fetchRelation(ridx)  ;
         string type = r.tags_.get("type") ;
         if ( type == "multipolygon" || type == "boundary" ) return true ;
     }
@@ -410,11 +419,12 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 
         SQLite::Command cmd_tags(con, "INSERT INTO kv (key, val, osm_id, zoom_min, zoom_max) VALUES (?, ?, ?, ?, ?)") ;
 
-        OSM::Document doc ;
+        OSM::DocumentReader reader ;
+        OSM::MemoryBasedAccessor doc ;
 
         cout << "Parsing file: " << osm_file << endl ;
 
-        if ( !doc.read(osm_file ) ) {
+        if ( !reader.read(osm_file, doc ) ) {
             cerr << "Error reading from " << osm_file << endl ;
             return false ;
         }
@@ -425,26 +435,32 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 
         // POIs
 
-        for(int k=0 ; k<doc.nodes_.size() ; k++ )
+        std::unique_ptr<OSM::NodeIteratorBase> nit = doc.nodes() ;
+
+        while ( nit->isValid() )
         {
-            auto node = doc.nodes_[k] ;
+            const OSM::Node &node = nit->current() ;
 
             if ( node.tags_.empty() ) continue ;
 
-            TagFilterContext ctx(node, k, &doc) ;
+            TagFilterContext ctx(node, node.id_, &doc) ;
             if ( !cfg.match(ctx, zmin, zmax) ) continue ;
 
             SQLite::Command cmd_poi(con, insert_feature_sql("pois")) ;
 
             addPointGeometry(cmd_poi, node, zmin, zmax) ;
             addTags(cmd_tags, ctx.tw_, node.id_) ;
+
+            nit->next() ;
         }
 
         // relations of type route, merge ways into chunks
 
-        for(int k=0 ; k<doc.relations_.size() ; k++ )
+        std::unique_ptr<OSM::RelationIteratorBase> rit = doc.relations() ;
+
+        while ( rit->isValid() )
         {
-            auto relation = doc.relations_[k] ;
+            const OSM::Relation &relation = rit->current() ;
 
             string rel_type = relation.tags_.get("type") ;
 
@@ -454,7 +470,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
             if ( rel_type == "route" ) {
 
                 vector<OSM::Way> chunks ;
-                if ( !OSM::Document::makeWaysFromRelation(doc, relation, chunks) ) continue ;
+                if ( !OSM::DocumentReader::makeWaysFromRelation(doc, relation, chunks) ) continue ;
 
                 SQLite::Command cmd_rel(con, insert_feature_sql("lines", "ST_Multi(?)")) ;
 
@@ -466,7 +482,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
             else if ( rel_type == "multipolygon" || rel_type == "boundary" ) {
 
                 OSM::Polygon polygon ;
-                if ( !OSM::Document::makePolygonsFromRelation(doc, relation, polygon) ) continue ;
+                if ( !OSM::DocumentReader::makePolygonsFromRelation(doc, relation, polygon) ) continue ;
 
                 SQLite::Command cmd_rel(con, insert_feature_sql("polygons", "ST_Multi(?)")) ;
 
@@ -475,13 +491,17 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
                     addTags(cmd_tags, ctx.tw_, relation.id_) ;
                 }
             }
+
+            rit->next() ;
         }
 
         // ways
 
-        for(int k=0 ; k<doc.ways_.size() ; k++ )
+        std::unique_ptr<OSM::WayIteratorBase> wit = doc.ways() ;
+
+        while ( wit->isValid() )
         {
-            auto way = doc.ways_[k] ;
+            const OSM::Way &way = wit->current() ;
 
             if ( way.tags_.empty() ) continue ;
 
@@ -489,7 +509,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 
             // match feature with filter rules
 
-            TagFilterContext ctx(way, k, &doc) ;
+            TagFilterContext ctx(way, way.id_, &doc) ;
             if ( !cfg.match(ctx, zmin, zmax) ) continue ;
 
             // deal with closed ways, potential polygon geometries (areas) are those indicated by area tag or those other than highway, barrier and contour
@@ -517,6 +537,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
                 addLineGeometry(cmd_line, doc, way, zmin, zmax) ;
                 addTags(cmd_tags, ctx.tw_, way.id_) ;
             }
+
+            wit->next() ;
         }
 
 
