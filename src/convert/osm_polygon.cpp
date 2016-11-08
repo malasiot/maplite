@@ -21,7 +21,9 @@ bool DocumentReader::makePolygonsFromRelation(DocumentAccessor &doc, const Relat
 
     for(uint i=0 ; i<rel.ways_.size() ; i++)
     {
-        const Way way = doc.fetchWay(rel.ways_[i]) ;
+        Way way ;
+        if ( !doc.readWay(rel.ways_[i], way) ) continue ;
+
         const string &role = rel.ways_role_[i] ;
 
         if (  way.nodes_.front() == way.nodes_.back() )
@@ -37,11 +39,15 @@ bool DocumentReader::makePolygonsFromRelation(DocumentAccessor &doc, const Relat
     while ( !unassigned_ways.empty() )
     {
         Ring current ;
-        deque<uint64_t> cnodes ;
+        deque<osm_id_t> cnodes ;
 
         uint idx = unassigned_ways.front() ;
 
-        Way way = doc.fetchWay(rel.ways_[idx]) ;
+        Way way ;
+        if ( !doc.readWay(rel.ways_[idx], way) ) {
+            unassigned_ways.pop_front() ;
+            continue ;
+        }
 
         string current_role = rel.ways_role_[idx] ;
 
@@ -62,7 +68,11 @@ bool DocumentReader::makePolygonsFromRelation(DocumentAccessor &doc, const Relat
             {
                 int idx = *itu ;
 
-                Way way = doc.fetchWay(rel.ways_[idx]) ;
+                Way way ;
+                if ( !doc.readWay(rel.ways_[idx], way) ) {
+                    ++itu ; continue ;
+                }
+
                 string role = rel.ways_role_[idx] ;
 
                 if ( role != current_role ) { ++itu ; continue ; }
@@ -120,19 +130,23 @@ bool DocumentReader::makeWaysFromRelation(DocumentAccessor &doc, const Relation 
 {
     vector<Ring> rings ;
 
-    list<uint> unassigned_ways ;
+    list<osm_id_t> unassigned_ways ;
 
     for(uint i=0 ; i<rel.ways_.size() ; i++)
-         unassigned_ways.push_back(i) ;
+         unassigned_ways.push_back(rel.ways_[i]) ;
 
     while ( !unassigned_ways.empty() )
     {
         Ring current ;
-        deque<uint64_t> cnodes ;
+        deque<osm_id_t> cnodes ;
 
-        uint idx = unassigned_ways.front() ;
+        osm_id_t idx = unassigned_ways.front() ;
 
-        Way way = doc.fetchWay(rel.ways_[idx]) ;
+        Way way ;
+        if ( !doc.readWay(idx, way) ) {
+            unassigned_ways.pop_front() ;
+            continue ;
+        }
 
         cnodes.insert(cnodes.end(), way.nodes_.begin(), way.nodes_.end()) ;
         unassigned_ways.pop_front() ;
@@ -145,13 +159,17 @@ bool DocumentReader::makeWaysFromRelation(DocumentAccessor &doc, const Relation 
         {
             finished = true ;
 
-            list<uint>::iterator itu = unassigned_ways.begin() ;
+            list<osm_id_t>::iterator itu = unassigned_ways.begin() ;
 
             while ( itu != unassigned_ways.end() )
             {
-                int idx = *itu ;
+                osm_id_t idx = *itu ;
 
-                Way way = doc.fetchWay(rel.ways_[idx]) ;
+                Way way ;
+                if ( !doc.readWay(idx, way) ) {
+                    ++itu ;
+                    continue ;
+                }
 
                 if ( cnodes.front() == way.nodes_.front() )
                 {

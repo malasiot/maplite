@@ -360,21 +360,26 @@ void LuaContext::setupContext(TagFilterContext &ctx)
     using namespace tag_filter ;
 
     if ( ctx.type_ == TagFilterContext::Way ) {
-        lua_pushstring(state_, "relations") ;
 
-        OSM::Way way = ctx.doc_->fetchWay(ctx.fid_) ;
+        OSM::Way way ;
+        if ( ctx.doc_->readWay(ctx.id_, way) ) {
 
-        lua_newtable(state_) ;
-        uint count = 1 ;
+            vector<OSM::Relation> relations ;
+            ctx.doc_->readParentRelations(ctx.id_, relations) ;
 
-        for( uint64_t idx: way.relations_) {
-            lua_pushinteger(state_, count++) ;
-            OSM::Relation rel = ctx.doc_->fetchRelation(idx) ;
+            lua_pushstring(state_, "relations") ;
 
-            addDictionary(rel.tags_) ;
-            lua_settable(state_, -3);
+            lua_newtable(state_) ;
+
+            uint count = 1 ;
+
+            for( OSM::Relation &rel: relations ) {
+                lua_pushinteger(state_, count++) ;
+                addDictionary(rel.tags_) ;
+                lua_settable(state_, -3);
+            }
+            lua_settable(state_, -3) ;
         }
-        lua_settable(state_, -3) ;
     }
 
     lua_pop(state_, -1) ;

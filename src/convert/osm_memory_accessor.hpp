@@ -3,6 +3,7 @@
 
 #include "osm_accessor.hpp"
 #include <unordered_map>
+#include <functional>
 
 namespace OSM {
 
@@ -14,77 +15,56 @@ public:
     MemoryBasedAccessor(): DocumentAccessor() {}
     virtual ~MemoryBasedAccessor() {}
 
-    virtual Way fetchWay(osm_id_t id) {
-        return std::move(ways_[id]) ;
+    virtual bool readWay(osm_id_t id, Way &way) {
+        auto it = ways_.find(id) ;
+        if ( it == ways_.end() ) return false ;
+        way = it->second ;
+        return true ;
     }
 
-    virtual std::vector<Way> fetchWays(const std::vector<osm_id_t> ids) override {
-        std::vector<Way> ways ;
+    virtual void readWays(const std::vector<osm_id_t> ids, std::vector<Way> &ways) override {
         for( osm_id_t id: ids ) {
-            ways.push_back(ways_[id]) ;
+            auto it = ways_.find(id) ;
+            if ( it != ways_.end() )
+            ways.push_back(it->second) ;
         }
-        return std::move(ways) ;
     }
 
-    virtual Relation fetchRelation(osm_id_t id) override {
-        return std::move(relations_[id]) ;
-    }
-
-    virtual std::vector<Relation> fetchRelations(const std::vector<osm_id_t> &ids) override {
-        std::vector<Relation> relations ;
-        for( osm_id_t id: ids ) {
-            relations.push_back(relations_[id]) ;
+    virtual void readWayNodes(osm_id_t wid, std::vector<Node> &nodes) override {
+        auto it = ways_.find(wid) ;
+        if ( it != ways_.end() ) {
+            for( osm_id_t id: it->second.nodes_ ) {
+                auto nit = nodes_.find(id) ;
+                if ( nit != nodes_.end() )
+                nodes.push_back(nit->second) ;
+            }
         }
-        return std::move(relations) ;
     }
 
-    virtual std::vector<Node> fetchNodes(const std::vector<osm_id_t> &ids) override {
-        std::vector<Node> nodes ;
-        for( osm_id_t id: ids ) {
-            nodes.push_back(nodes_[id]) ;
-        }
-        return std::move(nodes) ;
+    virtual void readParentRelations(osm_id_t id, std::vector<Relation> &parents) {
+        auto pr = memberships_.equal_range(id) ;
+        std::for_each(pr.first, pr.second, [this, &parents](const std::pair<osm_id_t, osm_id_t> &rp) {
+            auto it = relations_.find(rp.second) ;
+            if ( it != relations_.end() ) {
+                Relation rel ;
+                rel.id_ = it->second.id_ ;
+                rel.tags_ = it->second.tags_ ;
+                parents.push_back(rel) ;
+            }
+        }) ;
     }
 
-    class NodeIterator: public NodeIteratorBase {
-    public:
-        NodeIterator(MemoryBasedAccessor &a): NodeIteratorBase(), doc_(a), it_(doc_.nodes_.begin()) {}
-        bool isValid() const override { return it_ != doc_.nodes_.end() ; }
-        void next() override { ++it_ ; }
-        const Node &current() const override { return it_->second ; }
+    virtual void forAllNodes(std::function<void(const Node &)> cf) {
+        for( auto &np: nodes_ ) cf(np.second) ;
+    }
 
-        private:
-        MemoryBasedAccessor &doc_ ;
-        std::unordered_map<int64_t, Node>::const_iterator it_ ;
-    };
+    virtual void forAllWays(std::function<void(const Way &)> cf) {
+        for( auto &wp: ways_ ) cf(wp.second) ;
+    }
 
-    class WayIterator: public WayIteratorBase {
-    public:
-        WayIterator(MemoryBasedAccessor &a): WayIteratorBase(), doc_(a), it_(doc_.ways_.begin()) {}
-        bool isValid() const override { return it_ != doc_.ways_.end() ; }
-        void next() override { ++it_ ; }
-        const Way &current() const override { return it_->second ; }
-
-        private:
-        MemoryBasedAccessor &doc_ ;
-        std::unordered_map<int64_t, Way>::const_iterator it_ ;
-    };
-
-    class RelationIterator: public RelationIteratorBase {
-    public:
-        RelationIterator(MemoryBasedAccessor &a): RelationIteratorBase(), doc_(a), it_(doc_.relations_.begin()) {}
-        bool isValid() const override { return it_ != doc_.relations_.end() ; }
-        void next() override { ++it_ ; }
-        const Relation &current() const override { return it_->second ; }
-
-        private:
-        MemoryBasedAccessor &doc_ ;
-        std::unordered_map<int64_t, Relation>::const_iterator it_ ;
-    };
-
-    virtual std::unique_ptr<NodeIteratorBase> nodes() override { return std::unique_ptr<NodeIteratorBase>(new NodeIterator(*this)) ; }
-    virtual std::unique_ptr<WayIteratorBase> ways() override  { return std::unique_ptr<WayIteratorBase>(new WayIterator(*this)) ; }
-    virtual std::unique_ptr<RelationIteratorBase> relations() override { return std::unique_ptr<RelationIteratorBase>(new RelationIterator(*this)) ; }
+    virtual void forAllRelations(std::function<void(const Relation &)> cf) {
+        for( auto &rp: relations_ ) cf(rp.second) ;
+    }
 
     virtual void writeNode(const Node &n) override {
         nodes_.insert(std::make_pair(n.id_, n)) ;
@@ -96,14 +76,23 @@ public:
 
     virtual void writeRelation(const Relation &r ) override {
         relations_.insert(std::make_pair(r.id_,r)) ;
+        for( osm_id_t node_id: r.nodes_ )
+            memberships_.insert(std::make_pair(node_id, r.id_)) ;
+        for( osm_id_t way_id: r.ways_ )
+            memberships_.insert(std::make_pair(way_id, r.id_)) ;
+        for( osm_id_t rel_id: r.children_ )
+            memberships_.insert(std::make_pair(rel_id, r.id_)) ;
     }
 
+    virtual void beginWrite() override {}
+    virtual void endWrite() override {}
 
 private:
 
-    std::unordered_map<int64_t, Node> nodes_ ;
-    std::unordered_map<int64_t, Way> ways_ ;
-    std::unordered_map<int64_t, Relation> relations_ ;
+    std::unordered_map<osm_id_t, Node> nodes_ ;
+    std::unordered_map<osm_id_t, Way> ways_ ;
+    std::unordered_map<osm_id_t, Relation> relations_ ;
+    std::unordered_multimap<osm_id_t, osm_id_t> memberships_ ;
 };
 
 }

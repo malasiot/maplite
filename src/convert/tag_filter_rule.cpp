@@ -310,7 +310,7 @@ Literal Function::eval(TagFilterContext &ctx)
         return ( ctx.type() == TagFilterContext::Node )  ;
     }
     else if ( name_ == "is_way" ) {
-        return ctx.type() == TagFilterContext::Way ;
+        return ( ctx.type() == TagFilterContext::Way || ctx.type() == TagFilterContext::MultiPolygon );
     }
     else if ( name_ == "is_relation" ) {
         return ctx.type() == TagFilterContext::Relation ;

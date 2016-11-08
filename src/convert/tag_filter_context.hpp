@@ -21,13 +21,13 @@ class TagFilterContext {
 
 public:
 
-    enum FeatureType { Way, Node, Relation } ;
+    enum FeatureType { Way, Node, Relation, MultiPolygon } ;
 
     TagFilterContext() {}
-    TagFilterContext(const OSM::Node &node, uint64_t fid, OSM::DocumentAccessor *doc):
-        tags_(node.tags_), id_(node.id_), type_(Node), fid_(fid), doc_(doc) {}
-    TagFilterContext(const OSM::Way &way, uint64_t fid, OSM::DocumentAccessor *doc):
-        tags_(way.tags_), id_(way.id_), type_(Way), fid_(fid), doc_(doc) {}
+    TagFilterContext(const OSM::Node &node, OSM::DocumentAccessor *doc):
+        tags_(node.tags_), id_(node.id_), type_(Node), doc_(doc) {}
+    TagFilterContext(const OSM::Way &way, OSM::DocumentAccessor *doc):
+        tags_(way.tags_), id_(way.id_), type_(Way), doc_(doc) {}
     TagFilterContext(const Dictionary &tags, uint64_t id, FeatureType t): tags_(tags), id_(id), type_(t) {}
 
     FeatureType type() const { return type_ ; }
@@ -37,10 +37,9 @@ public:
     int64_t id() const { return id_ ; }
 
     Dictionary tags_ ;
-    int64_t id_ ;
+    osm_id_t id_ ;
     FeatureType type_ ;
     OSM::DocumentAccessor *doc_ ;
-    uint64_t fid_ ;
     TagWriteList tw_ ;
 };
 

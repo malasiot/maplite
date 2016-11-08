@@ -28,9 +28,6 @@ struct Node: public Feature {
     Node(): Feature(NodeFeature) {}
 
     double lat_, lon_ ;
-
-    std::vector<osm_id_t> ways_ ;      // ways in which this nodes participates
-    std::vector<osm_id_t> relations_ ; // relations that this node participates directly
 } ;
 
 
@@ -39,7 +36,6 @@ struct Way: public Feature {
     Way(): Feature(WayFeature) {}
 
     std::vector<osm_id_t> nodes_ ;     // nodes corresponding to this way
-    std::vector<osm_id_t> relations_ ; // relations that this way participates
 } ;
 
 
@@ -54,8 +50,6 @@ struct Relation: public Feature {
     std::vector<std::string> nodes_role_ ;
     std::vector<std::string> ways_role_ ;
     std::vector<std::string> children_role_ ;
-
-    std::vector<osm_id_t> parents_ ;    // parent relations
 };
 
 struct Ring {
