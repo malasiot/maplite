@@ -20,27 +20,25 @@ struct TagWriteList {
 class TagFilterContext {
 
 public:
-
     enum FeatureType { Way, Node, Relation } ;
 
     TagFilterContext() {}
-    TagFilterContext(const OSM::Node &node, uint64_t fid, OSM::Document *doc):
-        tags_(node.tags_), id_(node.id_), type_(Node), fid_(fid), doc_(doc) {}
-    TagFilterContext(const OSM::Way &way, uint64_t fid, OSM::Document *doc):
-        tags_(way.tags_), id_(way.id_), type_(Way), fid_(fid), doc_(doc) {}
-    TagFilterContext(const Dictionary &tags, const std::string &id, FeatureType t): tags_(tags), id_(id), type_(t) {}
+    TagFilterContext(const OSM::Node &node, OSM::DocumentReader *doc):
+        tags_(node.tags_), id_(node.id_), type_(Node), doc_(doc) {}
+    TagFilterContext(const OSM::Way &way,  OSM::DocumentReader *doc):
+        tags_(way.tags_), id_(way.id_), type_(Way), doc_(doc) {}
+    TagFilterContext(const Dictionary &tags, osm_id_t id, FeatureType t): tags_(tags), id_(id), type_(t), doc_(nullptr) {}
 
     FeatureType type() const { return type_ ; }
 
     bool has_tag(const std::string &tag) const { return tags_.contains(tag); }
     std::string value(const std::string &key) const { return tags_.get(key); }
-    std::string id() const { return id_ ; }
+    osm_id_t id() const { return id_ ; }
 
     Dictionary tags_ ;
-    std::string id_ ;
+    osm_id_t id_ ;
     FeatureType type_ ;
-    OSM::Document *doc_ ;
-    uint64_t fid_ ;
+    OSM::DocumentReader *doc_ ;
     TagWriteList tw_ ;
 };
 

@@ -18,7 +18,11 @@ SET ( OSM2MAP_SOURCES
 	${SRC_ROOT}/convert/osm_processor.hpp
 
         ${SRC_ROOT}/convert/osm_polygon.cpp
+
 	${SRC_ROOT}/convert/osm_pbf_reader.cpp
+	${SRC_ROOT}/convert/osm_pbf_reader.hpp
+	${SRC_ROOT}/convert/osm_xml_reader.cpp
+	${SRC_ROOT}/convert/osm_xml_reader.hpp
 
         ${SRC_ROOT}/convert/osm_document.cpp
         ${SRC_ROOT}/convert/osm_document.hpp

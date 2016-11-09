@@ -1,7 +1,6 @@
-#include <osm_document.hpp>
+#include "osm_pbf_reader.hpp"
 
-#include "convert/fileformat.pb.h"
-#include "convert/osmformat.pb.h"
+
 
 #include <fstream>
 #ifndef _WIN32
@@ -25,7 +24,7 @@ using PBF::HeaderBlock;
 using PBF::PrimitiveBlock ;
 using PBF::DenseNodes ;
 
-static uint32_t get_length(ifstream &input)
+static uint32_t get_length(istream &input)
 {
     char buf[4];
 
@@ -34,7 +33,7 @@ static uint32_t get_length(ifstream &input)
     return ntohl(*((size_t *)buf));
 }
 
-static bool read_header(BlockHeader &header_msg, ifstream &input)
+static bool read_header(BlockHeader &header_msg, istream &input)
 {
     size_t length = get_length(input);
 
@@ -47,7 +46,7 @@ static bool read_header(BlockHeader &header_msg, ifstream &input)
     return header_msg.ParseFromArray(buf.get(), length) ;
 }
 
-static bool read_blob(Blob &blob_msg, ifstream &input, int32_t length)
+static bool read_blob(Blob &blob_msg, istream &input, int32_t length)
 {
     std::unique_ptr<char []> buf(new char [length]) ;
 
@@ -92,29 +91,18 @@ static bool uncompress_blob(PBF::Blob &bmsg, char *ubuf)
     return true ;
 }
 
-static string make_id(int64_t id)
-{
-    stringstream s ;
-    s << id ;
-    return s.str() ;
-}
 
-static bool process_osm_data_nodes(vector<Node> &nodes, map<int64_t, uint64_t> &nodeMap, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
+bool PBFReader::process_osm_data_nodes(DocumentReader &doc, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
 {
-
     for ( unsigned node_id = 0; node_id < group.nodes_size() ; node_id++ )
     {
         const PBF::Node &node = group.nodes(node_id) ;
 
-        nodes.push_back(Node()) ;
-        Node &n = nodes.back() ;
-
-        n.id_ = make_id(node.id()) ;
+        Node n ;
+        n.id_ = node.id() ;
 
         n.lat_ = lat_offset + (node.lat() * granularity);
         n.lon_ = lon_offset + (node.lon() * granularity);
-
-        nodeMap.insert(make_pair(node.id(), nodes.size()-1)) ;
 
         for ( unsigned key_id = 0; key_id < node.keys_size() ; key_id++ )
         {
@@ -126,13 +114,15 @@ static bool process_osm_data_nodes(vector<Node> &nodes, map<int64_t, uint64_t> &
 
             n.tags_.add(key, val) ;
         }
+
+        doc.writeNode(n) ;
     }
 
     return true ;
 
 }
 
-static bool process_osm_data_dense_nodes(vector<Node> &nodes, map<int64_t, uint64_t> &nodeMap, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
+bool PBFReader::process_osm_data_dense_nodes(DocumentReader &doc, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
 {
     if ( !group.has_dense() ) return true ;
 
@@ -145,16 +135,13 @@ static bool process_osm_data_dense_nodes(vector<Node> &nodes, map<int64_t, uint6
 
     for ( unsigned node_id = 0; node_id < dense.id_size() ; node_id++ )
     {
-        nodes.push_back(Node()) ;
-        Node &n = nodes.back() ;
+        Node n ;
 
         deltaid += dense.id(node_id) ;
         deltalat += dense.lat(node_id);
         deltalon += dense.lon(node_id) ;
 
-        n.id_ = make_id(deltaid) ;
-
-        nodeMap.insert(make_pair(deltaid, nodes.size()-1)) ;
+        n.id_ = deltaid ;
 
         if ( l < dense.keys_vals_size() )
         {
@@ -176,6 +163,8 @@ static bool process_osm_data_dense_nodes(vector<Node> &nodes, map<int64_t, uint6
         n.lat_ = lat_offset + (deltalat * granularity);
         n.lon_ = lon_offset + (deltalon * granularity);
 
+        doc.writeNode(n);
+
     }
 
     return true ;
@@ -183,7 +172,7 @@ static bool process_osm_data_dense_nodes(vector<Node> &nodes, map<int64_t, uint6
 }
 
 
-static bool process_osm_data_ways(vector<Way> &ways, map<int64_t, uint64_t> &wayMap, vector< vector<int64_t> > &wayNodeMap, const PrimitiveGroup &group, const StringTable &string_table)
+bool PBFReader::process_osm_data_ways(DocumentReader &doc, const PrimitiveGroup &group, const StringTable &string_table)
 {
     for ( unsigned way_id = 0; way_id < group.ways_size() ; way_id++ )
     {
@@ -191,12 +180,9 @@ static bool process_osm_data_ways(vector<Way> &ways, map<int64_t, uint64_t> &way
 
         const PBF::Way &way = group.ways(way_id) ;
 
-        ways.push_back(Way()) ;
-        Way &w = ways.back() ;
+        Way w ;
 
-        w.id_ = make_id(way.id()) ;
-
-        wayMap.insert(make_pair(way.id(), ways.size()-1)) ;
+        w.id_ = way.id() ;
 
         for ( unsigned key_id = 0; key_id < way.keys_size() ; key_id++ )
         {
@@ -209,37 +195,31 @@ static bool process_osm_data_ways(vector<Way> &ways, map<int64_t, uint64_t> &way
             w.tags_.add(key, val) ;
         }
 
-        wayNodeMap.push_back( vector<int64_t>() ) ;
-        vector<int64_t> &node_refs = wayNodeMap.back() ;
-
         for ( unsigned ref_id = 0; ref_id < way.refs_size() ; ref_id++ )
         {
             int64_t delta = way.refs(ref_id) ;
             deltaref += delta ;
-            node_refs.push_back(deltaref) ;
+            w.nodes_.push_back(deltaref) ;
         }
+
+        doc.writeWay(w) ;
     }
+
 
     return true ;
 
 }
 
 
-static bool process_osm_data_relations(vector<Relation> &relations, map<int64_t, uint64_t> &relMap,
-                                       vector< vector<int64_t> > &relNodeMap, vector< vector<int64_t> > &relWayMap, vector< vector<int64_t> > &relRelMap,
-                                       vector< vector<string> > &roleNodeMap, vector< vector<string> > &roleWayMap, vector< vector<string> > &roleRelMap,
-                                       const PrimitiveGroup &group, const StringTable &string_table)
+bool PBFReader::process_osm_data_relations(DocumentReader &doc, const PrimitiveGroup &group, const StringTable &string_table)
 {
     for ( unsigned rel_id = 0; rel_id < group.relations_size() ; rel_id++ )
     {
         const PBF::Relation &relation = group.relations(rel_id) ;
 
-        relations.push_back(Relation()) ;
-        Relation &r = relations.back() ;
+        Relation r ;
 
-        r.id_ = make_id(relation.id()) ;
-
-        relMap.insert(make_pair(relation.id(), relations.size()-1)) ;
+        r.id_ = relation.id() ;
 
         for ( unsigned key_id = 0; key_id < relation.keys_size() ; key_id++ )
         {
@@ -252,49 +232,32 @@ static bool process_osm_data_relations(vector<Relation> &relations, map<int64_t,
             r.tags_.add(key, val) ;
         }
 
-        relNodeMap.push_back( vector<int64_t>() ) ;
-        vector<int64_t> &node_refs = relNodeMap.back() ;
-
-        relWayMap.push_back( vector<int64_t>() ) ;
-        vector<int64_t> &way_refs = relWayMap.back() ;
-
-        relRelMap.push_back( vector<int64_t>() ) ;
-        vector<int64_t> &rel_refs = relRelMap.back() ;
-
-        roleNodeMap.push_back( vector<string>() ) ;
-        vector<string> &node_roles = roleNodeMap.back() ;
-
-        roleWayMap.push_back( vector<string>() ) ;
-        vector<string> &way_roles = roleWayMap.back() ;
-
-        roleRelMap.push_back( vector<string>() ) ;
-        vector<string> &rel_roles = roleRelMap.back() ;
-
-        uint64_t deltaref = 0 ;
+        int64_t deltaref = 0 ;
 
         for( unsigned member_id = 0 ; member_id < relation.memids_size() ; member_id++ )
         {
             deltaref += relation.memids(member_id) ;
 
-            int32_t role_id = relation.roles_sid(member_id) ;
+            int64_t role_id = relation.roles_sid(member_id) ;
             string role = string_table.s(role_id) ;
 
             switch (relation.types(member_id) ) {
-                case PBF::Relation::NODE:
-                    node_refs.push_back(deltaref) ;
-                    node_roles.push_back(role) ;
-                    break ;
-                case PBF::Relation::WAY:
-                    way_refs.push_back(deltaref) ;
-                    way_roles.push_back(role) ;
-                    break ;
-                case PBF::Relation::RELATION:
-                    rel_refs.push_back(deltaref) ;
-                    rel_roles.push_back(role) ;
-                    break ;
+            case PBF::Relation::NODE:
+                r.nodes_.push_back(deltaref) ;
+                r.nodes_role_.push_back(role) ;
+                break ;
+            case PBF::Relation::WAY:
+                r.ways_.push_back(deltaref) ;
+                r.ways_role_.push_back(role) ;
+                break ;
+            case PBF::Relation::RELATION:
+                r.children_.push_back(deltaref) ;
+                r.children_role_.push_back(role) ;
+                break ;
             }
         }
 
+        doc.writeRelation(r);
 
     }
 
@@ -302,17 +265,10 @@ static bool process_osm_data_relations(vector<Relation> &relations, map<int64_t,
 
 }
 
-bool Document::readPBF(const string &fileName)
+bool PBFReader::read(istream &input, DocumentReader &doc)
 {
-    map<int64_t, uint64_t> nodeMap, wayMap, relMap ;
-    vector< vector<int64_t> > wayNodeMap, relNodeMap, relWayMap, relRelMap ;
-    vector< vector<string> > roleNodeMap, roleWayMap, roleRelMap ;
-
     BlockHeader header_msg;
     Blob blob_msg ;
-
-    ifstream input ;
-    input.open(fileName.c_str(), ios::in | ios::binary) ;
 
     if ( !input ) return false ;
 
@@ -323,151 +279,54 @@ bool Document::readPBF(const string &fileName)
         if ( !read_header(header_msg, input) ) break ;
 
         if ( !read_blob(blob_msg, input, header_msg.datasize()) )
-           return false ;
+            return false ;
 
-       // uncompress data
+        // uncompress data
 
-       size_t bsize = blob_msg.raw_size() ;
+        size_t bsize = blob_msg.raw_size() ;
 
-       std::unique_ptr<char []> bbuf(new char [bsize]) ;
+        std::unique_ptr<char []> bbuf(new char [bsize]) ;
 
-       if ( !bbuf || !uncompress_blob(blob_msg, bbuf.get()) ) return false ;
+        if ( !bbuf || !uncompress_blob(blob_msg, bbuf.get()) ) return false ;
 
-       // process data
+        // process data
 
-       if ( header_msg.type() == "OSMHeader" )
-       {
-           // Ignore header contents for now
+        if ( header_msg.type() == "OSMHeader" )
+        {
+            // Ignore header contents for now
 
-           HeaderBlock hb_msg ;
+            HeaderBlock hb_msg ;
 
-           if ( !hb_msg.ParseFromArray(bbuf.get(), bsize) ) return false ;
+            if ( !hb_msg.ParseFromArray(bbuf.get(), bsize) ) return false ;
 
-       }
-       else if ( header_msg.type() == "OSMData" )
-       {
-           PrimitiveBlock pb_msg ;
+        }
+        else if ( header_msg.type() == "OSMData" )
+        {
+            PrimitiveBlock pb_msg ;
 
-           if ( !pb_msg.ParseFromArray(bbuf.get(), bsize) ) return false ;
+            if ( !pb_msg.ParseFromArray(bbuf.get(), bsize) ) return false ;
 
-           double lat_offset = NANO_DEGREE * pb_msg.lat_offset();
-           double lon_offset = NANO_DEGREE * pb_msg.lon_offset();
-           double granularity = NANO_DEGREE * pb_msg.granularity();
+            double lat_offset = NANO_DEGREE * pb_msg.lat_offset();
+            double lon_offset = NANO_DEGREE * pb_msg.lon_offset();
+            double granularity = NANO_DEGREE * pb_msg.granularity();
 
-           for ( int j = 0; j < pb_msg.primitivegroup_size(); j++ )
-           {
+            for ( int j = 0; j < pb_msg.primitivegroup_size(); j++ )
+            {
                 const PrimitiveGroup &group = pb_msg.primitivegroup(j) ;
                 const StringTable &string_table = pb_msg.stringtable() ;
 
-
-                if ( !process_osm_data_nodes(nodes_, nodeMap, group, string_table, lat_offset, lon_offset, granularity) ) return false ;
-                if ( !process_osm_data_dense_nodes(nodes_, nodeMap, group, string_table, lat_offset, lon_offset, granularity) ) return false ;
-                if ( !process_osm_data_ways(ways_, wayMap, wayNodeMap, group, string_table) ) return false ;
-                if ( !process_osm_data_relations(relations_, relMap, relNodeMap, relWayMap, relRelMap,
-                                                 roleNodeMap, roleWayMap, roleRelMap,
-                                                 group, string_table) ) return false ;
-           }
-       }
-
-     } ;
-
-
-    // establish feature dependencies
-
-    for(int i=0 ; i<ways_.size() ; i++ )
-    {
-        Way &way = ways_[i] ;
-
-        vector<int64_t> &node_refs = wayNodeMap[i] ;
-
-        for(int j=0 ; j<node_refs.size() ; j++ )
-        {
-
-            int idx = nodeMap[node_refs[j]] ;
-            way.nodes_.push_back(idx) ;
-
-            nodes_[idx].ways_.push_back(i) ;
-        }
-
-    }
-
-    for(int i=0 ; i<relations_.size() ; i++ )
-    {
-        Relation &relation = relations_[i] ;
-
-        vector<int64_t> &node_refs = relNodeMap[i] ;
-        vector<string> &node_roles = roleNodeMap[i] ;
-
-        for(int j=0 ; j<node_refs.size() ; j++ )
-        {
-            auto it = nodeMap.find(node_refs[j]) ;
-
-            if ( it != nodeMap.end() )
-            {
-                int idx = (*it).second ;
-                relation.nodes_.push_back(idx) ;
-                relation.nodes_role_.push_back(node_roles[j]) ;
-
-                nodes_[idx].relations_.push_back(i) ;
+                if ( !process_osm_data_nodes(doc, group, string_table, lat_offset, lon_offset, granularity) ) return false ;
+                if ( !process_osm_data_dense_nodes(doc, group, string_table, lat_offset, lon_offset, granularity) ) return false ;
+                if ( !process_osm_data_ways(doc, group, string_table) ) return false ;
+                if ( !process_osm_data_relations(doc, group, string_table) ) return false ;
             }
         }
 
     }
 
-    for(int i=0 ; i<relations_.size() ; i++ )
-    {
-        Relation &relation = relations_[i] ;
-
-        vector<int64_t> &way_refs = relWayMap[i] ;
-        vector<string> &way_roles = roleWayMap[i] ;
-
-        for(int j=0 ; j<way_refs.size() ; j++ )
-        {
-            auto it = wayMap.find(way_refs[j]) ;
-
-            if ( it != wayMap.end() )
-            {
-
-                int idx = (*it).second ;
-                relation.ways_.push_back(idx) ;
-                relation.ways_role_.push_back(way_roles[j]) ;
-
-                ways_[idx].relations_.push_back(i) ;
-            }
-        }
-
-    }
-
-    for(int i=0 ; i<relations_.size() ; i++ )
-    {
-        Relation &relation = relations_[i] ;
-
-        vector<int64_t> &rel_refs = relRelMap[i] ;
-        vector<string> &rel_roles = roleRelMap[i] ;
-
-        for(int j=0 ; j<rel_refs.size() ; j++ )
-        {
-            auto it = relMap.find(rel_refs[j]) ;
-
-            if ( it != relMap.end() )
-            {
-                int idx = relMap[rel_refs[j]] ;
-                relation.children_.push_back(idx) ;
-                relation.children_role_.push_back(rel_roles[j]) ;
-
-                relations_[idx].parents_.push_back(i) ;
-            }
-        }
-
-    }
-
-     return true ;
+    return true ;
 
 
 }
-
-
-
-
 
 }

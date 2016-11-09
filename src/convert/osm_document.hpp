@@ -7,96 +7,152 @@
 #include <deque>
 
 #include "dictionary.hpp"
+#include <unordered_map>
+
+typedef int64_t osm_id_t ;
 
 namespace OSM {
 
 struct Feature {
 
-    enum Type { NodeFeature, WayFeature, RelationFeature, PolygonFeature } ;
+    Feature() {}
 
-    Feature(Type type): type_(type), visited_(false) {}
-
-    std::string id_ ; // feature id
+    osm_id_t id_ ; // feature id
     Dictionary tags_ ; // tags associated with this feature
-    Type type_ ; // feature type ;
-    bool visited_ ; // used by algorithms ;
 };
-
-class Way ;
-class Relation ;
 
 struct Node: public Feature {
 
-    Node(): Feature(NodeFeature) {}
+    Node(): Feature() {}
 
     double lat_, lon_ ;
-
-    std::vector<uint> ways_ ;      // ways in which this nodes participates
-    std::vector<uint> relations_ ; // relations that this node participates directly
 } ;
 
 
 struct Way: public Feature {
 
-    Way(): Feature(WayFeature) {}
+    Way(): Feature() {}
 
-    std::vector<uint> nodes_ ;     // nodes corresponding to this way
-    std::vector<uint> relations_ ; // relations that this way participates
+    std::vector<osm_id_t> nodes_ ;     // nodes corresponding to this way
 } ;
 
 
 struct Relation: public Feature {
 
-    Relation(): Feature(RelationFeature) {}
+    Relation(): Feature() {}
 
-    std::vector<uint> nodes_ ;     // node members
-    std::vector<uint> ways_ ;      // way members
-    std::vector<uint> children_ ; // relation members
+    std::vector<osm_id_t> nodes_ ;     // node members
+    std::vector<osm_id_t> ways_ ;      // way members
+    std::vector<osm_id_t> children_ ; // relation members
 
     std::vector<std::string> nodes_role_ ;
     std::vector<std::string> ways_role_ ;
     std::vector<std::string> children_role_ ;
-
-    std::vector<uint> parents_ ;    // parent relations
 };
 
 struct Ring {
-    std::deque<uint> nodes_ ;
+    std::vector<osm_id_t> nodes_ ;
 };
 
 struct Polygon: public Feature {
 
-    Polygon(): Feature(PolygonFeature) {}
+    Polygon(): Feature() {}
 
     std::vector<Ring> rings_ ;
 };
 
 
-class Document {
+class DocumentReader {
 public:
 
     // empty document
-    Document() {}
+    DocumentReader() {}
 
     // open an existing document
-    Document(const std::string &fileName) ;
+    DocumentReader(const std::string &fileName) ;
 
-    // create OSM document by filtering an existing one
-    Document(const Document &other, const std::string &filter) ;
-
-    // read Osm file (format determined by extension)
+    // read OSM file into memory (format determined by extension)
     bool read(const std::string &fileName) ;
 
-    // write Osm file (format determined by extension)
-    void write(const std::string &fileName) ;
+    // readers
 
-public:
+    bool readWay(osm_id_t id, Way &way) {
+        auto it = ways_.find(id) ;
+        if ( it == ways_.end() ) return false ;
+        way = it->second ;
+        return true ;
+    }
 
-    std::vector<Node> nodes_ ;
-    std::vector<Way> ways_ ;
-    std::vector<Relation> relations_ ;
+    void readWays(const std::vector<osm_id_t> ids, std::vector<Way> &ways) {
+        for( osm_id_t id: ids ) {
+            auto it = ways_.find(id) ;
+            if ( it != ways_.end() )
+            ways.push_back(it->second) ;
+        }
+    }
+
+    void forAllWayCoords(osm_id_t wid, std::function<void(osm_id_t, double, double)> cf) {
+        auto it = ways_.find(wid) ;
+        if ( it != ways_.end() ) {
+            for( osm_id_t id: it->second.nodes_ ) {
+                auto nit = nodes_.find(id) ;
+                if ( nit != nodes_.end() ) {
+                    const Node &n = nit->second ;
+                    cf(n.id_, n.lat_, n.lon_) ;
+                }
+            }
+        }
+    }
+
+    void forAllNodeCoordList(const std::vector<osm_id_t> &ids, std::function<void(double lat, double lon)> cf) {
+        for( auto &id: ids ) {
+            auto nit = nodes_.find(id) ;
+            if ( nit != nodes_.end() ) {
+                const Node &n = nit->second ;
+                cf(n.lat_, n.lon_) ;
+            }
+        }
+    }
+
+    void readParentRelations(osm_id_t id, std::vector<Relation> &parents) {
+        auto pr = memberships_.equal_range(id) ;
+        std::for_each(pr.first, pr.second, [this, &parents](const std::pair<osm_id_t, osm_id_t> &rp) {
+            auto it = relations_.find(rp.second) ;
+            if ( it != relations_.end() ) {
+                Relation rel ;
+                rel.id_ = it->second.id_ ;
+                rel.tags_ = it->second.tags_ ;
+                parents.push_back(rel) ;
+            }
+        }) ;
+    }
+
+    void forAllNodes(std::function<void(const Node &)> cf) {
+        for( auto &np: nodes_ ) cf(np.second) ;
+    }
+
+    void forAllWays(std::function<void(const Way &)> cf) {
+        for( auto &wp: ways_ ) cf(wp.second) ;
+    }
+
+    void forAllRelations(std::function<void(const Relation &)> cf) {
+        for( auto &rp: relations_ ) cf(rp.second) ;
+    }
+
+    bool makePolygonsFromRelation(const Relation &rel, Polygon &polygon) ;
+    bool makeWaysFromRelation(const Relation &rel, std::vector<Way> &ways) ;
+
+private:
+
+    std::unordered_map<osm_id_t, Node> nodes_ ;
+    std::unordered_map<osm_id_t, Way> ways_ ;
+    std::unordered_map<osm_id_t, Relation> relations_ ;
+    std::unordered_multimap<osm_id_t, osm_id_t> memberships_ ;
 
 protected:
+
+    friend class XMLReader ;
+    friend class PBFReader ;
 
     bool readXML(std::istream &strm) ;
     void writeXML(std::ostream &strm);
@@ -104,10 +160,25 @@ protected:
     bool readPBF(const std::string &fileName) ;
     bool isPBF(const std::string &fileName) ;
 
-public:
+    void writeNode(const Node &n) {
+        nodes_.insert(std::make_pair(n.id_, n)) ;
+    }
 
-    static bool makePolygonsFromRelation(const Document &doc, const Relation &rel, Polygon &polygon) ;
-    static bool makeWaysFromRelation(const Document &doc, const Relation &rel, std::vector<Way> &ways) ;
+    void writeWay(const Way &way) {
+        ways_.insert(std::make_pair(way.id_, way)) ;
+    }
+
+    void writeRelation(const Relation &r ) {
+        relations_.insert(std::make_pair(r.id_,r)) ;
+        for( osm_id_t node_id: r.nodes_ )
+            memberships_.insert(std::make_pair(node_id, r.id_)) ;
+        for( osm_id_t way_id: r.ways_ )
+            memberships_.insert(std::make_pair(way_id, r.id_)) ;
+        for( osm_id_t rel_id: r.children_ )
+            memberships_.insert(std::make_pair(rel_id, r.id_)) ;
+    }
+
+
 
 };
 

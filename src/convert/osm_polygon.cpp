@@ -9,7 +9,7 @@ namespace OSM {
 // the function will create linear rings from relation members ignoring inner, outer roles
 // the topology will be fixed by spatialite function ST_BuildArea
 
-bool Document::makePolygonsFromRelation(const Document &doc, const Relation &rel, Polygon &polygon)
+bool DocumentReader::makePolygonsFromRelation(const Relation &rel, Polygon &polygon)
 {
     vector<string> roles ;
     vector<Ring> &rings = polygon.rings_ ;
@@ -20,7 +20,9 @@ bool Document::makePolygonsFromRelation(const Document &doc, const Relation &rel
 
     for(uint i=0 ; i<rel.ways_.size() ; i++)
     {
-        const Way &way = doc.ways_[rel.ways_[i]] ;
+        Way way ;
+        if ( !readWay(rel.ways_[i], way) ) continue ;
+
         const string &role = rel.ways_role_[i] ;
 
         if (  way.nodes_.front() == way.nodes_.back() )
@@ -36,14 +38,19 @@ bool Document::makePolygonsFromRelation(const Document &doc, const Relation &rel
     while ( !unassigned_ways.empty() )
     {
         Ring current ;
+        deque<osm_id_t> cnodes ;
 
         uint idx = unassigned_ways.front() ;
 
-        const Way &way = doc.ways_[rel.ways_[idx]] ;
+        Way way ;
+        if ( !readWay(rel.ways_[idx], way) ) {
+            unassigned_ways.pop_front() ;
+            continue ;
+        }
 
         string current_role = rel.ways_role_[idx] ;
 
-        current.nodes_.insert(current.nodes_.end(), way.nodes_.begin(), way.nodes_.end()) ;
+        cnodes.insert(cnodes.end(), way.nodes_.begin(), way.nodes_.end()) ;
         unassigned_ways.pop_front() ;
 
         // merge ways into circular rings
@@ -60,38 +67,42 @@ bool Document::makePolygonsFromRelation(const Document &doc, const Relation &rel
             {
                 int idx = *itu ;
 
-                const Way &way = doc.ways_[rel.ways_[idx]] ;
+                Way way ;
+                if ( !readWay(rel.ways_[idx], way) ) {
+                    ++itu ; continue ;
+                }
+
                 string role = rel.ways_role_[idx] ;
 
                 if ( role != current_role ) { ++itu ; continue ; }
 
-                if ( current.nodes_.front() == way.nodes_.front() )
+                if ( cnodes.front() == way.nodes_.front() )
                 {
                     auto it = way.nodes_.begin() ;
                     ++it ;
                     while ( it != way.nodes_.end() )
-                       current.nodes_.push_front(*it++) ;
+                       cnodes.push_front(*it++) ;
                     finished = false ;
                     itu = unassigned_ways.erase(itu) ;
                 }
-                else if ( current.nodes_.back() == way.nodes_.front() )
+                else if ( cnodes.back() == way.nodes_.front() )
                 {
-                    current.nodes_.insert(current.nodes_.end(), way.nodes_.begin()+1, way.nodes_.end()) ;
+                    cnodes.insert(cnodes.end(), way.nodes_.begin()+1, way.nodes_.end()) ;
                     finished = false ;
                     itu = unassigned_ways.erase(itu) ;
                 }
-                else if ( current.nodes_.front() == way.nodes_.back() )
+                else if ( cnodes.front() == way.nodes_.back() )
                 {
                     auto it = way.nodes_.rbegin() ;
                     ++it ;
                     while ( it != way.nodes_.rend() )
-                        current.nodes_.push_front(*it++) ;
+                        cnodes.push_front(*it++) ;
                     finished = false ;
                     itu = unassigned_ways.erase(itu) ;
                 }
-                else if ( current.nodes_.back() == way.nodes_.back() )
+                else if ( cnodes.back() == way.nodes_.back() )
                 {
-                    current.nodes_.insert(current.nodes_.end(), way.nodes_.rbegin()+1, way.nodes_.rend()) ;
+                    cnodes.insert(cnodes.end(), way.nodes_.rbegin()+1, way.nodes_.rend()) ;
                     finished = false ;
                     itu = unassigned_ways.erase(itu) ;
                 }
@@ -101,7 +112,9 @@ bool Document::makePolygonsFromRelation(const Document &doc, const Relation &rel
 
 
         // we should have a closed way otherwise something is wrong
-        if ( current.nodes_.front() != current.nodes_.back() ) return false ;
+        if ( cnodes.front() != cnodes.back() ) return false ;
+
+        current.nodes_.assign(cnodes.begin(), cnodes.end());
 
         rings.push_back(current) ;
         roles.push_back(current_role) ;
@@ -112,24 +125,29 @@ bool Document::makePolygonsFromRelation(const Document &doc, const Relation &rel
 }
 
 
-bool Document::makeWaysFromRelation(const Document &doc, const Relation &rel, std::vector<Way> &ways)
+bool DocumentReader::makeWaysFromRelation(const Relation &rel, std::vector<Way> &ways)
 {
     vector<Ring> rings ;
 
-    list<uint> unassigned_ways ;
+    list<osm_id_t> unassigned_ways ;
 
     for(uint i=0 ; i<rel.ways_.size() ; i++)
-         unassigned_ways.push_back(i) ;
+         unassigned_ways.push_back(rel.ways_[i]) ;
 
     while ( !unassigned_ways.empty() )
     {
         Ring current ;
+        deque<osm_id_t> cnodes ;
 
-        uint idx = unassigned_ways.front() ;
+        osm_id_t idx = unassigned_ways.front() ;
 
-        const Way &way = doc.ways_[rel.ways_[idx]] ;
+        Way way ;
+        if ( !readWay(idx, way) ) {
+            unassigned_ways.pop_front() ;
+            continue ;
+        }
 
-        current.nodes_.insert(current.nodes_.end(), way.nodes_.begin(), way.nodes_.end()) ;
+        cnodes.insert(cnodes.end(), way.nodes_.begin(), way.nodes_.end()) ;
         unassigned_ways.pop_front() ;
 
         // merge ways into circular rings
@@ -140,41 +158,45 @@ bool Document::makeWaysFromRelation(const Document &doc, const Relation &rel, st
         {
             finished = true ;
 
-            list<uint>::iterator itu = unassigned_ways.begin() ;
+            list<osm_id_t>::iterator itu = unassigned_ways.begin() ;
 
             while ( itu != unassigned_ways.end() )
             {
-                int idx = *itu ;
+                osm_id_t idx = *itu ;
 
-                const Way &way = doc.ways_[rel.ways_[idx]] ;
+                Way way ;
+                if ( !readWay(idx, way) ) {
+                    ++itu ;
+                    continue ;
+                }
 
-                if ( current.nodes_.front() == way.nodes_.front() )
+                if ( cnodes.front() == way.nodes_.front() )
                 {
                     auto it = way.nodes_.begin() ;
                     ++it ;
                     while ( it != way.nodes_.end() )
-                       current.nodes_.push_front(*it++) ;
+                       cnodes.push_front(*it++) ;
                     finished = false ;
                     itu = unassigned_ways.erase(itu) ;
                 }
-                else if ( current.nodes_.back() == way.nodes_.front() )
+                else if ( cnodes.back() == way.nodes_.front() )
                 {
-                    current.nodes_.insert(current.nodes_.end(), way.nodes_.begin()+1, way.nodes_.end()) ;
+                    cnodes.insert(cnodes.end(), way.nodes_.begin()+1, way.nodes_.end()) ;
                     finished = false ;
                     itu = unassigned_ways.erase(itu) ;
                 }
-                else if ( current.nodes_.front() == way.nodes_.back() )
+                else if ( cnodes.front() == way.nodes_.back() )
                 {
                     auto it = way.nodes_.rbegin() ;
                     ++it ;
                     while ( it != way.nodes_.rend() )
-                        current.nodes_.push_front(*it++) ;
+                        cnodes.push_front(*it++) ;
                     finished = false ;
                     itu = unassigned_ways.erase(itu) ;
                 }
-                else if ( current.nodes_.back() == way.nodes_.back() )
+                else if ( cnodes.back() == way.nodes_.back() )
                 {
-                    current.nodes_.insert(current.nodes_.end(), way.nodes_.rbegin()+1, way.nodes_.rend()) ;
+                    cnodes.insert(cnodes.end(), way.nodes_.rbegin()+1, way.nodes_.rend()) ;
                     finished = false ;
                     itu = unassigned_ways.erase(itu) ;
                 }
@@ -183,9 +205,8 @@ bool Document::makeWaysFromRelation(const Document &doc, const Relation &rel, st
         } while ( !finished ) ;
 
 
+        current.nodes_.assign(cnodes.begin(), cnodes.end()) ;
         rings.push_back(current) ;
-        current.nodes_.clear() ;
-
     }
 
     for(int i=0 ; i< rings.size() ; i++ )

@@ -1,5 +1,6 @@
 #include "lua_context.hpp"
 #include "tag_filter_context.hpp"
+#include "osm_document.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -358,20 +359,28 @@ void LuaContext::setupContext(TagFilterContext &ctx)
 
     using namespace tag_filter ;
 
-    if ( ctx.type_ == TagFilterContext::Way ) {
-        lua_pushstring(state_, "relations") ;
-        OSM::Way &way = ctx.doc_->ways_[ctx.fid_] ;
-        lua_newtable(state_) ;
-        uint count = 1 ;
 
-        for( uint idx: way.relations_) {
-            lua_pushinteger(state_, count++) ;
-            OSM::Relation &rel = ctx.doc_->relations_[idx] ;
-            addDictionary(rel.tags_) ;
-            lua_settable(state_, -3);
+    if ( ctx.type_ == TagFilterContext::Way && ctx.doc_ ) {
+
+        OSM::Way way ;
+        if ( ctx.doc_->readWay(ctx.id_, way) ) {
+            lua_pushstring(state_, "relations") ;
+            vector<OSM::Relation> relations ;
+            ctx.doc_->readParentRelations(ctx.id_, relations) ;
+
+            lua_newtable(state_) ;
+
+            uint count = 1 ;
+
+            for( OSM::Relation &rel: relations ) {
+                lua_pushinteger(state_, count++) ;
+                addDictionary(rel.tags_) ;
+                lua_settable(state_, -3);
+            }
+            lua_settable(state_, -3) ;
         }
-        lua_settable(state_, -3) ;
     }
+
 
     lua_pop(state_, -1) ;
 }
