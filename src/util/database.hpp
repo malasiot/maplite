@@ -125,7 +125,7 @@ public:
  * @brief The Statement class is a wrapper for prepared statements
  */
 
-class Statement: boost::noncopyable
+class Statement
 {
 public:
 
@@ -135,6 +135,11 @@ public:
     Statement(Connection& con, const std::string & sql) ;
 
     virtual ~Statement();
+
+    Statement(const std::shared_ptr<sqlite3_stmt> &statement);
+    Statement(const Statement &other) = delete;
+    Statement(Statement &&other) = default;
+
 
     /** \brief clear is used if you'd like to reuse a command object
     */
@@ -174,7 +179,7 @@ public:
     Statement &bind(void const * buf, size_t buf_size);
 
 
-    sqlite3_stmt *handle() const { return handle_ ; }
+    std::shared_ptr<sqlite3_stmt> handle() const { return handle_ ; }
 protected:
 
     void check();
@@ -194,7 +199,7 @@ protected:
 
     friend class QueryResult ;
 
-    sqlite3_stmt *handle_;
+    std::shared_ptr<sqlite3_stmt> handle_;
 
 private:
 
@@ -295,6 +300,30 @@ public:
         return boost::make_tuple(get(idx1, T1()), get(idx2, T2()), get(idx3, T3()), get(idx4, T4()), get(idx5, T5()), get(idx6, T6()), get(idx7, T7()), get(idx8, T8()));
     }
 
+    class const_iterator {
+       public:
+           const_iterator(
+                   const QueryResult &res,
+                   bool &at_end
+           );
+           const_iterator(const const_iterator &other) = delete;
+           const_iterator(const_iterator &&other) = default;
+
+           const_iterator& operator=(const const_iterator &other) = delete;
+           const_iterator& operator=(const_iterator &&other) = default;
+
+           bool operator==(const const_iterator &other) const;
+           bool operator!=(const const_iterator &other) const;
+
+           const_iterator& operator++();
+           const row& operator*() const;
+           const row* operator->() const;
+
+       private:
+           std::shared_ptr<sqlite3_stmt> stmt;
+           bool &end_reached;
+           row current_row;
+   };
 
 
 private:

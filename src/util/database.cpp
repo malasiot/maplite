@@ -70,14 +70,15 @@ Connection::~Connection()
 Exception::Exception(sqlite3 *handle): std::runtime_error(sqlite3_errmsg(handle)) {}
 Exception::Exception(const std::string &msg): std::runtime_error(msg) {}
 
-Statement::Statement(Connection &con, const string &sql): con_(con), sql_(sql), handle_(NULL), last_arg_idx(0)
+Statement::Statement(Connection &con, const string &sql): con_(con), sql_(sql), last_arg_idx(0)
 {
     con_.check() ;
 
     const char * tail = 0;
-
-    if ( sqlite3_prepare_v2(con.handle(), sql.c_str(), -1, &handle_ ,&tail) != SQLITE_OK )
+    sqlite3_stmt *handle ;
+    if ( sqlite3_prepare_v2(con.handle(), sql.c_str(), -1, &handle ,&tail) != SQLITE_OK )
           throw Exception(con.handle()) ;
+    handle_.reset(handle, &sqlite3_finalize) ;
 
 }
 
@@ -92,16 +93,16 @@ Statement::~Statement() {
 void Statement::clear()
 {
      check();
-     if ( sqlite3_reset(handle_) != SQLITE_OK ) throw Exception(con_.handle());
+     if ( sqlite3_reset(handle_.get()) != SQLITE_OK ) throw Exception(con_.handle());
 
-     if ( sqlite3_clear_bindings(handle_) != SQLITE_OK ) throw Exception(con_.handle());
+     if ( sqlite3_clear_bindings(handle_.get()) != SQLITE_OK ) throw Exception(con_.handle());
 
      last_arg_idx = 0 ;
 }
 
 void Statement::finalize() {
     check();
-    if ( sqlite3_finalize(handle_) != SQLITE_OK ) throw Exception(con_.handle());
+    if ( sqlite3_finalize(handle_.get()) != SQLITE_OK ) throw Exception(con_.handle());
     handle_ = 0;
 }
 
@@ -115,7 +116,7 @@ void Statement::check() {
 bool Statement::step() {
     check() ;
 
-    switch( sqlite3_step(handle_) ) {
+    switch( sqlite3_step(handle_.get()) ) {
         case SQLITE_ROW:
             return true;
         case SQLITE_DONE:
@@ -129,49 +130,49 @@ bool Statement::step() {
 
 Statement &Statement::bind(int idx, const NullType &) {
     check();
-    if ( sqlite3_bind_null(handle_, idx) != SQLITE_OK )
+    if ( sqlite3_bind_null(handle_.get(), idx) != SQLITE_OK )
         throw Exception(con_.handle());
     return *this ;
 }
 
 Statement &Statement::bind(int idx, int v) {
     check();
-    if ( sqlite3_bind_int(handle_, idx, v) != SQLITE_OK )
+    if ( sqlite3_bind_int(handle_.get(), idx, v) != SQLITE_OK )
         throw Exception(con_.handle());
     return *this ;
 }
 
 Statement &Statement::bind(int idx, long long int v){
     check();
-    if ( sqlite3_bind_int64(handle_, idx, v) != SQLITE_OK )
+    if ( sqlite3_bind_int64(handle_.get(), idx, v) != SQLITE_OK )
         throw Exception(con_.handle());
     return *this ;
 }
 
 Statement &Statement::bind(int idx, unsigned long long int v){
     check();
-    if ( sqlite3_bind_int64(handle_, idx, v) != SQLITE_OK )
+    if ( sqlite3_bind_int64(handle_.get(), idx, v) != SQLITE_OK )
         throw Exception(con_.handle());
     return *this ;
 }
 
 Statement &Statement::bind(int idx, double v){
     check() ;
-    if ( sqlite3_bind_double(handle_, idx, v) != SQLITE_OK )
+    if ( sqlite3_bind_double(handle_.get(), idx, v) != SQLITE_OK )
         throw Exception(con_.handle());
     return *this ;
 }
 
 Statement &Statement::bind(int idx, const string  &v){
     check() ;
-    if ( sqlite3_bind_text(handle_, idx, v.c_str(), int(v.size()), SQLITE_TRANSIENT ) != SQLITE_OK )
+    if ( sqlite3_bind_text(handle_.get(), idx, v.c_str(), int(v.size()), SQLITE_TRANSIENT ) != SQLITE_OK )
         throw Exception(con_.handle());
     return *this ;
 }
 
 Statement &Statement::bind(int idx, void const * v , size_t vn){
     check();
-    if ( sqlite3_bind_blob(handle_, idx, v, int(vn), SQLITE_TRANSIENT) != SQLITE_OK)
+    if ( sqlite3_bind_blob(handle_.get(), idx, v, int(vn), SQLITE_TRANSIENT) != SQLITE_OK)
         throw Exception(con_.handle());
     return *this ;
 }
@@ -205,43 +206,43 @@ Statement &Statement::bind(void const * v , size_t vn){
 }
 
 Statement &Statement::bindp(const string &name, const NullType &v) {
-    int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
+    int idx = sqlite3_bind_parameter_index(handle_.get(), name.c_str() );
     if ( idx ) return bind(idx, v) ;
     else throw Exception(name + " is not a valid statement placeholder") ;
 }
 
 Statement &Statement::bindp(const string &name, int v) {
-    int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
+    int idx = sqlite3_bind_parameter_index(handle_.get(), name.c_str() );
     if ( idx ) return bind(idx, v) ;
     else throw Exception(name + " is not a valid statement placeholder") ;
 }
 
 Statement &Statement::bindp(const string &name, long long int v){
-    int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
+    int idx = sqlite3_bind_parameter_index(handle_.get(), name.c_str() );
     if ( idx ) return bind(idx, v) ;
     else throw Exception(name + " is not a valid statement placeholder") ;
 }
 
 Statement &Statement::bindp(const string &name, unsigned long long int v){
-    int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
+    int idx = sqlite3_bind_parameter_index(handle_.get(), name.c_str() );
     if ( idx ) return bind(idx, v) ;
     else throw Exception(name + " is not a valid statement placeholder") ;
 }
 
 Statement &Statement::bindp(const string &name, double v){
-    int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
+    int idx = sqlite3_bind_parameter_index(handle_.get(), name.c_str() );
     if ( idx ) return bind(idx, v) ;
     else throw Exception(name + " is not a valid statement placeholder") ;
 }
 
 Statement &Statement::bindp(const string &name, const string  &v){
-    int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
+    int idx = sqlite3_bind_parameter_index(handle_.get(), name.c_str() );
     if ( idx ) return bind(idx, v) ;
     else throw Exception(name + " is not a valid statement placeholder") ;
 }
 
 Statement &Statement::bindp(const string &name, void const * v , size_t vn){
-    int idx = sqlite3_bind_parameter_index(handle_, name.c_str() );
+    int idx = sqlite3_bind_parameter_index(handle_.get(), name.c_str() );
     if ( idx ) return bind(idx, v, vn) ;
     else throw Exception(name + " is not a valid statement placeholder") ;
 }
@@ -263,11 +264,11 @@ void Command::exec() {
 Query::Query(Connection &con, const string &sql):
     Statement(con, sql) {
 
-    int num_fields = sqlite3_column_count(handle_);
+    int num_fields = sqlite3_column_count(handle_.get());
 
     for( int index = 0; index < num_fields; index++ )
     {
-        const char* field_name = sqlite3_column_name(handle_, index);
+        const char* field_name = sqlite3_column_name(handle_.get(), index);
         field_map[field_name] = index ;
     }
 }
@@ -292,12 +293,12 @@ QueryResult::QueryResult(Query &cmd): cmd_(cmd) {
 
 int QueryResult::columns() const {
     cmd_.check() ;
-    return ( sqlite3_data_count(cmd_.handle()) ) ;
+    return ( sqlite3_data_count(cmd_.handle().get()) ) ;
 }
 
 const char *QueryResult::columnName(int idx) const {
    cmd_.check() ;
-   const char *name = sqlite3_column_name(cmd_.handle(), idx)  ;
+   const char *name = sqlite3_column_name(cmd_.handle().get(), idx)  ;
    if ( name == NULL ) throw Exception(str(boost::format("There is no column with index %d") % idx)) ;
    else return name ;
 }
@@ -314,7 +315,7 @@ void QueryResult::next() {
 int QueryResult::columnType(int idx) const
 {
     cmd_.check() ;
-    return sqlite3_column_type(cmd_.handle(), idx);
+    return sqlite3_column_type(cmd_.handle().get(), idx);
 }
 
 int QueryResult::columnBytes(int idx) const
