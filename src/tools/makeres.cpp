@@ -124,20 +124,17 @@ int main(int argc, char *argv[])
     if ( dataFile.empty() ||  resFiles.empty() )
         printUsageAndExit() ;
 
-    std::unique_ptr<SQLite::Database> db ;
+    SQLite::Connection db ;
 
-    db.reset(new SQLite::Database(dataFile)) ;
-
-    SQLite::Session session(db.get()) ;
-    SQLite::Connection &con = session.handle() ;
+    db.open(dataFile, SQLITE_OPEN_CREATE) ;
 
     try {
-        con.exec("CREATE TABLE IF NOT EXISTS resources (name TEXT PRIMARY KEY, sz INT, data BLOB);") ;
-        if ( !append ) con.exec("DELETE FROM resources;") ;
+        db.exec("CREATE TABLE IF NOT EXISTS resources (name TEXT PRIMARY KEY, sz INT, data BLOB);") ;
+        if ( !append ) db.exec("DELETE FROM resources;") ;
 
-        SQLite::Command stmt(con, "REPLACE INTO resources (name,sz,data) VALUES(?,?,?)") ;
+        SQLite::Statement stmt(db, "REPLACE INTO resources (name,sz,data) VALUES(?,?,?)") ;
 
-        SQLite::Transaction trans(con) ;
+        SQLite::Transaction trans(db) ;
 
         Dictionary files ;
 
@@ -159,7 +156,7 @@ int main(int argc, char *argv[])
 
             stmt.bind(key) ;
             stmt.bind((int)sz) ;
-            stmt.bind(content.data(), content.size()) ;
+            stmt.bind(SQLite::Blob(content.data(), content.size())) ;
 
             stmt.exec() ;
             stmt.clear() ;

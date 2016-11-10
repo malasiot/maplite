@@ -69,10 +69,10 @@ public:
     void create(const std::string &file_path);
 
     // write data from spatialite database to mapsforge binary format
-    void write(SQLite::Database &db, WriteOptions &options) ;
+    void write(SQLite::Connection &db, WriteOptions &options) ;
 
     void setBoundingBox(const BBox &box) ;
-    void setBoundingBoxFromGeometries(SQLite::Database &db) ;
+    void setBoundingBoxFromGeometries(SQLite::Connection &db) ;
     void setStartPosition(float lat, float lon) ;
     void setStartZoom(uint8_t zoom) ;
     void setPreferredLanguages(const std::string &langs) ;
@@ -96,12 +96,12 @@ private:
     };
 
 private:
-    void writeHeader(SQLite::Database &db, WriteOptions &options) ;
+    void writeHeader(SQLite::Connection &db, WriteOptions &options) ;
     void writeMapInfo();
     void writeTagList(const std::vector<std::string> &tags) ;
     void writeSubFileInfo(const WriteOptions &options);
-    void writeSubFiles(SQLite::Database &db, const WriteOptions &options);
-    void fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options,
+    void writeSubFiles(SQLite::Connection &db, const WriteOptions &options);
+    void fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Connection &db, const WriteOptions &options,
                        std::vector<POIData> &pois, std::vector<std::vector<uint32_t> > &pois_per_level,
                        std::vector<WayDataContainer> &ways, std::vector<std::vector<uint32_t> > &ways_per_level);
     std::string writeTileData(int32_t tx, int32_t ty, int32_t tz, const WriteOptions &options, const std::vector<POIData> &pois,

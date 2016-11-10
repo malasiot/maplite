@@ -15,7 +15,7 @@ public:
 
 private:
 
-    std::unique_ptr<SQLite::Database> db_ ;
+    SQLite::Connection db_ ;
     boost::filesystem::path rsdb_ ;
     std::string url_prefix_ ;
 };

@@ -9,10 +9,9 @@
 #include <map>
 #include <set>
 #include <deque>
+#include <cstdint>
 #include <boost/thread/mutex.hpp>
 #include <boost/utility.hpp>
-#include <boost/tuple/tuple.hpp>
-#include <boost/shared_ptr.hpp>
 
 
 namespace SQLite {
@@ -22,68 +21,22 @@ class QueryResult ;
 class Exception ;
 class NullType;
 class Connection ;
-class ConnectionPool ;
+class Blob ;
 
 extern NullType Nil;
-typedef boost::shared_ptr<Connection> ConnectionPtr ;
-
-class Database: boost::noncopyable {
-public:
-
-    Database(const std::string &fname, size_t pool_size = 1) ;
-    ~Database() ;
-
-    Connection *connect();
-    void release(Connection *con) ;
-
-private:
-
-    std::string fileName ;
-    std::map<Connection *, bool> pool_ ;
-    boost::mutex mutex_ ;
-};
-
-class Session {
-public:
-
-    Session(Database *db):
-        db_(db) {
-        con_ = db_->connect() ;
-    }
-
-    ~Session() {
-        db_->release(con_) ;
-    }
-
-    Connection &handle() const { return *con_ ; }
-
-private:
-
-    Connection *con_ ;
-    Database *db_ ;
-};
 
 class Connection: boost::noncopyable {
 
     public:
 
     explicit Connection();
-    virtual ~Connection();
+    ~Connection();
 
-    /**
-     * @brief Establish a connection with the database
-     * @param name      Name of the file to open
-     * @param create    If set to false it will throw an exception if the file does not exist otherwise a new file will be created and opened for read/write
-     * @return
-     */
+    // open connection to database withe given flags
+    void open(const std::string &name, int flags);
+    void close() ;
 
-    virtual void open(const std::string &name, bool create = true);
-
-    /**
-     * @brief Close the connection
-     */
-    virtual void close() ;
-
+     operator int () { return handle_ != nullptr ; }
     /**
      * @brief Helper for executing an sql statement, including a colon separated list of statements
      * @param sql Format string similar to printf. Use %q for arguments that need quoting (see sqlite3_mprintf documentation)
@@ -99,6 +52,7 @@ class Connection: boost::noncopyable {
     }
 
     sqlite3 *handle() { return handle_ ; }
+
 protected:
 
     friend class Statement ;
@@ -109,17 +63,12 @@ protected:
     sqlite3 *handle_ ;
 };
 
-
-
-
 class Exception: public std::runtime_error
 {
 public:
     Exception(const std::string &msg) ;
     Exception(sqlite3 *handle) ;
 };
-
-
 
 /**
  * @brief The Statement class is a wrapper for prepared statements
@@ -134,11 +83,12 @@ public:
      */
     Statement(Connection& con, const std::string & sql) ;
 
-    virtual ~Statement();
+    template<typename ...Args>
+    Statement(Connection& con, const std::string & sql, Args... args): Statement(con, sql) {
+        bindm(args...) ;
+    }
 
-    Statement(const std::shared_ptr<sqlite3_stmt> &statement);
-    Statement(const Statement &other) = delete;
-    Statement(Statement &&other) = default;
+    ~Statement();
 
 
     /** \brief clear is used if you'd like to reuse a command object
@@ -148,38 +98,57 @@ public:
     /** \brief Bind value with corresponding placeholder index
      */
 
-    Statement &bind(int idx, const NullType &p);
-    Statement &bind(int idx, int v);
-    Statement &bind(int idx, long long int v);
-    Statement &bind(int idx, unsigned long long int v);
-    Statement &bind(int idx, double v);
-    Statement &bind(int idx, std::string const & v);
-    Statement &bind(int idx, void const * buf, size_t buf_size);
+    Statement &bind(int idx, const NullType &) ;
+    Statement &bind(int idx, unsigned char v) ;
+    Statement &bind(int idx, char v) ;
+    Statement &bind(int idx, unsigned short v) ;
+    Statement &bind(int idx, short v) ;
+    Statement &bind(int idx, unsigned long v) ;
+    Statement &bind(int idx, long v) ;
+    Statement &bind(int idx, unsigned int v) ;
+    Statement &bind(int idx, int v) ;
+    Statement &bind(int idx, unsigned long long int v) ;
+    Statement &bind(int idx, long long int v) ;
+    Statement &bind(int idx, double v) ;
+    Statement &bind(int idx, float v) ;
+    Statement &bind(int idx, const std::string &v) ;
+    Statement &bind(int idx, const Blob &blob) ;
+
+    Statement &bind(int idx, const char *str) ;
 
     /** \brief Bind value with corresponding placeholder parameter name
      */
 
-    Statement &bindp(const std::string &name, NullType const & p);
-    Statement &bindp(const std::string &name, int p);
-    Statement &bindp(const std::string &name, long long int p);
-    Statement &bindp(const std::string &name, unsigned long long int p);
-    Statement &bindp(const std::string &name, double p);
-    Statement &bindp(const std::string &name, const std::string &p);
-    Statement &bindp(const std::string &name, void const * buf, size_t buf_size);
+    template <class T>
+    Statement &bind(const std::string &name, const T &p) {
+        int idx = sqlite3_bind_parameter_index(handle_.get(), name.c_str() );
+        if ( idx ) return bind(idx, p) ;
+        else throw Exception(name + " is not a valid statement placeholder") ;
+    }
 
     /** \brief Bind value with placeholder index automatically assigned based on the order of the calls
      */
+    template <class T>
+    Statement &bind(const T &p) {
+        return bind(++last_arg_idx_, p) ;
+    }
 
-    Statement &bind(NullType const & p);
-    Statement &bind(int p);
-    Statement &bind(long long int p);
-    Statement &bind(unsigned long long int p);
-    Statement &bind(double p);
-    Statement &bind(const std::string &p);
-    Statement &bind(void const * buf, size_t buf_size);
+    template <typename T>
+    Statement &bindm(T t) {
+        return bind(t) ;
+    }
 
+    template <typename First, typename ... Args>
+    Statement &bindm(First f, Args ... args) {
+        return bind(f).bindm(args...) ;
+    }
 
-    std::shared_ptr<sqlite3_stmt> handle() const { return handle_ ; }
+    sqlite3_stmt *handle() const { return handle_.get() ; }
+
+    void exec() {
+        step() ;
+    }
+
 protected:
 
     void check();
@@ -190,10 +159,7 @@ private:
     void prepare();
     void finalize();
 
-private:
-
-    Connection &con_ ;
-    std::string sql_ ;
+    void throwStmtException() ;
 
 protected:
 
@@ -203,21 +169,19 @@ protected:
 
 private:
 
-    int last_arg_idx;
+    int last_arg_idx_;
 
 };
 
-
-class Command: public Statement {
-public:
-    Command(Connection &con, const std::string &sql) ;
-
-    void exec() ;
-};
 
 class Query: public Statement {
 public:
     Query(Connection &con, const std::string &sql) ;
+
+    template<typename ...Args>
+    Query(Connection& con, const std::string & sql, Args... args): Query(con, sql) {
+        mbind(args...) ;
+    }
 
     QueryResult exec() ;
 
@@ -225,16 +189,35 @@ private:
     friend class QueryResult ;
 
     int columnIdx(const std::string &name) const ;
-    std::map<std::string, int> field_map ;
+    std::map<std::string, int> field_map_ ;
 };
 
-typedef std::vector<unsigned char> Blob ;
+// Wraps pointer to buffer and its size. Memory management is external
+class Blob {
+public:
 
+    Blob(const char *data, uint32_t sz): size_(sz), data_(data) {}
+
+    const char *data() const { return data_ ; }
+    uint32_t size() const { return size_ ; }
+
+private:
+    const char *data_ = nullptr;
+    uint32_t size_ = 0 ;
+};
+
+class Row ;
 class QueryResult
 {
 
 public:
 
+    QueryResult(QueryResult &&other) = default ;
+    QueryResult(QueryResult &other) = delete ;
+    QueryResult& operator=(const QueryResult &other) = delete;
+    QueryResult& operator=(QueryResult &&other) = default;
+
+    bool isValid() const { return !empty_ ; }
     operator int () { return !empty_ ; }
 
     void next() ;
@@ -245,85 +228,45 @@ public:
     int columnIdx(const std::string &name) const ;
     int columnBytes(int idx) const ;
 
-    template <class T> T get(int idx) const {
-       return get(idx, T());
-    }
+    template<class T>
+    T get(int idx) const ;
 
-    template <class T> T get(const std::string &name) const {
+    template <class T>
+    T get(const std::string &name) const {
         int idx = columnIdx(name) ;
-        return get(idx, T()) ;
+        return get<T>(idx) ;
     }
 
-    void getBlob(int idx, std::vector<unsigned char> &blob) ;
-    void getBlob(const std::string &name, std::vector<unsigned char> &blob) ;
-
-    const char *getBlob(int idx, int &blob_size);
-    const char *getBlob(const std::string &name, int &blob_size);
-
-    template <class T1>
-    boost::tuple<T1> getColumns(int idx1) const {
-        return boost::make_tuple(get(idx1, T1()));
-    }
-
-    template <class T1, class T2>
-    boost::tuple<T1, T2> getColumns(int idx1, int idx2) const {
-        return boost::make_tuple(get(idx1, T1()), get(idx2, T2()));
-    }
-
-    template <class T1, class T2, class T3>
-    boost::tuple<T1, T2, T3> getColumns(int idx1, int idx2, int idx3) const {
-        return boost::make_tuple(get(idx1, T1()), get(idx2, T2()), get(idx3, T3()));
-    }
-
-    template <class T1, class T2, class T3, class T4>
-    boost::tuple<T1, T2, T3, T4> getColumns(int idx1, int idx2, int idx3, int idx4) const {
-        return boost::make_tuple(get(idx1, T1()), get(idx2, T2()), get(idx3, T3()), get(idx4, T4()));
-    }
-
-    template <class T1, class T2, class T3, class T4, class T5>
-    boost::tuple<T1, T2, T3, T4, T5> getColumns(int idx1, int idx2, int idx3, int idx4, int idx5) const {
-        return boost::make_tuple(get(idx1, T1()), get(idx2, T2()), get(idx3, T3()), get(idx4, T4()), get(idx5, T5()));
-    }
-
-    template <class T1, class T2, class T3, class T4, class T5, class T6>
-    boost::tuple<T1, T2, T3, T4, T5, T6> getColumns(int idx1, int idx2, int idx3, int idx4, int idx5, int idx6) const {
-        return boost::make_tuple(get(idx1, T1()), get(idx2, T2()), get(idx3, T3()), get(idx4, T4()), get(idx5, T5()), get(idx6, T6()));
-    }
-
-    template <class T1, class T2, class T3, class T4, class T5, class T6, class T7>
-    boost::tuple<T1, T2, T3, T4, T5, T6, T7> getColumns(int idx1, int idx2, int idx3, int idx4, int idx5, int idx6, int idx7) const {
-       return boost::make_tuple(get(idx1, T1()), get(idx2, T2()), get(idx3, T3()), get(idx4, T4()), get(idx5, T5()), get(idx6, T6()), get(idx7, T7()));
-    }
-
-    template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8>
-    boost::tuple<T1, T2, T3, T4, T5, T6, T7, T8> getColumns(int idx1, int idx2, int idx3, int idx4, int idx5, int idx6, int idx7, int idx8) const {
-        return boost::make_tuple(get(idx1, T1()), get(idx2, T2()), get(idx3, T3()), get(idx4, T4()), get(idx5, T5()), get(idx6, T6()), get(idx7, T7()), get(idx8, T8()));
-    }
-
-    class const_iterator {
+    class iterator {
        public:
-           const_iterator(
-                   const QueryResult &res,
-                   bool &at_end
-           );
-           const_iterator(const const_iterator &other) = delete;
-           const_iterator(const_iterator &&other) = default;
+           iterator(QueryResult &res, bool at_end);
+           iterator(const iterator &other) = delete;
+           iterator(iterator &&other) = default;
 
-           const_iterator& operator=(const const_iterator &other) = delete;
-           const_iterator& operator=(const_iterator &&other) = default;
+           iterator& operator=(const iterator &other) = delete;
+           iterator& operator=(iterator &&other) = default;
 
-           bool operator==(const const_iterator &other) const;
-           bool operator!=(const const_iterator &other) const;
+           bool operator==(const iterator &other) const { return ( qres_ == other.qres_) && ( at_end_ == other.at_end_ ) ; }
+           bool operator!=(const iterator &other) const { return ( qres_ != other.qres_) || ( at_end_ != other.at_end_ ) ; }
 
-           const_iterator& operator++();
-           const row& operator*() const;
-           const row* operator->() const;
+           iterator& operator++() {
+                qres_.next() ;
+                at_end_ = !qres_ ;
+                return *this;
+           }
+
+           const Row& operator*() const { return *current_; }
 
        private:
-           std::shared_ptr<sqlite3_stmt> stmt;
-           bool &end_reached;
-           row current_row;
+           QueryResult &qres_ ;
+           bool at_end_ ;
+           std::unique_ptr<Row> current_ ;
+
    };
+
+
+    iterator begin() { return iterator(*this, empty_) ; }
+    iterator end() { return iterator(*this, true) ; }
 
 
 private:
@@ -332,16 +275,6 @@ private:
 
     QueryResult(Query &cmd);
 
-    int get(int idx, int) const;
-    double get(int idx, double) const;
-    long long int get(int idx, long long int) const;
-    unsigned long long int get(int idx, unsigned long long int) const;
-    char const* get(int idx, char const*) const;
-    std::string get(int idx, std::string) const;
-    void const* get(int idx, void const*) const;
-    NullType get(int idx, const NullType &) const;
-
-
 private:
 
     Query &cmd_ ;
@@ -349,9 +282,41 @@ private:
 
 } ;
 
+
+class Column {
+public:
+
+    template <class T> T as() const {
+        return qres_.get<T>(idx_) ;
+    }
+
+private:
+
+    friend class Row ;
+
+    Column(QueryResult &qr, int idx): qres_(qr), idx_(idx) {}
+    Column(QueryResult &qr, const std::string &name): qres_(qr), idx_(qr.columnIdx(name)) {}
+
+    QueryResult &qres_ ;
+    int idx_ ;
+};
+
+class Row {
+public:
+    Row(QueryResult &qr): qres_(qr) {}
+
+    uint columns() const { return qres_.columns() ; }
+    Column operator [] (int idx) const { return Column(qres_, idx); }
+    Column operator [] (const std::string &name) const { return Column(qres_, name); }
+    bool isValid() const { return (int)qres_ ; }
+
+private:
+
+    QueryResult &qres_ ;
+};
+
 class Transaction : boost::noncopyable
 {
-
 public:
 
     Transaction(Connection &con_); // the construcctor starts the constructor

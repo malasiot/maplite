@@ -26,7 +26,7 @@ public:
 
     // Get handle to database
 
-    SQLite::Database &handle() const { return *db_ ; }
+    SQLite::Connection &db() { return db_ ; }
 
     bool createGeometriesTable(const std::string &desc);
     bool createTagsTable() ;
@@ -44,16 +44,16 @@ public:
 private:
     string insertFeatureSQL(const std::string &desc, const std::string &geomCmd = "?") ;
 
-    bool addLineGeometry(SQLite::Command &cmd, OSM::DocumentReader &doc, const OSM::Way &way, uint8_t zmin, uint8_t zmax) ;
-    bool addMultiLineGeometry(SQLite::Command &cmd, OSM::DocumentReader &doc, const std::vector<OSM::Way> &ways, int64_t id, uint8_t zmin, uint8_t zmax) ;
-    bool addPointGeometry(SQLite::Command &cmd, const OSM::Node &poi, uint8_t zmin, uint8_t zmax) ;
-    bool addPolygonGeometry(SQLite::Command &cmd,  OSM::DocumentReader &doc, const OSM::Polygon &poly, int64_t id, uint8_t zmin, uint8_t zmax) ;
+    bool addLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &doc, const OSM::Way &way, uint8_t zmin, uint8_t zmax) ;
+    bool addMultiLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &doc, const std::vector<OSM::Way> &ways, int64_t id, uint8_t zmin, uint8_t zmax) ;
+    bool addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi, uint8_t zmin, uint8_t zmax) ;
+    bool addPolygonGeometry(SQLite::Statement &cmd,  OSM::DocumentReader &doc, const OSM::Polygon &poly, int64_t id, uint8_t zmin, uint8_t zmax) ;
 
-    bool addTags(SQLite::Command &cmd, const TagWriteList &tags, int64_t id) ;
+    bool addTags(SQLite::Statement &cmd, const TagWriteList &tags, int64_t id) ;
 
 private:
 
-    std::shared_ptr<SQLite::Database> db_ ;
+    SQLite::Connection db_ ;
 };
 
 #endif

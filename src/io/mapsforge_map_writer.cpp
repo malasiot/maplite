@@ -33,30 +33,22 @@ static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &ta
     }) ;
 }
 
-static bool get_poi_tags(SQLite::Database &db, std::vector<string> &pois, map<string, uint32_t> &tag_mapping) {
+static bool get_poi_tags(SQLite::Connection &db, std::vector<string> &pois, map<string, uint32_t> &tag_mapping) {
     try {
-        SQLite::Session session(&db) ;
-        SQLite::Connection &con = session.handle() ;
-
         map<string, uint64_t> tag_hist ;
 
         string sql = "SELECT key, val from kv JOIN geom_pois ON geom_pois.osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ele');" ;
-        SQLite::Query q(con, sql) ;
+        SQLite::Query q(db, sql) ;
 
-        SQLite::QueryResult res = q.exec() ;
-
-        while ( res ) {
-
-            string tag = res.get<string>(0);
-            string val = res.get<string>(1);
+        for( const SQLite::Row &r: q.exec() ) {
+            string tag = r[0].as<string>();
+            string val = r[1].as<string>();
 
             auto it = tag_hist.find(tag) ;
             if ( it == tag_hist.end() )
                 tag_hist.insert(make_pair(tag + '=' + val, 1)) ;
             else
                 it->second ++ ;
-
-            res.next() ;
         }
 
         sort_histogram(tag_hist, pois) ;
@@ -77,20 +69,16 @@ static bool query_kv(SQLite::Connection &con, const string &table, map<string, u
 
     try {
         SQLite::Query q(con, sql) ;
-        SQLite::QueryResult res = q.exec() ;
 
-        while ( res ) {
-
-            string tag = res.get<string>(0);
-            string val = res.get<string>(1);
+        for( const SQLite::Row &r: q.exec() ) {
+            string tag = r[0].as<string>();
+            string val = r[1].as<string>();
 
             auto it = tag_hist.find(tag) ;
             if ( it == tag_hist.end() )
                 tag_hist.insert(make_pair(tag + '=' + val, 1)) ;
             else
                 it->second ++ ;
-
-            res.next() ;
         }
 
         return true ;
@@ -101,15 +89,12 @@ static bool query_kv(SQLite::Connection &con, const string &table, map<string, u
     }
 }
 
-static bool get_way_tags(SQLite::Database &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
-
-    SQLite::Session session(&db) ;
-    SQLite::Connection &con = session.handle() ;
+static bool get_way_tags(SQLite::Connection &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
 
     map<string, uint64_t> tag_hist ;
 
-    if ( !query_kv(con, "geom_lines", tag_hist)  ||
-         !query_kv(con, "geom_polygons", tag_hist)
+    if ( !query_kv(db, "geom_lines", tag_hist)  ||
+         !query_kv(db, "geom_polygons", tag_hist)
          ) return false ;
 
     sort_histogram(tag_hist, ways) ;
@@ -175,7 +160,7 @@ void MapFileWriter::create(const std::string &file_path) {
     info_.projection_ = "Mercator" ;
 }
 
-void MapFileWriter::write(SQLite::Database &db, WriteOptions &options) {
+void MapFileWriter::write(SQLite::Connection &db, WriteOptions &options) {
 
     setDebug(options.debug_);
     writeHeader(db, options) ;
@@ -191,7 +176,7 @@ void MapFileWriter::write(SQLite::Database &db, WriteOptions &options) {
 
 
 
-void MapFileWriter::writeHeader(SQLite::Database &db, WriteOptions &options)
+void MapFileWriter::writeHeader(SQLite::Connection &db, WriteOptions &options)
 {
     MapFileOSerializer so(strm_) ;
 
@@ -323,7 +308,7 @@ static bool check_is_sea( const vector<POIData> &pois, const vector<WayDataConta
     return false ;
 }
 
-void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &options)
+void MapFileWriter::writeSubFiles(SQLite::Connection &db, const WriteOptions &options)
 {
     MapFileOSerializer s(strm_) ;
 
@@ -372,7 +357,7 @@ void MapFileWriter::writeSubFiles(SQLite::Database &db, const WriteOptions &opti
             vector<string> tile_data(chunk_left) ;
             vector<bool> tile_is_sea(chunk_left) ;
 
-#pragma omp parallel for
+//#pragma omp parallel for
             for( uint k = j ; k< j + chunk_left ; k++ ) {
 
                 int32_t row = k / cols ;
@@ -463,31 +448,28 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
     return sql.str() ;
 }
 
-static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
+static bool fetch_pois(SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
     try {
-        SQLite::Session session(&db) ;
-        SQLite::Connection &con = session.handle() ;
-
         string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0, false) ;
-        SQLite::Query q(con, sql) ;
-
-        SQLite::QueryResult res = q.exec() ;
+        SQLite::Query q(db, sql) ;
 
         string prev_id ;
 
-        while ( res ) { // each geometry appears as many times as the number of associated tags, here we group the results
+        for( const SQLite::Row &r: q.exec() ) {
+         // each geometry appears as many times as the number of associated tags, here we group the results
 
-            string osm_id = res.get<string>(0) ;
-            string key = res.get<string>(1) ;
-            string val = res.get<string>(2) ;
-            uint8_t minz = res.get<int>(3) ;
-            uint8_t maxz = res.get<int>(4) ;
+            string osm_id = r[0].as<string>() ;
+            string key = r[1].as<string>() ;
+            string val = r[2].as<string>() ;
+            uint8_t minz = r[3].as<int>() ;
+            uint8_t maxz = r[4].as<int>() ;
 
             if ( osm_id != prev_id ) {
                 int blob_size ;
-                const char *data = res.getBlob(5, blob_size) ;
+               // const char *data = res.getBlob(5, blob_size) ;
+                SQLite::Blob blob = r[5].as<SQLite::Blob>() ;
 
-                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)blob.data(), blob.size());
 
                 for( gaiaPointPtr p = geom->FirstPoint ; p != nullptr ; p = p->Next ) {
                     double lon = p->X ;
@@ -507,8 +489,6 @@ static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom,
             pois.back().tags_.add(key, val) ;
 
             prev_id = osm_id ;
-
-            res.next() ;
         }
 
         return true ;
@@ -521,33 +501,28 @@ static bool fetch_pois(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom,
 }
 
 
-static bool fetch_lines(const std::string &tableName, SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
+static bool fetch_lines(const std::string &tableName, SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
                         bool clip, double buffer, double tol,
                         vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
     try {
-        SQLite::Session session(&db) ;
-        SQLite::Connection &con = session.handle() ;
-
         string sql = make_bbox_query(tableName, bbox, min_zoom, max_zoom, clip, buffer, tol, false) ;
-        SQLite::Query q(con, sql) ;
-
-        SQLite::QueryResult res = q.exec() ;
-
+        SQLite::Query q(db, sql) ;
         string prev_id ;
 
-        while ( res ) { // each geometry appears as many times as the number of associated tags, here we group the results
+        for( const SQLite::Row &r: q.exec() ) {
+         // each geometry appears as many times as the number of associated tags, here we group the results
 
-            string osm_id = res.get<string>(0) ;
-            string key = res.get<string>(1) ;
-            string val = res.get<string>(2) ;
-            uint8_t minz = res.get<int>(3) ;
-            uint8_t maxz = res.get<int>(4) ;
+            string osm_id = r[0].as<string>() ;
+            string key = r[1].as<string>() ;
+            string val = r[2].as<string>() ;
+            uint8_t minz = r[3].as<int>() ;
+            uint8_t maxz = r[4].as<int>() ;
 
             if ( osm_id != prev_id ) {
-                int blob_size ;
-                const char *data = res.getBlob(5, blob_size) ;
 
-                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+                SQLite::Blob blob = r[5].as<SQLite::Blob>() ;
+
+                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)blob.data(), blob.size());
 
                 // each line may be broken into multiple linestrings by clipping
                 WayDataContainer wc ;
@@ -585,8 +560,6 @@ static bool fetch_lines(const std::string &tableName, SQLite::Database &db, cons
             ways.back().tags_.add(key, val) ;
 
             prev_id = osm_id ;
-
-            res.next() ;
         }
 
         return true ;
@@ -598,33 +571,26 @@ static bool fetch_lines(const std::string &tableName, SQLite::Database &db, cons
     }
 }
 
-static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, bool clip,
+static bool fetch_polygons(SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, bool clip,
                            double buffer, double tol, bool labels, vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
     try {
-        SQLite::Session session(&db) ;
-        SQLite::Connection &con = session.handle() ;
-
         string sql = make_bbox_query("geom_polygons", bbox, min_zoom, max_zoom, clip, buffer, tol, labels) ;
-        SQLite::Query q(con, sql) ;
-
-        SQLite::QueryResult res = q.exec() ;
-
+        SQLite::Query q(db, sql) ;
         string prev_id ;
 
-        while ( res ) { // each geometry appears as many times as the number of associated tags, here we group the results
+        for( const SQLite::Row &r: q.exec() ) { // each geometry appears as many times as the number of associated tags, here we group the results
 
-            string osm_id = res.get<string>(0) ;
-            string key = res.get<string>(1) ;
-            string val = res.get<string>(2) ;
-            uint8_t minz = res.get<int>(3) ;
-            uint8_t maxz = res.get<int>(4) ;
+            string osm_id = r[0].as<string>() ;
+            string key = r[1].as<string>() ;
+            string val = r[2].as<string>() ;
+            uint8_t minz = r[3].as<int>() ;
+            uint8_t maxz = r[4].as<int>() ;
 
             if ( osm_id != prev_id ) {
-                int blob_size ;
-                const char *data = res.getBlob(5, blob_size) ;
 
-                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+                SQLite::Blob blob = r[5].as<SQLite::Blob>() ;
 
+                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)blob.data(), blob.size());
 
                 // each polygon may be broken into multiple polygons by clipping
                 WayDataContainer wc ;
@@ -677,8 +643,9 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
 
 
                 if ( labels ) {
-                    const char *data = res.getBlob(6, blob_size) ;
-                    geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data, blob_size);
+                    SQLite::Blob data = r[6].as<SQLite::Blob>() ;
+
+                    geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data.data(), data.size());
                     double lon = geom->FirstPoint->X ;
                     double lat = geom->FirstPoint->Y ;
                     wc.label_pos_ = ILatLon(lat, lon) ;
@@ -689,8 +656,6 @@ static bool fetch_polygons(SQLite::Database &db, const BBox &bbox, uint8_t min_z
             ways.back().tags_.add(key, val) ;
 
             prev_id = osm_id ;
-
-            res.next() ;
         }
 
         return true ;
@@ -715,7 +680,7 @@ static double deltaLat(double delta, double lat, uint8_t zoom) {
     return fabs(dlat - lat) ;
 }
 
-void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Database &db, const WriteOptions &options,
+void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Connection &db, const WriteOptions &options,
                                   vector<POIData> &pois,
                                   vector<vector<uint32_t>> &pois_per_level,
                                   vector<WayDataContainer> &ways,

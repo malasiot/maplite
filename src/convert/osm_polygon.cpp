@@ -121,6 +121,12 @@ bool DocumentReader::makePolygonsFromRelation(const Relation &rel, Polygon &poly
         current.nodes_.clear() ;
     }
 
+    for( int i=0 ; i<roles.size() ; i++ ) {
+        if ( roles[i] == "outer") {
+            swap(rings[i], rings[0]) ;
+        }
+    }
+
     return true ;
 }
 

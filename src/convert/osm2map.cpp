@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    SQLite::Database &db = proc.handle() ;
+    SQLite::Connection &db = proc.db() ;
 
     if ( !has_bbox )
         writer.setBoundingBox(proc.getBoundingBoxFromGeometries());

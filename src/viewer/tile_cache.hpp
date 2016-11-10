@@ -20,7 +20,7 @@ private:
     void evict() ;
 
     uint64_t max_capacity_, capacity_, eviction_size_ ;
-    std::unique_ptr<SQLite::Database> db_ ;
+    SQLite::Connection db_ ;
 };
 
 

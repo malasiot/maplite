@@ -31,14 +31,10 @@ bool MapOverlayManager::open(const QString &storage)
     QString db_path = storage + ".sqlite" ;
 
     bool populate_db = !QFileInfo(db_path).exists() ;
-    db_ = new SQLite::Database((const char *)db_path.toUtf8()) ;
+    db_.open((const char *)db_path.toUtf8(), SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE ) ;
 
     if ( populate_db ) { // create database for the first time
-
-        SQLite::Session session(db_) ;
-        SQLite::Connection &con = session.handle() ;
-
-        con.exec("CREATE TABLE overlays (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, content BLOB NOT NULL);\
+        db_.exec("CREATE TABLE overlays (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, content BLOB NOT NULL);\
                  CREATE TABLE collections (id INTEGER PRIMARY KEY AUTOINCREMENT, folder_id INTEGER NOT NULL, is_visible INTEGER DEFAULT 1, name TEXT, attributes BLOB);\
                 CREATE TABLE memberships (overlay_id INTEGER, collection_id INTEGER);\
         CREATE INDEX membership_idx ON memberships (overlay_id);\
@@ -149,12 +145,9 @@ MapOverlayPtr MapOverlayManager::findNearest(const QByteArray &searchType, const
 
 MapOverlayPtr MapOverlayManager::load(quint64 id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
-        SQLite::Query q(con, "select f.id as id, f.type as type, f.name as name, f.content as content, c.is_visible as is_visible from overlays as f join memberships as m on m.overlay_id = f.id join collections as c on c.id = collection_id where f.id = ?") ;
+        SQLite::Query q(db_, "select f.id as id, f.type as type, f.name as name, f.content as content, c.is_visible as is_visible from overlays as f join memberships as m on m.overlay_id = f.id join collections as c on c.id = collection_id where f.id = ?") ;
 
         q.bind(id) ;
 
@@ -167,10 +160,9 @@ MapOverlayPtr MapOverlayManager::load(quint64 id)
 
             MapOverlayPtr obj = MapOverlay::create(type, name) ;
 
-            int bs ;
-            const char *blob = res.getBlob(3, bs) ;
+            SQLite::Blob blob = res.get<SQLite::Blob>(3) ;
 
-            QByteArray ba(blob, bs) ;
+            QByteArray ba(blob.data(), blob.size()) ;
 
             obj->deserialize(ba);
             obj->storage_id_ = id ;
@@ -197,17 +189,14 @@ bool MapOverlayManager::update(const MapOverlayPtr &overlay)
 
     if (!old_overlay ) return false ;
 
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
-        SQLite::Command q(con, "UPDATE overlays SET name=?, content=? WHERE id=?;") ;
+        SQLite::Statement q(db_, "UPDATE overlays SET name=?, content=? WHERE id=?;") ;
 
         q.bind(overlay->name().toUtf8().data()) ;
 
         QByteArray ba = overlay->serialize() ;
-        q.bind(ba.data(), ba.size()) ;
+        q.bind(SQLite::Blob(ba.data(), ba.size())) ;
         q.bind((long long int)overlay->id()) ;
 
         q.exec() ;
@@ -255,11 +244,8 @@ bool MapOverlayManager::update(const MapOverlayPtr &overlay)
 
 bool MapOverlayManager::write(const QVector<MapOverlayPtr> &objects, quint64 collection_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
-    SQLite::Transaction trans(con) ;
-    bool res = write(con, objects, collection_id) ;
+    SQLite::Transaction trans(db_) ;
+    bool res = write(db_, objects, collection_id) ;
     trans.commit() ;
 
     return res ;
@@ -272,7 +258,7 @@ bool MapOverlayManager::write(SQLite::Connection &con, const QVector<MapOverlayP
         // write overlay table
         {
 
-            SQLite::Command cmd(con, "INSERT INTO overlays (type, name, content) VALUES (?, ?, ?);") ;
+            SQLite::Statement cmd(db_, "INSERT INTO overlays (type, name, content) VALUES (?, ?, ?);") ;
 
             for(int i=0 ; i<objects.size() ; i++)
             {
@@ -281,9 +267,9 @@ bool MapOverlayManager::write(SQLite::Connection &con, const QVector<MapOverlayP
                 QByteArray data = object->serialize() ;
                 QByteArray name = object->name().toUtf8() ;
 
-                cmd.bind(1, object->type().data()) ;
-                cmd.bind(2, name.data()) ;
-                cmd.bind(3, (const void *)data.data(), data.size()) ;
+                cmd.bind(object->type().data()) ;
+                cmd.bind(name.data()) ;
+                cmd.bind(SQLite::Blob(data.data(), data.size())) ;
 
                 cmd.exec() ;
 
@@ -301,7 +287,7 @@ bool MapOverlayManager::write(SQLite::Connection &con, const QVector<MapOverlayP
             // write membership table
 
 
-            SQLite::Command cmd(con, "INSERT INTO memberships (overlay_id, collection_id) VALUES (?, ?)") ;
+            SQLite::Statement cmd(db_, "INSERT INTO memberships (overlay_id, collection_id) VALUES (?, ?)") ;
 
             for(int i=0 ; i<objects.size() ; i++)
             {
@@ -370,11 +356,8 @@ void MapOverlayManager::query(QVector<quint64> &ovr, QVector<QRectF> &boxes)
 }
 
 QString MapOverlayManager::uniqueFolderName(const QString &name, quint64 &parent_id) {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     QString name_unique ;
-    SQLite::Query q(con, "SELECT id FROM folders WHERE name = ? AND parent_id = ? LIMIT 1;") ;
+    SQLite::Query q(db_, "SELECT id FROM folders WHERE name = ? AND parent_id = ? LIMIT 1;") ;
 
     int counter = 0 ;
 
@@ -404,19 +387,16 @@ QString MapOverlayManager::uniqueFolderName(const QString &name, quint64 &parent
 
 bool MapOverlayManager::addNewFolder(const QString &name_unique, quint64 parent_id, quint64 &item_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
-        SQLite::Command cmd(con, "INSERT INTO folders (name, parent_id) VALUES (?, ?)") ;
+        SQLite::Statement cmd(db_, "INSERT INTO folders (name, parent_id) VALUES (?, ?)") ;
         cmd.bind(name_unique.toUtf8().data()) ;
 
         long long id = parent_id ;
         cmd.bind(id) ;
         cmd.exec() ;
 
-        item_id = con.last_insert_rowid() ;
+        item_id = db_.last_insert_rowid() ;
 
         return true ;
 
@@ -432,11 +412,8 @@ bool MapOverlayManager::addNewFolder(const QString &name_unique, quint64 parent_
 
 QString MapOverlayManager::uniqueCollectionName(const QString &name, quint64 &folder_id) {
 
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     QString name_unique ;
-    SQLite::Query q(con, "SELECT id FROM collections WHERE name = ? AND folder_id = ? LIMIT 1;") ;
+    SQLite::Query q(db_, "SELECT id FROM collections WHERE name = ? AND folder_id = ? LIMIT 1;") ;
 
     int counter = 0 ;
 
@@ -467,14 +444,11 @@ QString MapOverlayManager::uniqueCollectionName(const QString &name, quint64 &fo
 
 bool MapOverlayManager::addNewCollection(const QString &name_unique, quint64 folder_id, const QMap<QString, QVariant> &attributes, quint64 &item_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
         string sql = "INSERT INTO collections (folder_id, name, attributes) VALUES (?, ?, ?)" ;
 
-        SQLite::Command cmd(con, sql) ;
+        SQLite::Statement cmd(db_, sql) ;
 
         cmd.bind((long long int)folder_id) ;
         cmd.bind(name_unique.toUtf8().data()) ;
@@ -484,10 +458,10 @@ bool MapOverlayManager::addNewCollection(const QString &name_unique, quint64 fol
 
         ds << attributes ;
 
-        cmd.bind((const void *)ba.data(), ba.size()) ;
+        cmd.bind(SQLite::Blob(ba.data(), ba.size())) ;
         cmd.exec() ;
 
-        item_id = (quint64)con.last_insert_rowid() ;
+        item_id = (quint64)db_.last_insert_rowid() ;
 
         return true ;
 
@@ -543,11 +517,9 @@ bool MapOverlayManager::addCollectionTreeOverlays(SQLite::Connection &con, Colle
 }
 
 bool MapOverlayManager::addCollectionTreeOverlays(CollectionTreeNode *node) {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-    SQLite::Transaction trans(con) ;
 
-    bool res = addCollectionTreeOverlays(con, node) ;
+    SQLite::Transaction trans(db_) ;
+    bool res = addCollectionTreeOverlays(db_, node) ;
     trans.commit() ;
 
     return res ;
@@ -556,14 +528,11 @@ bool MapOverlayManager::addCollectionTreeOverlays(CollectionTreeNode *node) {
 
 bool MapOverlayManager::addOverlayInCollection(quint64 collection_id, const QVector<quint64> &overlays)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
-        SQLite::Transaction trans(con) ;
+        SQLite::Transaction trans(db_) ;
 
-        SQLite::Command cmd(con, "REPLACE INTO memberships (overlay_id, collection_id) VALUES (?, ?);") ;
+        SQLite::Statement cmd(db_, "REPLACE INTO memberships (overlay_id, collection_id) VALUES (?, ?);") ;
 
         Q_FOREACH(quint64 id, overlays)
         {
@@ -613,14 +582,11 @@ bool MapOverlayManager::deleteOverlaysFromCollection(quint64 collection_id, cons
     getAllOverlays(overlays, objs) ;
     deleteOverlaysFromSpatialIndex(objs);
 
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
-        SQLite::Transaction trans(con) ;
+        SQLite::Transaction trans(db_) ;
 
-        SQLite::Command cmd1(con, "DELETE FROM memberships WHERE overlay_id = ? AND collection_id = ?;") ;
+        SQLite::Statement cmd1(db_, "DELETE FROM memberships WHERE overlay_id = ? AND collection_id = ?;") ;
 
         Q_FOREACH(quint64 id, overlays)
         {
@@ -631,7 +597,7 @@ bool MapOverlayManager::deleteOverlaysFromCollection(quint64 collection_id, cons
             cmd1.clear() ;
         }
 
-        SQLite::Command cmd2(con, "DELETE overlays WHERE id = ?;") ;
+        SQLite::Statement cmd2(db_, "DELETE overlays WHERE id = ?;") ;
 
         Q_FOREACH(quint64 id, overlays)
         {
@@ -654,7 +620,7 @@ bool MapOverlayManager::deleteOverlaysFromCollection(quint64 collection_id, cons
 }
 
 
-MapOverlayManager::MapOverlayManager(): index_(0), db_(0) {
+MapOverlayManager::MapOverlayManager(): index_(0) {
 }
 
 MapOverlayManager::~MapOverlayManager() {
@@ -664,18 +630,15 @@ MapOverlayManager::~MapOverlayManager() {
 
 bool MapOverlayManager::getSubFolders(QVector<quint64> &ids, QVector<QString> &names, QVector<bool> &states, quint64 parent_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
-        SQLite::Query q(con, "SELECT id, name, is_visible FROM folders where parent_id=?;") ;
+        SQLite::Query q(db_, "SELECT id, name, is_visible FROM folders where parent_id=?;") ;
         quint64 id = parent_id ;
         q.bind(id) ;
         SQLite::QueryResult res = q.exec() ;
 
         while ( res )
         {
-            quint64 id = res.get<long long int>(0) ;
+            quint64 id = res.get<quint64>(0) ;
             string name = res.get<string>(1) ;
             bool state = res.get<bool>(2) ;
 
@@ -698,18 +661,15 @@ bool MapOverlayManager::getSubFolders(QVector<quint64> &ids, QVector<QString> &n
 
 bool MapOverlayManager::getFolderCollections(QVector<quint64> &ids, QVector<QString> &names, QVector<bool> &states, quint64 folder_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
-        SQLite::Query q(con, "SELECT id, name, is_visible FROM collections where folder_id=?;") ;
+        SQLite::Query q(db_, "SELECT id, name, is_visible FROM collections where folder_id=?;") ;
         long long int id = folder_id ;
         q.bind(id) ;
         SQLite::QueryResult res = q.exec() ;
 
         while ( res )
         {
-            quint64 id = res.get<long long int>(0) ;
+            quint64 id = res.get<quint64>(0) ;
             string name = res.get<string>(1) ;
             bool state = res.get<bool>(2) ;
 
@@ -731,11 +691,8 @@ bool MapOverlayManager::getFolderCollections(QVector<quint64> &ids, QVector<QStr
 
 int MapOverlayManager::getNumCollections(quint64 folder_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
-        SQLite::Query q(con, "SELECT count(*) FROM collections where folder_id=?;") ;
+        SQLite::Query q(db_, "SELECT count(*) FROM collections where folder_id=?;") ;
         long long int id = folder_id ;
         q.bind(id) ;
         SQLite::QueryResult res = q.exec() ;
@@ -755,9 +712,6 @@ int MapOverlayManager::getNumCollections(quint64 folder_id)
 
 bool MapOverlayManager::getAllOverlays(const QVector<quint64> overlay_ids, QVector<MapOverlayPtr> &overlays)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     QByteArray idlist ;
 
     Q_FOREACH(quint64 id, overlay_ids)
@@ -770,29 +724,24 @@ bool MapOverlayManager::getAllOverlays(const QVector<quint64> overlay_ids, QVect
         QByteArray sql = "SELECT * FROM overlays WHERE id IN (" ;
         sql += idlist + ')' ;
 
-        SQLite::Query q(con, sql.data()) ;
+        SQLite::Query q(db_, sql.data()) ;
 
-        SQLite::QueryResult res = q.exec() ;
-
-        while ( res )
+        for( const SQLite::Row &r: q.exec() )
         {
-            quint64 id = res.get<long long int>(0) ;
-            string type = res.get<string>(1) ;
-            string name = res.get<string>(2) ;
+            quint64 id =  r[0].as<quint64>() ;
+            string type = r[1].as<string>() ;
+            string name = r[2].as<string>() ;
 
             MapOverlayPtr overlay = MapOverlay::create(type, QString::fromUtf8(name.c_str())) ;
             overlay->storage_id_ = id ;
 
-            int bs ;
-            const char *blob = res.getBlob(3, bs) ;
+            SQLite::Blob blob = r[3].as<SQLite::Blob>() ;
 
-            QByteArray ba(blob, bs) ;
+            QByteArray ba(blob.data(), blob.size()) ;
 
             overlay->deserialize(ba);
 
             overlays.append(overlay) ;
-
-            res.next() ;
         }
 
         return true ;
@@ -826,34 +775,27 @@ bool MapOverlayManager::getAllOverlaysInFolder(quint64 folder_id, QVector<MapOve
 
 bool MapOverlayManager::getAllOverlaysInCollection(quint64 collection_id, QVector<MapOverlayPtr> &overlays)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
-        SQLite::Query q(con, "SELECT f.id, f.type, f.name, f.content FROM overlays AS f JOIN memberships AS m ON m.overlay_id = f.id WHERE m.collection_id = ?;") ;
+        SQLite::Query q(db_, "SELECT f.id, f.type, f.name, f.content FROM overlays AS f JOIN memberships AS m ON m.overlay_id = f.id WHERE m.collection_id = ?;") ;
         long long int id = collection_id ;
         q.bind(id) ;
-        SQLite::QueryResult res = q.exec() ;
 
-        while ( res )
+        for( const SQLite::Row &r: q.exec() )
         {
-            quint64 id = res.get<long long int>(0) ;
-            string type = res.get<string>(1) ;
-            string name = res.get<string>(2) ;
+            quint64 id = r[0].as<quint64>() ;
+            string type = r[1].as<string>() ;
+            string name = r[2].as<string>() ;
 
             MapOverlayPtr overlay = MapOverlay::create(type, QString::fromUtf8(name.c_str())) ;
             overlay->storage_id_ = id ;
 
-            int bs ;
-            const char *blob = res.getBlob(3, bs) ;
+            SQLite::Blob blob = r[3].as<SQLite::Blob>() ;
 
-            QByteArray ba(blob, bs) ;
+            QByteArray ba(blob.data(), blob.size()) ;
 
             overlay->deserialize(ba);
 
             overlays.append(overlay) ;
-
-            res.next() ;
         }
 
         return true ;
@@ -891,7 +833,7 @@ bool MapOverlayManager::deleteCollections(SQLite::Connection &con, quint64 folde
 bool MapOverlayManager::deleteFolders(SQLite::Connection &con, quint64 parent_folder_id)
 {
     try {
-        SQLite::Command q(con, "DELETE FROM folders where parent_id=?;") ;
+        SQLite::Statement q(con, "DELETE FROM folders where parent_id=?;") ;
         q.bind(parent_folder_id) ;
         q.exec() ;
         return true ;
@@ -911,7 +853,7 @@ bool MapOverlayManager::deleteFolder(SQLite::Connection &con, quint64 folder_id)
 
         // remove the folder itself
 
-        SQLite::Command cmd(con, "DELETE FROM folders where id=?;") ;
+        SQLite::Statement cmd(con, "DELETE FROM folders where id=?;") ;
 
         cmd.bind(folder_id) ;
         cmd.exec() ;
@@ -942,23 +884,15 @@ bool MapOverlayManager::deleteFolder(SQLite::Connection &con, quint64 folder_id)
 
 
 bool MapOverlayManager::deleteFolder(quint64 folder_id) {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
-    SQLite::Transaction trans(con) ;
-    bool res = deleteFolder(con, folder_id) ;
+    SQLite::Transaction trans(db_) ;
+    bool res = deleteFolder(db_, folder_id) ;
     trans.commit() ;
 
     return res ;
 }
 
-bool MapOverlayManager::deleteCollection(quint64 id)
-{
-
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
-    deleteCollection(con, id) ;
+bool MapOverlayManager::deleteCollection(quint64 id) {
+    deleteCollection(db_, id) ;
 }
 
 bool MapOverlayManager::deleteCollection(SQLite::Connection &con, quint64 collection_id)
@@ -967,17 +901,17 @@ bool MapOverlayManager::deleteCollection(SQLite::Connection &con, quint64 collec
 
         long long int id = collection_id ;
 
-        SQLite::Command cmd1(con, "DELETE FROM collections where id=?;") ;
+        SQLite::Statement cmd1(con, "DELETE FROM collections where id=?;") ;
 
         cmd1.bind(id) ;
         cmd1.exec() ;
 
-        SQLite::Command cmd2(con, "DELETE FROM overlays WHERE id IN ( SELECT overlay_id FROM memberships WHERE collection_id=?);") ;
+        SQLite::Statement cmd2(con, "DELETE FROM overlays WHERE id IN ( SELECT overlay_id FROM memberships WHERE collection_id=?);") ;
 
         cmd2.bind(id) ;
         cmd2.exec() ;
 
-        SQLite::Command cmd3(con, "DELETE FROM memberships where collection_id=?;") ;
+        SQLite::Statement cmd3(con, "DELETE FROM memberships where collection_id=?;") ;
 
         cmd3.bind(id) ;
         cmd3.exec() ;
@@ -995,13 +929,10 @@ bool MapOverlayManager::deleteCollection(SQLite::Connection &con, quint64 collec
 
 bool MapOverlayManager::getOverlayCollectionAndFolder(quint64 overlay_id, quint64 &collection_id, quint64 &folder_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
         {
-            SQLite::Query cmd(con, "SELECT collection_id from memberships WHERE overlay_id=? LIMIT 1;") ;
+            SQLite::Query cmd(db_, "SELECT collection_id from memberships WHERE overlay_id=? LIMIT 1;") ;
 
             cmd.bind(overlay_id) ;
             SQLite::QueryResult res = cmd.exec() ;
@@ -1013,7 +944,7 @@ bool MapOverlayManager::getOverlayCollectionAndFolder(quint64 overlay_id, quint6
 
         {
 
-            SQLite::Query cmd(con, "SELECT folder_id from collections WHERE id=? LIMIT 1;") ;
+            SQLite::Query cmd(db_, "SELECT folder_id from collections WHERE id=? LIMIT 1;") ;
 
             cmd.bind(collection_id) ;
             SQLite::QueryResult res = cmd.exec() ;
@@ -1036,14 +967,11 @@ bool MapOverlayManager::getOverlayCollectionAndFolder(quint64 overlay_id, quint6
 
 bool MapOverlayManager::renameFolder(quint64 folder_id, const QString &newName)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
         long long int id = folder_id ;
 
-        SQLite::Command cmd(con, "UPDATE folders SET name=? WHERE id=?;") ;
+        SQLite::Statement cmd(db_, "UPDATE folders SET name=? WHERE id=?;") ;
 
         cmd.bind(newName.toUtf8().data()) ;
         cmd.bind(id) ;
@@ -1061,14 +989,11 @@ bool MapOverlayManager::renameFolder(quint64 folder_id, const QString &newName)
 
 bool MapOverlayManager::renameCollection(quint64 collection_id, const QString &newName)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
         long long int id = collection_id ;
 
-        SQLite::Command cmd(con, "UPDATE collections SET name=? WHERE id=?;") ;
+        SQLite::Statement cmd(db_, "UPDATE collections SET name=? WHERE id=?;") ;
 
         cmd.bind(newName.toUtf8().data()) ;
         cmd.bind(id) ;
@@ -1085,15 +1010,12 @@ bool MapOverlayManager::renameCollection(quint64 collection_id, const QString &n
 
 bool MapOverlayManager::moveFolder(quint64 folder_id, quint64 parent_folder_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
         long long int id = folder_id ;
         long long int parent_id = parent_folder_id ;
 
-        SQLite::Command cmd(con, "UPDATE folders SET parent_id=? WHERE id=?;") ;
+        SQLite::Statement cmd(db_, "UPDATE folders SET parent_id=? WHERE id=?;") ;
 
         cmd.bind(parent_id) ;
         cmd.bind(id) ;
@@ -1111,15 +1033,12 @@ bool MapOverlayManager::moveFolder(quint64 folder_id, quint64 parent_folder_id)
 
 bool MapOverlayManager::moveCollection(quint64 collection_id, quint64 parent_folder_id)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
         long long int id = collection_id ;
         long long int parent_id = parent_folder_id ;
 
-        SQLite::Command cmd(con, "UPDATE collections SET folder_id=? WHERE id=?;") ;
+        SQLite::Statement cmd(db_, "UPDATE collections SET folder_id=? WHERE id=?;") ;
 
         cmd.bind(parent_id) ;
         cmd.bind(id) ;
@@ -1137,13 +1056,10 @@ bool MapOverlayManager::moveCollection(quint64 collection_id, quint64 parent_fol
 
 bool MapOverlayManager::setCollectionVisibility(quint64 id, bool state)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
         {
-            SQLite::Command cmd(con, "UPDATE collections SET is_visible=? WHERE id=?;") ;
+            SQLite::Statement cmd(db_, "UPDATE collections SET is_visible=? WHERE id=?;") ;
 
             cmd.bind(state) ;
             cmd.bind(id) ;
@@ -1152,17 +1068,17 @@ bool MapOverlayManager::setCollectionVisibility(quint64 id, bool state)
 
         if ( state ) // is checked state we have to check the parent folder too
         {
-            con.exec("CREATE TRIGGER parent_folder_visibility AFTER UPDATE OF is_visible ON folders WHEN NEW.is_visible=1\
+            db_.exec("CREATE TRIGGER parent_folder_visibility AFTER UPDATE OF is_visible ON folders WHEN NEW.is_visible=1\
                      BEGIN\
                      UPDATE folders SET is_visible=1 WHERE folders.id = NEW.parent_id;\
                     END;") ;
 
 
-            SQLite::Command cmd(con, "UPDATE folders SET is_visible=1 where id IN ( SELECT folder_id FROM collections WHERE id = ? LIMIT 1);") ;
+            SQLite::Statement cmd(db_, "UPDATE folders SET is_visible=1 where id IN ( SELECT folder_id FROM collections WHERE id = ? LIMIT 1);") ;
             cmd.bind(id) ;
             cmd.exec() ;
 
-            con.exec("DROP TRIGGER parent_folder_visibility") ;
+            db_.exec("DROP TRIGGER parent_folder_visibility") ;
 
         }
 
@@ -1177,40 +1093,37 @@ bool MapOverlayManager::setCollectionVisibility(quint64 id, bool state)
 
 bool MapOverlayManager::setFolderVisibility(quint64 id, bool state, bool update_children)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
         // update this folder ( establish a triger that will update recursively child folders and collections)
 
         {
-            con.exec("CREATE TRIGGER folder_visibility BEFORE UPDATE OF is_visible ON folders\
+            db_.exec("CREATE TRIGGER folder_visibility BEFORE UPDATE OF is_visible ON folders\
                      BEGIN\
                         UPDATE folders SET is_visible = NEW.is_visible WHERE folders.parent_id = NEW.id;\
                         UPDATE collections SET is_visible = NEW.is_visible WHERE collections.folder_id = NEW.id;\
                      END;") ;
-            SQLite::Command cmd(con, "UPDATE folders SET is_visible=? WHERE id=?") ;
+            SQLite::Statement cmd(db_, "UPDATE folders SET is_visible=? WHERE id=?") ;
 
             cmd.bind(state) ;
             cmd.bind(id) ;
             cmd.exec() ;
 
-            con.exec("DROP TRIGGER folder_visibility;") ;
+            db_.exec("DROP TRIGGER folder_visibility;") ;
         }
 
         if ( state ) // is checked state we have to check the parent folder too
         {
-            con.exec("CREATE TRIGGER parent_folder_visibility AFTER UPDATE OF is_visible ON folders WHEN NEW.is_visible=1\
+            db_.exec("CREATE TRIGGER parent_folder_visibility AFTER UPDATE OF is_visible ON folders WHEN NEW.is_visible=1\
                      BEGIN\
                      UPDATE folders SET is_visible=1 WHERE folders.id = NEW.parent_id;\
                     END;") ;
 
 
-            SQLite::Command cmd(con, "UPDATE folders SET is_visible=1 where id=?;") ;
+            SQLite::Statement cmd(db_, "UPDATE folders SET is_visible=1 where id=?;") ;
             cmd.bind(id) ;
             cmd.exec() ;
 
-            con.exec("DROP TRIGGER parent_folder_visibility") ;
+            db_.exec("DROP TRIGGER parent_folder_visibility") ;
         }
 
 
@@ -1232,21 +1145,13 @@ void MapOverlayManager::cleanup()
         delete storage_;
         index_ = nullptr ;
     }
-
-    if ( db_ ) {
-        delete db_ ;
-        db_ = nullptr ;
-    }
 }
 
 QString MapOverlayManager::uniqueOverlayName(const QString &pattern, quint64 collection_id, int &counter)
 {
-    SQLite::Session session(db_) ;
-    SQLite::Connection &con = session.handle() ;
-
     try {
 
-        SQLite::Query q(con, "SELECT f.id FROM overlays AS f JOIN memberships AS m ON m.overlay_id = f.id WHERE f.name = ? AND m.collection_id = ? LIMIT 1;") ;
+        SQLite::Query q(db_, "SELECT f.id FROM overlays AS f JOIN memberships AS m ON m.overlay_id = f.id WHERE f.name = ? AND m.collection_id = ? LIMIT 1;") ;
 
         QString name_unique = pattern.arg((int)counter, 3, 10, QChar('0')) ;
 

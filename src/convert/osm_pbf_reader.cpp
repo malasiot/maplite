@@ -1,6 +1,6 @@
 #include "osm_pbf_reader.hpp"
 
-
+#include <iostream>
 
 #include <fstream>
 #ifndef _WIN32
@@ -142,6 +142,8 @@ bool PBFReader::process_osm_data_dense_nodes(DocumentReader &doc, const Primitiv
         deltalon += dense.lon(node_id) ;
 
         n.id_ = deltaid ;
+
+        if ( n.id_ < 0 ) std::cout << n.id_ << std::endl ;
 
         if ( l < dense.keys_vals_size() )
         {

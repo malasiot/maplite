@@ -93,7 +93,7 @@ static string uncompress(const string &str)
 AssetRequestHandler::AssetRequestHandler(const string &url_prefix, const std::string &rs): rsdb_(rs), url_prefix_(url_prefix)
 {
     if ( !fs::is_directory(rsdb_) )
-        db_.reset(new SQLite::Database(rsdb_.native())) ;
+        db_.open(rsdb_.native(), SQLITE_OPEN_READONLY) ;
 }
 
 bool AssetRequestHandler::matches(const string &req_path) {
@@ -113,21 +113,16 @@ void AssetRequestHandler::handle_request(const Request &req, Response &resp) {
         // since we do not store timestamps per tile we use the modification time of the tileset
         time_t mod_time = boost::filesystem::last_write_time(rsdb_.native());
 
-        SQLite::Session session(db_.get()) ;
-        SQLite::Connection &con = session.handle() ;
-
         try {
-            SQLite::Query stmt(con, "SELECT data FROM resources WHERE name=?") ;
+            SQLite::Query stmt(db_, "SELECT data FROM resources WHERE name=?") ;
             stmt.bind(key) ;
 
             SQLite::QueryResult res = stmt.exec() ;
 
             if ( res )
             {
-                int bs ;
-                const char *blob = res.getBlob(0, bs) ;
-
-                string content(blob, blob + bs) ;
+                SQLite::Blob blob = res.get<SQLite::Blob>(0) ;
+                string content(blob.data(), blob.size()) ;
 
                 if ( cnv.empty() )
                     resp.encode_file_data(content, "gzip", string(), mod_time) ;

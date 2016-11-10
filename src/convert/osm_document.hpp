@@ -128,15 +128,15 @@ public:
     }
 
     void forAllNodes(std::function<void(const Node &)> cf) {
-        for( auto &np: nodes_ ) cf(np.second) ;
+        for( const auto &np: nodes_ ) cf(np.second) ;
     }
 
     void forAllWays(std::function<void(const Way &)> cf) {
-        for( auto &wp: ways_ ) cf(wp.second) ;
+        for( const auto &wp: ways_ ) cf(wp.second) ;
     }
 
     void forAllRelations(std::function<void(const Relation &)> cf) {
-        for( auto &rp: relations_ ) cf(rp.second) ;
+        for( const auto &rp: relations_ ) cf(rp.second) ;
     }
 
     bool makePolygonsFromRelation(const Relation &rel, Polygon &polygon) ;

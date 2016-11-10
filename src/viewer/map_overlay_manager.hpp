@@ -106,14 +106,14 @@ protected:
 
     friend class MapFeatureCollection ;
 
-    SQLite::Database *db() const { return db_ ; }
+    SQLite::Connection &db() { return db_ ; }
 
 private:
 
     SpatialIndex::ISpatialIndex *index_ ;           // R-Tree index
     SpatialIndex::IStorageManager* storage_ ;       // data storage (only id's are stored here)
     SpatialIndex::StorageManager::IBuffer *buffer_ ;// memory buffer containing loaded pages
-    SQLite::Database *db_ ;                         // the actual data are serialized here
+    SQLite::Connection db_ ;                         // the actual data are serialized here
 
     static const size_t index_page_size_ ;
     static const size_t index_buffer_capacity_ ;
