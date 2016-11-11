@@ -264,10 +264,8 @@ public:
 
    };
 
-
     iterator begin() { return iterator(*this, empty_) ; }
     iterator end() { return iterator(*this, true) ; }
-
 
 private:
 

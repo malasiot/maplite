@@ -463,7 +463,8 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
             // match feature with filter rules
 
             TagFilterContext ctx(way, &reader) ;
-            if ( !cfg.match(ctx, zmin, zmax) ) return ;
+            if ( !cfg.match(ctx, zmin, zmax) )
+                return ;
 
             // deal with closed ways, potential polygon geometries (areas) are those indicated by area tag or those other than highway, barrier and contour
 
@@ -486,6 +487,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
             }
             else {
                 SQLite::Statement cmd_line(db_, insert_feature_sql("lines", "ST_Multi(?)")) ;
+
 
                 addLineGeometry(cmd_line, reader, way, zmin, zmax) ;
                 addTags(cmd_tags, ctx.tw_, way.id_) ;
