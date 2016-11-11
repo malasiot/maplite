@@ -165,7 +165,8 @@ protected:
     }
 
     void writeWay(const Way &way) {
-        ways_.insert(std::make_pair(way.id_, way)) ;
+        if ( !way.tags_.empty() && !way.nodes_.empty())
+            ways_.insert(std::make_pair(way.id_, way)) ;
     }
 
     void writeRelation(const Relation &r ) {

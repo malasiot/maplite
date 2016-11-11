@@ -453,19 +453,19 @@ static bool fetch_pois(SQLite::Connection &db, const BBox &bbox, uint8_t min_zoo
         string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0, false) ;
         SQLite::Query q(db, sql) ;
 
-        string prev_id ;
+        osm_id_t prev_id ;
 
         for( const SQLite::Row &r: q.exec() ) {
          // each geometry appears as many times as the number of associated tags, here we group the results
 
-            string osm_id = r[0].as<string>() ;
+            osm_id_t osm_id = r[0].as<osm_id_t>() ;
             string key = r[1].as<string>() ;
             string val = r[2].as<string>() ;
             uint8_t minz = r[3].as<int>() ;
             uint8_t maxz = r[4].as<int>() ;
 
             if ( osm_id != prev_id ) {
-                int blob_size ;
+
                // const char *data = res.getBlob(5, blob_size) ;
                 SQLite::Blob blob = r[5].as<SQLite::Blob>() ;
 
@@ -507,12 +507,12 @@ static bool fetch_lines(const std::string &tableName, SQLite::Connection &db, co
     try {
         string sql = make_bbox_query(tableName, bbox, min_zoom, max_zoom, clip, buffer, tol, false) ;
         SQLite::Query q(db, sql) ;
-        string prev_id ;
+        osm_id_t prev_id ;
 
         for( const SQLite::Row &r: q.exec() ) {
          // each geometry appears as many times as the number of associated tags, here we group the results
 
-            string osm_id = r[0].as<string>() ;
+            osm_id_t osm_id = r[0].as<osm_id_t>() ;
             string key = r[1].as<string>() ;
             string val = r[2].as<string>() ;
             uint8_t minz = r[3].as<int>() ;
@@ -576,15 +576,14 @@ static bool fetch_polygons(SQLite::Connection &db, const BBox &bbox, uint8_t min
     try {
         string sql = make_bbox_query("geom_polygons", bbox, min_zoom, max_zoom, clip, buffer, tol, labels) ;
         SQLite::Query q(db, sql) ;
-        string prev_id ;
+        osm_id_t prev_id ;
 
         for( const SQLite::Row &r: q.exec() ) { // each geometry appears as many times as the number of associated tags, here we group the results
 
-            string osm_id = r[0].as<string>() ;
+            osm_id_t osm_id = r[0].as<osm_id_t>() ;
             string key = r[1].as<string>() ;
             string val = r[2].as<string>() ;
             uint8_t minz = r[3].as<int>() ;
-            uint8_t maxz = r[4].as<int>() ;
 
             if ( osm_id != prev_id ) {
 
@@ -615,8 +614,6 @@ static bool fetch_polygons(SQLite::Connection &db, const BBox &bbox, uint8_t min
                         double lat = *coords++ ;
                         block.coords_[0].emplace_back(lat, lon) ;
                     }
-
-         //           block.coords_[0].emplace_back(block.coords_[0][0]) ;
 
                     for( uint k=0 ; k< n_interior_rings ; k++ ) {
                         gaiaRing &ir_ring = p->Interiors[k] ;

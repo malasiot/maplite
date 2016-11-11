@@ -12,6 +12,7 @@
 #include "geometry.hpp"
 #include "database.hpp"
 #include "mapsforge_map_info.hpp"
+#include "osm_document.hpp"
 
 #include <boost/optional.hpp>
 
@@ -26,12 +27,12 @@ public:
 
 struct POIData {
     POIData() = default ;
-    POIData(const ILatLon &c, const std::string &id = std::string()):
+    POIData(const ILatLon &c, osm_id_t id):
         coords_(c), id_(id) {}
 
     ILatLon coords_ ;
     Dictionary tags_ ;
-    std::string id_ ;
+    osm_id_t id_ ;
 };
 
 struct WayDataBlock {
@@ -43,7 +44,7 @@ struct WayDataContainer {
     Dictionary tags_ ;
 
     std::vector<WayDataBlock> blocks_ ;
-    std::string id_ ;
+    osm_id_t id_ ;
     boost::optional<ILatLon> label_pos_ ;
     enum Encoding { SingleDelta, DoubleDelta } encoding_ ;
     uint16_t subtile_mask_ ;

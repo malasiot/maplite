@@ -151,27 +151,27 @@ Statement &Statement::bind(int idx, unsigned int v) {
     return *this ;
 }
 
-Statement &Statement::bind(int idx, unsigned short v) {
+Statement &Statement::bind(int idx, unsigned short int v) {
     check();
     if ( sqlite3_bind_int(handle_.get(), idx, v) != SQLITE_OK ) throwStmtException();
     return *this ;
 }
 
-Statement &Statement::bind(int idx, short v) {
+Statement &Statement::bind(int idx, short int v) {
     check();
     if ( sqlite3_bind_int(handle_.get(), idx, v) != SQLITE_OK ) throwStmtException();
     return *this ;
 }
 
-Statement &Statement::bind(int idx, long v) {
+Statement &Statement::bind(int idx, long int v) {
     check();
-    if ( sqlite3_bind_int(handle_.get(), idx, v) != SQLITE_OK ) throwStmtException();
+    if ( sqlite3_bind_int64(handle_.get(), idx, v) != SQLITE_OK ) throwStmtException();
     return *this ;
 }
 
-Statement &Statement::bind(int idx, unsigned long v) {
+Statement &Statement::bind(int idx, unsigned long int v) {
     check();
-    if ( sqlite3_bind_int(handle_.get(), idx, v) != SQLITE_OK ) throwStmtException();
+    if ( sqlite3_bind_int64(handle_.get(), idx, v) != SQLITE_OK ) throwStmtException();
     return *this ;
 }
 
