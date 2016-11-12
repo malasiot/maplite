@@ -1,16 +1,33 @@
 #include "osm_document.hpp"
 
 #include <list>
+#include <iostream>
 
 using namespace std ;
 
 namespace OSM {
+
+bool checkSelfIntersection(const vector<Ring> &rings) {
+    for( const auto &ring: rings) {
+        set<osm_id_t> node_ring_assignement ;
+
+        for ( osm_id_t idx: ring.nodes_ )
+        {
+            if ( node_ring_assignement.count(idx) == 0 )
+                node_ring_assignement.insert(idx) ;
+            else return false ;
+        }
+    }
+    return true ;
+}
 
 // the function will create linear rings from relation members ignoring inner, outer roles
 // the topology will be fixed by spatialite function ST_BuildArea
 
 bool DocumentReader::makePolygonsFromRelation(const Relation &rel, Polygon &polygon)
 {
+
+
     vector<string> roles ;
     vector<Ring> &rings = polygon.rings_ ;
 
@@ -72,10 +89,6 @@ bool DocumentReader::makePolygonsFromRelation(const Relation &rel, Polygon &poly
                     ++itu ; continue ;
                 }
 
-                string role = rel.ways_role_[idx] ;
-
-                if ( role != current_role ) { ++itu ; continue ; }
-
                 if ( cnodes.front() == way.nodes_.front() )
                 {
                     auto it = way.nodes_.begin() ;
@@ -110,23 +123,19 @@ bool DocumentReader::makePolygonsFromRelation(const Relation &rel, Polygon &poly
             }
         } while ( !finished ) ;
 
-
-        // we should have a closed way otherwise something is wrong
-        if ( cnodes.front() != cnodes.back() ) return false ;
-
         current.nodes_.assign(cnodes.begin(), cnodes.end());
 
-        rings.push_back(current) ;
-        roles.push_back(current_role) ;
+        if ( cnodes.front() == cnodes.back() ) {
+            // we should have a closed way otherwise something is wrong probably incomplete ways in relation
+            rings.push_back(current) ;
+            roles.push_back(current_role) ;
+        }
         current.nodes_.clear() ;
     }
 
-    for( int i=0 ; i<roles.size() ; i++ ) {
-        if ( roles[i] == "outer") {
-            swap(rings[i], rings[0]) ;
-        }
+    if ( checkSelfIntersection(rings) ) {
+        cerr << "Polygon (" << rel.id_ << ") contains duplicate nodes." << endl ;
     }
-
     return true ;
 }
 

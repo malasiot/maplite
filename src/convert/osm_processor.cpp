@@ -290,6 +290,7 @@ bool OSMProcessor::addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi
 
 }
 
+
 bool OSMProcessor::addPolygonGeometry(SQLite::Statement &cmd, OSM::DocumentReader &reader, const OSM::Polygon &poly, int64_t id,
                                       uint8_t zmin, uint8_t zmax)
 {
@@ -299,44 +300,42 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Statement &cmd, OSM::DocumentReade
 
         gaiaGeomCollPtr geo_poly = gaiaAllocGeomColl();
         geo_poly->Srid = 4326;
-        geo_poly->DeclaredType = GAIA_MULTIPOLYGON ;
+        geo_poly->DeclaredType = GAIA_MULTILINESTRING ;
 
-        gaiaPolygonPtr g_poly = gaiaAddPolygonToGeomColl (geo_poly, poly.rings_[0].nodes_.size(),
-                poly.rings_.size() - 1);
+        for( int i=0 ; i<poly.rings_.size() ; i++ ) {
 
-        gaiaRingPtr er = g_poly->Exterior ;
-
-        int j=0 ;
-        reader.forAllNodeCoordList(poly.rings_[0].nodes_, [&](double lat, double lon) {
-            gaiaSetPoint (er->Coords, j, lon, lat); ++j ;
-        }) ;
-
-        for( int i=1 ; i<poly.rings_.size() ; i++ ) {
+            gaiaLinestringPtr g_poly = gaiaAddLinestringToGeomColl (geo_poly, poly.rings_[i].nodes_.size());
 
             const OSM::Ring &ring = poly.rings_[i] ;
-            gaiaRingPtr ir = gaiaAddInteriorRing(g_poly, i-1, ring.nodes_.size()) ;
 
             int j=0 ;
             reader.forAllNodeCoordList(ring.nodes_, [&](double lat, double lon) {
-                gaiaSetPoint (ir->Coords, j, lon, lat); ++j ;
+                gaiaSetPoint (g_poly->Coords, j, lon, lat); ++j ;
             }) ;
 
         }
+
+        // at the moment the functions bellow ignore invalid (self-intersecting) polygons
+        // self-intersection can be handled at the level of the multi-polygon parsing function (makePolygonsFromRelation)
+        gaiaGeomCollPtr ps = gaiaSanitize(geo_poly) ;
+        gaiaGeomCollPtr pg = gaiaPolygonize(ps, 1) ;
+
         /*
         gaiaOutBuffer wkt ;
         gaiaOutBufferInitialize (&wkt);
         gaiaOutWkt(&wkt, geo_poly) ;
 */
-        if ( gaiaIsValid(geo_poly) ) {
-            gaiaToSpatiaLiteBlobWkb (geo_poly, &blob, &blob_size);
+        gaiaToSpatiaLiteBlobWkb (pg, &blob, &blob_size);
 
-            cmd.bindm(SQLite::Blob((const char *)blob, blob_size), id, zmin, zmax) ;
-            cmd.exec() ;
-            cmd.clear() ;
-            gaiaFree(blob) ;
-        }
+        cmd.bindm(SQLite::Blob((const char *)blob, blob_size), id, zmin, zmax) ;
+        cmd.exec() ;
+        cmd.clear() ;
+        gaiaFree(blob) ;
+
 
         gaiaFreeGeomColl (geo_poly);
+        gaiaFreeGeomColl (ps);
+        gaiaFreeGeomColl (pg);
     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
@@ -345,6 +344,7 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Statement &cmd, OSM::DocumentReade
 
     return true ;
 }
+
 
 bool OSMProcessor::addTags(SQLite::Statement &cmd, const TagWriteList &tags, int64_t id)
 {
@@ -358,17 +358,6 @@ bool OSMProcessor::addTags(SQLite::Statement &cmd, const TagWriteList &tags, int
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
     }
-}
-
-
-static bool member_of_multipolygon_or_boundary(const OSM::Way &way, OSM::DocumentReader &reader) {
-    vector<OSM::Relation> relations ;
-    reader.readParentRelations(way.id_, relations) ;
-    for( OSM::Relation &r: relations ) {
-        string type = r.tags_.get("type") ;
-        if ( type == "multipolygon" || type == "boundary" ) return true ;
-    }
-    return false ;
 }
 
 
@@ -442,7 +431,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
                 OSM::Polygon polygon ;
                 if ( !reader.makePolygonsFromRelation(relation, polygon) ) return ;
 
-                SQLite::Statement cmd_rel(db_, insert_feature_sql("polygons", "ST_Multi(ST_BuildArea(?))")) ;
+                SQLite::Statement cmd_rel(db_, insert_feature_sql("polygons", "ST_Multi(?)")) ;
 
                 if ( !polygon.rings_.empty() ) {
                     addPolygonGeometry(cmd_rel, reader, polygon, relation.id_, zmin, zmax) ;
@@ -458,7 +447,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
         {
             if ( way.tags_.empty() ) return ;
 
-       //     if ( member_of_multipolygon_or_boundary(way, reader) ) return ;
+            //     if ( member_of_multipolygon_or_boundary(way, reader) ) return ;
 
             // match feature with filter rules
 
@@ -503,6 +492,10 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
         cerr << e.what() << endl ;
         return false ;
     }
+    catch ( LuaException &e ) {
+        cerr << e.what() << endl ;
+        return false ;
+    }
 }
 
 
@@ -541,8 +534,6 @@ static bool write_box_geometry(SQLite::Connection &con, const BBox &box, osm_id_
     gaiaFree(blob) ;
 
     cmd.clear() ;
-
-
 }
 
 namespace fs = boost::filesystem ;
