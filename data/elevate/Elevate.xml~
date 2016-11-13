@@ -580,7 +580,7 @@ Please have a look at read_me_elevate.txt for reuse and licenses of resources us
 		<cat id="barriers" />
 	</layer>
 
-	<layer id="elv-buildings-h" enabled="false">
+	<layer id="elv-buildings-h" enabled="true">
 		<name lang="de" value="besondere Gebäude" />
 		<name lang="en" value="special buildings" />
 		<name lang="es" value="edificios especiales" />
@@ -1907,7 +1907,7 @@ Please have a look at read_me_elevate.txt for reuse and licenses of resources us
 							</rule>
 						</rule>
 						<rule e="way" k="highway" v="path|footway">
-							<rule e="way" k="surface" v="asphalt|smooth_paved|rough_paved">
+							<rule e="way" k="surface" v="asphalt|smooth_paved|rough_paved|cobblestone">
 								<line stroke="#888888" stroke-width="0.65" stroke-dasharray="17,1" stroke-linecap="butt" />
 							</rule>
 							<rule e="way" k="surface" v="compacted|gravel|raw|winter|unpaved">
@@ -2037,7 +2037,7 @@ Please have a look at read_me_elevate.txt for reuse and licenses of resources us
 							</rule>
 						</rule>
 						<rule e="way" k="highway" v="path|footway">
-							<rule e="way" k="surface" v="asphalt|smooth_paved|rough_paved">
+							<rule e="way" k="surface" v="asphalt|smooth_paved|rough_paved|concrete">
 								<line stroke="#888888" stroke-width="0.65" stroke-dasharray="11,1,1,1" stroke-linecap="butt" />
 							</rule>
 							<rule e="way" k="surface" v="compacted|gravel|raw|winter|unpaved">
@@ -2304,10 +2304,10 @@ Please have a look at read_me_elevate.txt for reuse and licenses of resources us
 					<line stroke="#FFFFFF" stroke-width="0.5" />
 				</rule>
 				<rule e="any" k="foot" v="ft_yes|ft_permissive|ft_designated">
-					<rule e="way" k="surface" v="~|asphalt|smooth_paved|rough_paved">
+					<rule e="way" k="surface" v="~|asphalt|smooth_paved|rough_paved|concrete">
 						<line stroke="#888888" stroke-width="0.65" stroke-dasharray="10,1,1,1" stroke-linecap="butt" />
 					</rule>
-					<rule e="way" k="surface" v="compacted|gravel|raw|winter|unpaved">
+					<rule e="way" k="surface" v="compacted|gravel|raw|winter|unpaved|ground">
 						<line stroke="#9C6800" stroke-width="0.65" stroke-dasharray="10,1,1,1" stroke-linecap="butt" />
 					</rule>
 					<line stroke="#3366FF" stroke-width="0.1" stroke-dasharray="10,3" stroke-linecap="butt" />
@@ -2393,11 +2393,11 @@ Please have a look at read_me_elevate.txt for reuse and licenses of resources us
 
 			<!-- highway surfaces -->
 			<rule e="way" k="highway" v="service" zoom-min="14">
-				<rule e="way" k="surface" v="rough_paved">
+				<rule e="way" k="surface" v="rough_paved|concrete">
 					<line stroke="#AAAAAA" stroke-width="0.65" stroke-dasharray="2,1" stroke-linecap="butt" />
 					<line stroke="#FFFFFF" stroke-width="0.15" stroke-linecap="butt" />
 				</rule>
-				<rule e="way" k="surface" v="compacted|gravel|raw|unpaved">
+				<rule e="way" k="surface" v="compacted|gravel|raw|unpaved|ground">
 					<line stroke="#D9D0C7" stroke-width="0.65" />
 				</rule>
 				<rule e="way" k="surface" v="gravel">
@@ -2409,11 +2409,11 @@ Please have a look at read_me_elevate.txt for reuse and licenses of resources us
 				</rule>
 			</rule>
 			<rule e="way" k="highway" v="unclassified|residential|living_street|road|ford" zoom-min="14">
-				<rule e="way" k="surface" v="rough_paved">
+				<rule e="way" k="surface" v="rough_paved|concrete">
 					<line stroke="#AAAAAA" stroke-width="0.9" stroke-dasharray="2,2" stroke-linecap="butt" />
 					<line stroke="#FFFFFF" stroke-width="0.3" stroke-linecap="butt" />
 				</rule>
-				<rule e="way" k="surface" v="compacted|unpaved|gravel|raw">
+				<rule e="way" k="surface" v="compacted|unpaved|gravel|raw|ground">
 					<line stroke="#D9D0C7" stroke-width="0.9" />
 				</rule>
 				<rule e="way" k="surface" v="gravel">
@@ -4262,11 +4262,21 @@ Please have a look at read_me_elevate.txt for reuse and licenses of resources us
 		<rule e="any" k="amenity" v="place_of_worship" zoom-min="14">
 			<rule e="any" k="historic" v="~">
 				<rule e="any" k="religion" v="christian">
-					<symbol id="s_church" priority="56" src="file:ele_res/s_church.svg" symbol-scaling="size" symbol-height="16" symbol-width="16" />
-					<rule e="any" k="*" v="*" zoom-min="18">
-						<caption k="name" symbol-id="s_church" position="above" font-style="bold" font-size="10" fill="#666666" stroke="#E5FFFFFF" stroke-width="2" />
-						<caption k="ele" priority="-5" symbol-id="s_church" position="below" font-size="10" font-style="bold" fill="#666666" stroke="#E5FFFFFF" stroke-width="2" />
+					<rule e="any" k="community" v="monks">
+						<symbol id="s_monastery" priority="16" src="file:ele_res/s_church.svg" symbol-scaling="size" symbol-height="24" symbol-width="24" />
+						<rule e="any" k="*" v="*" zoom-min="14">
+							<caption k="name" symbol-id="s_monastery" position="above" font-style="bold" font-size="12" fill="#666666" stroke="#E5FFFFFF" stroke-width="2" />
+							<caption k="ele" priority="-5" symbol-id="s_church" position="below" font-size="10" font-style="bold" fill="#666666" stroke="#E5FFFFFF" stroke-width="2" />
+						</rule>
 					</rule>
+					<rule e="any" k="community" v="~">
+						<symbol id="s_church" priority="56" src="file:ele_res/s_church.svg" symbol-scaling="size" symbol-height="16" symbol-width="16" />
+						<rule e="any" k="*" v="*" zoom-min="18">
+							<caption k="name" symbol-id="s_church" position="above" font-style="bold" font-size="10" fill="#666666" stroke="#E5FFFFFF" stroke-width="2" />
+							<caption k="ele" priority="-5" symbol-id="s_church" position="below" font-size="10" font-style="bold" fill="#666666" stroke="#E5FFFFFF" stroke-width="2" />
+						</rule>
+					</rule>
+
 				</rule>
 				<rule e="any" k="religion" v="jewish">
 					<symbol id="s_synagogue" priority="56" src="file:ele_res/s_synagogue.svg" symbol-scaling="size" symbol-height="16" symbol-width="16" />
