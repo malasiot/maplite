@@ -45,11 +45,11 @@ private:
     string insertFeatureSQL(const std::string &desc, const std::string &geomCmd = "?") ;
 
     bool addLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &doc, const OSM::Way &way, uint8_t zmin, uint8_t zmax) ;
-    bool addMultiLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &doc, const std::vector<OSM::Way> &ways, int64_t id, uint8_t zmin, uint8_t zmax) ;
+    bool addMultiLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &doc, const std::vector<OSM::Way> &ways, int64_t id, int ft, uint8_t zmin, uint8_t zmax) ;
     bool addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi, uint8_t zmin, uint8_t zmax) ;
-    bool addPolygonGeometry(SQLite::Statement &cmd,  OSM::DocumentReader &doc, const OSM::Polygon &poly, int64_t id, uint8_t zmin, uint8_t zmax) ;
+    bool addPolygonGeometry(SQLite::Statement &cmd,  OSM::DocumentReader &doc, const OSM::Polygon &poly, int64_t id, int ft, uint8_t zmin, uint8_t zmax) ;
 
-    bool addTags(SQLite::Statement &cmd, const TagWriteList &tags, int64_t id) ;
+    bool addTags(SQLite::Statement &cmd, const TagWriteList &tags, int64_t id, int ftype) ;
 
 private:
 

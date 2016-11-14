@@ -437,7 +437,7 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 
     sql << " AS _geom_ " ;
     if ( centroid ) sql << ", ST_Centroid(geom) " ;
-    sql << " FROM " << tableName << " AS g JOIN kv USING (osm_id) ";
+    sql << " FROM " << tableName << " AS g JOIN kv USING (osm_id, osm_type) ";
 
     sql << " WHERE " ;
     sql << "(( g.zmin BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( g.zmax BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( g.zmin <= " << min_zoom << " AND g.zmax >= " << max_zoom << "))" ;
@@ -748,6 +748,15 @@ std::string MapFileWriter::writeTileData(int32_t tx, int32_t ty, int32_t tz,
 
 }
 
+static int safe_stoi(const std::string &val, uint dv=0) {
+    try {
+        return stoi(val) ;
+    }
+    catch ( std::invalid_argument & ) {
+        return dv ;
+    }
+}
+
 string MapFileWriter::writePOIData(const vector<POIData> &pois, const vector<vector<uint32_t> > &pois_per_level, const ILatLon &orig)
 {
     ostringstream strm ;
@@ -786,7 +795,7 @@ string MapFileWriter::writePOIData(const vector<POIData> &pois, const vector<vec
                 if ( key == "name" ) cflag |= 0x80 ;
                 else if ( key == "addr:housenumber" ) cflag |= 0x40 ;
                 else if ( key == "ele" ) cflag |= 0x20 ;
-                else if ( key == "layer" ) layer = stoi(val) ;
+                else if ( key == "layer" ) layer = safe_stoi(val) ;
                 else {
                     uint32_t idx = poi_tag_mapping_[key+'='+val] ;
                     tags.push_back(idx) ;
@@ -816,7 +825,7 @@ string MapFileWriter::writePOIData(const vector<POIData> &pois, const vector<vec
                 buffer.write_utf8(poi.tags_.get("addr:housenumber")) ;
 
             if ( cflag & 0x20 )
-                buffer.write_var_int64(std::stoi(poi.tags_.get("ele"))) ;
+                buffer.write_var_int64(safe_stoi(poi.tags_.get("ele"))) ;
 
         }
     }
@@ -980,7 +989,7 @@ string MapFileWriter::writeWayData(const vector<WayDataContainer> &ways, const v
                 if ( key == "name" ) cflag |= 0x80 ;
                 else if ( key == "addr:housenumber" ) cflag |= 0x40 ;
                 else if ( key == "ref" ) cflag |= 0x20 ;
-                else if ( key == "layer" ) layer = stoi(val);
+                else if ( key == "layer" ) layer = safe_stoi(val);
                 else {
                     uint32_t idx = way_tag_mapping_[key+'='+val] ;
                     tags.push_back(idx) ;

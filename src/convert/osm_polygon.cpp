@@ -7,18 +7,22 @@ using namespace std ;
 
 namespace OSM {
 
-bool checkSelfIntersection(const vector<Ring> &rings) {
-    for( const auto &ring: rings) {
+void checkSelfIntersection(vector<Ring> &rings) {
+
+
+    std::remove_if(rings.begin(), rings.end(), [&](const Ring &ring) {
         set<osm_id_t> node_ring_assignement ;
 
         for ( osm_id_t idx: ring.nodes_ )
         {
-            if ( node_ring_assignement.count(idx) == 0 )
+            if ( node_ring_assignement.count(idx) == 0 ) {
                 node_ring_assignement.insert(idx) ;
-            else return false ;
+                return false ;
+            }
+            else return true ;
         }
-    }
-    return true ;
+    }) ;
+
 }
 
 // the function will create linear rings from relation members ignoring inner, outer roles
@@ -133,10 +137,20 @@ bool DocumentReader::makePolygonsFromRelation(const Relation &rel, Polygon &poly
         current.nodes_.clear() ;
     }
 
-    if ( checkSelfIntersection(rings) ) {
-        cerr << "Polygon (" << rel.id_ << ") contains duplicate nodes." << endl ;
+    uint nr = rings.size() ;
+
+    checkSelfIntersection(rings) ;
+
+    if ( nr != rings.size() ) {
+        cerr << "Multipolygon contains self-intersecting rings (" << rel.id_ << ")" << endl ;
     }
-    return true ;
+
+    if ( rings.empty() ) {
+        cerr << "Multipolygon with no valid rings (" << rel.id_ << ")" << endl ;
+    }
+
+    return !rings.empty() ;
+
 }
 
 
