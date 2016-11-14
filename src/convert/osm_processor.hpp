@@ -5,6 +5,7 @@
 #include "dictionary.hpp"
 #include "osm_document.hpp"
 #include "geometry.hpp"
+#include "geo_database.hpp"
 
 #include "tag_filter_config_parser.hpp"
 #include "tag_filter_context.hpp"
