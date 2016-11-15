@@ -16,11 +16,7 @@
 
 using namespace std ;
 BBox OSMProcessor::getBoundingBoxFromGeometries() {
-
-    double min_lat, min_lon, max_lat, max_lon ;
-
-    //?
-    return BBox(min_lon, min_lat, max_lon, max_lat) ;
+    return geodb_.box() ;
 }
 
 bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)

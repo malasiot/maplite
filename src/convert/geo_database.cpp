@@ -8,6 +8,7 @@
 #include <geos/geom/Polygon.h>
 #include <geos/operation/polygonize/Polygonizer.h>
 #include <geos/io/WKBWriter.h>
+#include <geos/io/WKBReader.h>
 #include <memory>
 
 #include <boost/filesystem.hpp>
@@ -104,18 +105,19 @@ void serialize_tags(ostream &strm, const Dictionary &tags) {
 bool GeoDatabase::addPointGeometry(const OSM::Node &poi, uint8_t zmin, uint8_t zmax)
 {
     PrecisionModel pm;
-    GeometryFactory factory(&pm, 4326) ;
+    GeometryFactory factory(&pm) ;
 
     std::unique_ptr<Point> p(factory.createPoint(Coordinate(poi.lon_, poi.lat_))) ;
-    std::unique_ptr<Geometry> e(p->getEnvelope()) ;
+    const Envelope *e = p->getEnvelopeInternal() ;
 
-    data_.push_back({poi.id_, osm_node_t, zmin, zmax, (uint64_t)strm_.tellg()}) ;
+    DataRecord *rec = new DataRecord{poi.id_, osm_node_t, zmin, zmax, (uint64_t)strm_.tellg(), new Envelope(*e)} ;
+    data_.push_back(rec) ;
 
     WKBWriter writer ;
     writer.write(*p, strm_);
 
-    index_.insert((const Envelope *)e.get(), &(data_.back())) ;
-    envelope_.expandToInclude((const Envelope *)e.get());
+    index_.insert(rec->bounds_, rec) ;
+    envelope_.expandToInclude(e);
 
     return true ;
 }
@@ -123,7 +125,7 @@ bool GeoDatabase::addPointGeometry(const OSM::Node &poi, uint8_t zmin, uint8_t z
 bool GeoDatabase::addPolygonGeometry(OSM::DocumentReader &reader, const OSM::Polygon &poly, osm_id_t id, osm_feature_t ft, uint8_t zmin, uint8_t zmax)
 {
     PrecisionModel pm;
-    GeometryFactory factory(&pm, 4326) ;
+    GeometryFactory factory(&pm) ;
 
     if ( poly.rings_.size() == 1 ) { // simple polygon case
 
@@ -138,15 +140,16 @@ bool GeoDatabase::addPolygonGeometry(OSM::DocumentReader &reader, const OSM::Pol
         LinearRing *shell = factory.createLinearRing(cl);
 
         std::unique_ptr<Polygon> geom(factory.createPolygon(shell, nullptr)) ;
-        std::unique_ptr<Geometry> e(geom->getEnvelope()) ;
+        const Envelope *e = geom->getEnvelopeInternal() ;
 
-        data_.push_back({id, ft, zmin, zmax, (uint64_t)strm_.tellg()}) ;
+        DataRecord *rec = new DataRecord{id, ft, zmin, zmax, (uint64_t)strm_.tellg(), new Envelope(*e)} ;
+        data_.push_back(rec) ;
 
         WKBWriter writer ;
         writer.write(*geom, strm_);
 
-        index_.insert((const Envelope *)e.get(), &(data_.back())) ;
-        envelope_.expandToInclude((const Envelope *)e.get());
+        index_.insert(rec->bounds_, rec) ;
+        envelope_.expandToInclude(e);
     }
     else { // multipolygon, use Polygonize to find outer and inner rings
 
@@ -170,15 +173,16 @@ bool GeoDatabase::addPolygonGeometry(OSM::DocumentReader &reader, const OSM::Pol
 
         if ( polygons ) {
             std::unique_ptr<MultiPolygon> geom(factory.createMultiPolygon(polygons)) ;
-            std::unique_ptr<Geometry> e(geom->getEnvelope()) ;
+            const Envelope *e = geom->getEnvelopeInternal() ;
 
-            data_.push_back({id, ft, zmin, zmax, (uint64_t)strm_.tellg()}) ;
+            DataRecord *rec = new DataRecord{id, ft, zmin, zmax, (uint64_t)strm_.tellg(), new Envelope(*e)} ;
+            data_.push_back(rec) ;
 
             WKBWriter writer ;
             writer.write(*geom, strm_);
 
-            index_.insert((const Envelope *)e.get(), &(data_.back())) ;
-            envelope_.expandToInclude((const Envelope *)e.get());
+            index_.insert(rec->bounds_, rec) ;
+            envelope_.expandToInclude(e);
         }
         else {
             return false ;
@@ -200,45 +204,48 @@ GeoDatabase::GeoDatabase()
     cout << geo_db_file << endl ;
 
     strm_.open(geo_db_file, ios::in | ios::out | ios::binary | ios::trunc) ;
+
+    envelope_.setToNull();
 }
 
 bool GeoDatabase::addLineGeometry(OSM::DocumentReader &reader, const OSM::Way &way, uint8_t zmin, uint8_t zmax)
 {
     PrecisionModel pm;
-    GeometryFactory factory(&pm, 4326) ;
+    GeometryFactory factory(&pm) ;
 
     CoordinateArraySequence *cl = new CoordinateArraySequence ;
 
-    int j = 0 ;
     reader.forAllWayCoords(way.id_, [&](osm_id_t id, double lat, double lon) {
         cl->add(Coordinate(lon, lat)) ;
     }) ;
 
     std::unique_ptr<LineString> ls(factory.createLineString(cl));
-    std::unique_ptr<Geometry> e(ls->getEnvelope()) ;
+    const Envelope *e = ls->getEnvelopeInternal() ;
 
-    data_.push_back({way.id_, osm_way_t, zmin, zmax, (uint64_t)strm_.tellg()}) ;
+    DataRecord *rec = new DataRecord{way.id_, osm_way_t, zmin, zmax, (uint64_t)strm_.tellg(), new Envelope(*e)} ;
+    data_.push_back(rec) ;
 
     WKBWriter writer ;
     writer.write(*ls, strm_);
 
-    index_.insert((const Envelope *)e.get(), &(data_.back())) ;
-    envelope_.expandToInclude((const Envelope *)e.get());
+    index_.insert(rec->bounds_, rec) ;
+    envelope_.expandToInclude(e);
 
     return true ;
 }
 
 bool GeoDatabase::addGeometry(Geometry *geom, osm_id_t id, osm_feature_t ft, uint8_t zmin, uint8_t zmax)
 {
-    std::unique_ptr<Geometry> e(geom->getEnvelope()) ;
+    const Envelope *e = geom->getEnvelopeInternal() ;
 
-    data_.push_back({id, ft, zmin, zmax, (uint64_t)strm_.tellg()}) ;
+    DataRecord *rec = new DataRecord{id, ft, zmin, zmax, (uint64_t)strm_.tellg(), new Envelope(*e)} ;
+    data_.push_back(rec) ;
 
     WKBWriter writer ;
     writer.write(*geom, strm_);
 
-    index_.insert((const Envelope *)e.get(), &(data_.back())) ;
-    envelope_.expandToInclude((const Envelope *)e.get());
+    index_.insert(rec->bounds_, rec) ;
+    envelope_.expandToInclude(e);
 
     return true ;
 }
@@ -264,15 +271,16 @@ bool GeoDatabase::addMultiLineGeometry(OSM::DocumentReader &reader, const vector
     }
 
     std::unique_ptr<MultiLineString> geom(factory.createMultiLineString(&geometries)) ;
-    std::unique_ptr<Geometry> e(geom->getEnvelope()) ;
+    const Envelope *e = geom->getEnvelopeInternal() ;
 
-    data_.push_back({id, ft, zmin, zmax, (uint64_t)strm_.tellg()}) ;
+    DataRecord *rec = new DataRecord{id, ft, zmin, zmax, (uint64_t)strm_.tellg(), new Envelope(*e)} ;
+    data_.push_back(rec) ;
 
     WKBWriter writer ;
     writer.write(*geom, strm_);
 
-    index_.insert((const Envelope *)e.get(), &(data_.back())) ;
-    envelope_.expandToInclude((const Envelope *)e.get());
+    index_.insert(rec->bounds_, rec) ;
+    envelope_.expandToInclude(e);
 
     return true ;
 }
@@ -293,17 +301,97 @@ bool GeoDatabase::addBoxGeometry(const BBox &box, osm_id_t id ) {
     LinearRing *shell = factory.createLinearRing(cl);
 
     std::unique_ptr<Polygon> geom(factory.createPolygon(shell, nullptr)) ;
-    std::unique_ptr<Geometry> e(geom->getEnvelope()) ;
+    const Envelope *e = geom->getEnvelopeInternal() ;
 
-    data_.push_back({id, osm_way_t, 0, 255, (uint64_t)strm_.tellg()}) ;
+    DataRecord *rec = new DataRecord{id, osm_way_t, 0, 255, (uint64_t)strm_.tellg(), new Envelope(*e)} ;
+    data_.push_back(rec) ;
 
     WKBWriter writer ;
     writer.write(*geom, strm_);
 
-    index_.insert((const Envelope *)e.get(), &(data_.back())) ;
-    envelope_.expandToInclude((const Envelope *)e.get());
+    index_.insert(rec->bounds_, rec) ;
+    envelope_.expandToInclude(e);
 
     return true ;
+}
+
+BBox GeoDatabase::box() const {
+    return BBox(envelope_.getMinX(), envelope_.getMinY(), envelope_.getMaxX(), envelope_.getMaxY()) ;
+}
+
+void GeoDatabase::forAllGeometries(const BBox &bbox, uint8_t minz, uint8_t maxz,
+                                   std::function<void (const Geometry *, osm_id_t, osm_feature_t, uint8_t, uint8_t)> f)
+{
+    Envelope env(bbox.minx_, bbox.maxx_, bbox.miny_, bbox.maxy_) ;
+    vector<void *> matches ;
+    index_.query(&env, matches) ;
+
+    for( void *ptr: matches ) {
+        DataRecord *rec = (DataRecord *)ptr ;
+
+        uint8_t imin = std::max(rec->zmin_, minz) ;
+        uint8_t imax = std::min(rec->zmax_, maxz) ;
+
+        if ( imin <= imax ) {
+            strm_.seekg(rec->offset_) ;
+            WKBReader reader ;
+            std::unique_ptr<Geometry> geom( reader.read(strm_) ) ;
+
+            if ( geom )
+                f(geom.get(), rec->id_, rec->type_, rec->zmin_, rec->zmax_ ) ;
+        }
+    }
+}
+
+void GeoDatabase::forAllPOITags(std::function<void (const string &, const string &)> f)
+{
+    for( const auto &lp: ntags_ ) {
+        const Tag &t = lp.second ;
+        f(t.key_, t.val_) ;
+    }
+}
+
+void GeoDatabase::forAllWayTags(std::function<void (const string &, const string &)> f)
+{
+    for( const auto &lp: wtags_ ) {
+        const Tag &t = lp.second ;
+        f(t.key_, t.val_) ;
+    }
+
+    for( const auto &lp: rtags_ ) {
+        const Tag &t = lp.second ;
+        f(t.key_, t.val_) ;
+    }
+
+}
+
+
+void GeoDatabase::getTags(osm_id_t id, osm_feature_t ft, uint8_t minz, uint8_t maxz, Dictionary &tags)
+{
+    typedef std::unordered_multimap<osm_id_t, Tag>::const_iterator mapit_t ;
+    std::pair<mapit_t, mapit_t> range ;
+
+    switch ( ft ) {
+    case osm_node_t:
+        range = ntags_.equal_range(id);
+        break ;
+    case osm_way_t:
+        range = wtags_.equal_range(id);
+        break ;
+    case osm_relation_t:
+        range = rtags_.equal_range(id);
+        break ;
+    }
+
+    for_each( range.first, range.second, [&](const pair<osm_id_t, Tag> &kv) {
+        const Tag &tag = kv.second ;
+
+        uint8_t imin = std::max(tag.zmin_, minz) ;
+        uint8_t imax = std::min(tag.zmax_, maxz) ;
+
+        if ( imin <= imax ) tags.add(tag.key_, tag.val_) ;
+    }) ;
+
 }
 
 bool GeoDatabase::addTags(const TagWriteList &tags, osm_id_t id, osm_feature_t ftype)

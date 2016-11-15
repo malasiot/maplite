@@ -13,9 +13,15 @@
 #include <spatialite.h>
 #include <omp.h>
 
+#include <geos/geom/Point.h>
+#include <geos/geom/LineString.h>
+#include <geos/geom/Polygon.h>
+#include <geos/geom/CoordinateArraySequence.h>
+#include <geos/geom/PrecisionModel.h>
+#include <geos/geom/GeometryFactory.h>
+#include <geos/simplify/TopologyPreservingSimplifier.h>
+
 using namespace std ;
-
-
 
 static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &tags) {
     vector<uint64_t> freq ;
@@ -34,76 +40,45 @@ static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &ta
 }
 
 static bool get_poi_tags(GeoDatabase &db, std::vector<string> &pois, map<string, uint32_t> &tag_mapping) {
-#if 0
-    try {
-        map<string, uint64_t> tag_hist ;
-
-        string sql = "SELECT key, val from kv JOIN geom_pois ON geom_pois.osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ele');" ;
-        SQLite::Query q(db, sql) ;
-
-        for( const SQLite::Row &r: q.exec() ) {
-            string tag = r[0].as<string>();
-            string val = r[1].as<string>();
-
-            auto it = tag_hist.find(tag) ;
-            if ( it == tag_hist.end() )
-                tag_hist.insert(make_pair(tag + '=' + val, 1)) ;
-            else
-                it->second ++ ;
-        }
-
-        sort_histogram(tag_hist, pois) ;
-
-        for( uint i=0 ; i<pois.size() ; i++ )
-            tag_mapping.emplace(std::make_pair(pois[i], i)) ;
-
-        return true ;
-    }
-    catch ( SQLite::Exception &e ) {
-        cerr << e.what() << endl ;
-        return false ;
-    }
-#endif
-}
-
-static bool query_kv(SQLite::Connection &con, const string &table, map<string, uint64_t> &tag_hist) {
-    string sql = "SELECT key, val from kv JOIN " + table + " ON " + table + ".osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ref');" ;
-
-    try {
-        SQLite::Query q(con, sql) ;
-
-        for( const SQLite::Row &r: q.exec() ) {
-            string tag = r[0].as<string>();
-            string val = r[1].as<string>();
-
-            auto it = tag_hist.find(tag) ;
-            if ( it == tag_hist.end() )
-                tag_hist.insert(make_pair(tag + '=' + val, 1)) ;
-            else
-                it->second ++ ;
-        }
-
-        return true ;
-    }
-    catch ( SQLite::Exception &e ) {
-        cerr << e.what() << endl ;
-        return false ;
-    }
-}
-
-static bool get_way_tags(GeoDatabase &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
-/*
     map<string, uint64_t> tag_hist ;
 
-    if ( !query_kv(db, "geom_lines", tag_hist)  ||
-         !query_kv(db, "geom_polygons", tag_hist)
-         ) return false ;
+    db.forAllPOITags([&](const string &tag, const string &val) {
+        if ( tag == "name" || tag == "addr:housenumber" || tag == "ele" ) return ;
+        auto it = tag_hist.find(tag) ;
+        if ( it == tag_hist.end() )
+            tag_hist.insert(std::make_pair(tag + '=' + val, 1)) ;
+        else
+            it->second ++ ;
+    }) ;
+
+    sort_histogram(tag_hist, pois) ;
+
+    for( uint i=0 ; i<pois.size() ; i++ )
+        tag_mapping.emplace(std::make_pair(pois[i], i)) ;
+
+    return true ;
+
+
+}
+
+
+static bool get_way_tags(GeoDatabase &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
+    map<string, uint64_t> tag_hist ;
+
+    db.forAllWayTags([&](const string &tag, const string &val) {
+        if ( tag == "name" || tag == "addr:housenumber" || tag == "ref" ) return ;
+        auto it = tag_hist.find(tag) ;
+        if ( it == tag_hist.end() )
+            tag_hist.insert(std::make_pair(tag + '=' + val, 1)) ;
+        else
+            it->second ++ ;
+    }) ;
 
     sort_histogram(tag_hist, ways) ;
 
     for( uint i=0 ; i<ways.size() ; i++ )
         tag_mapping.emplace(std::make_pair(ways[i], i)) ;
-*/
+
     return true ;
 }
 
@@ -359,7 +334,7 @@ void MapFileWriter::writeSubFiles(GeoDatabase &db, const WriteOptions &options)
             vector<string> tile_data(chunk_left) ;
             vector<bool> tile_is_sea(chunk_left) ;
 
-//#pragma omp parallel for
+            //#pragma omp parallel for
             for( uint k = j ; k< j + chunk_left ; k++ ) {
 
                 int32_t row = k / cols ;
@@ -451,58 +426,68 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 }
 */
 
+std::unique_ptr<geos::geom::Polygon> geomFromBox(const BBox &box) {
+    using namespace geos::geom ;
+
+    PrecisionModel pm;
+    GeometryFactory factory(&pm) ;
+
+    CoordinateArraySequence *cl = new CoordinateArraySequence();
+
+    cl->add(Coordinate(box.minx_, box.miny_));
+    cl->add(Coordinate(box.maxx_, box.miny_));
+    cl->add(Coordinate(box.maxx_, box.maxy_));
+    cl->add(Coordinate(box.minx_, box.maxy_));
+    cl->add(Coordinate(box.minx_, box.miny_));
+
+    LinearRing *shell = factory.createLinearRing(cl);
+    std::unique_ptr<Polygon> geom(factory.createPolygon(shell, nullptr)) ;
+
+    return geom ;
+}
+
+void convertGeomToWayData(geos::geom::Geometry *geom, WayDataContainer &wc) {
+
+}
+
 static bool fetch_pois(GeoDatabase &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
-#if 0
-    try {
-        string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0, false) ;
-        SQLite::Query q(db, sql) ;
+    using namespace geos::geom ;
+    using namespace geos::simplify ;
 
-        osm_id_t prev_id ;
+    std::unique_ptr<Polygon> clip_box = geomFromBox(bbox) ;
 
-        for( const SQLite::Row &r: q.exec() ) {
-         // each geometry appears as many times as the number of associated tags, here we group the results
+    db.forAllGeometries(bbox, min_zoom, max_zoom, [&](const Geometry *geom, osm_id_t id, osm_feature_t ft, uint8_t zmin, uint8_t zmax) {
+        const Point *p = dynamic_cast<const Point *>(geom) ;
+        if ( p ) {
+            double lon = p->getX();
+            double lat = p->getY();
 
-            osm_id_t osm_id = r[0].as<osm_id_t>() ;
-            string key = r[1].as<string>() ;
-            string val = r[2].as<string>() ;
-            uint8_t minz = r[3].as<int>() ;
-            uint8_t maxz = r[4].as<int>() ;
+            pois.emplace_back(ILatLon(lat, lon), id) ;
 
-            if ( osm_id != prev_id ) {
+            db.getTags(id, osm_node_t, min_zoom, max_zoom, pois.back().tags_) ;
 
-               // const char *data = res.getBlob(5, blob_size) ;
-                SQLite::Blob blob = r[5].as<SQLite::Blob>() ;
+            // we add the poi at the lowest possible level
+            int z = std::max<int>(zmin, min_zoom) - (int)min_zoom;
+            pois_per_level[z].push_back(pois.size()-1) ;
+            return ;
+        }
+        const LineString *ls = dynamic_cast<const LineString *>(geom) ;
+        if ( ls ) {
+            const double tol = 0.0001 ;
+            std::unique_ptr<Geometry> clipped(ls->intersection(clip_box.get())) ;
+            std::unique_ptr<Geometry> simplified = TopologyPreservingSimplifier::simplify(clipped.get(), tol) ;
 
-                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)blob.data(), blob.size());
+            WayDataContainer wc ;
+            wc.id_ = id ;
+            convertGeomToWayData(simplified.get(), wc) ;
+        //    ways.emplace_back(wc) ;
 
-                for( gaiaPointPtr p = geom->FirstPoint ; p != nullptr ; p = p->Next ) {
-                    double lon = p->X ;
-                    double lat = p->Y ;
-
-                    pois.emplace_back(ILatLon(lat, lon), osm_id) ;
-
-                    // we add the poi at the lowest possible level
-                    int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
-                    pois_per_level[z].push_back(pois.size()-1) ;
-                }
-
-                gaiaFreeGeomColl(geom) ;
-
-            }
-
-            pois.back().tags_.add(key, val) ;
-
-            prev_id = osm_id ;
+            return ;
         }
 
-        return true ;
 
-    }
-    catch ( SQLite::Exception &e) {
-        cerr << e.what() << endl ;
-        return false ;
-    }
-#endif
+    }) ;
+
 }
 
 
@@ -694,7 +679,7 @@ void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t mi
 {
     BBox bbox ;
     TileKey bt(tx, ty, tz, true) ;
-    tms::tileBounds(bt.x(), bt.y(), bt.z(), bbox.minx_, bbox.miny_, bbox.maxx_, bbox.maxy_) ;
+    tms::tileLatLonBounds(bt.x(), bt.y(), bt.z(), bbox.miny_, bbox.minx_, bbox.maxy_, bbox.maxx_) ;
     int nz = (int)max_zoom - (int)min_zoom + 1 ;
 
     pois_per_level.resize(nz) ;
