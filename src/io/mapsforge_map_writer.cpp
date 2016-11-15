@@ -33,7 +33,8 @@ static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &ta
     }) ;
 }
 
-static bool get_poi_tags(SQLite::Connection &db, std::vector<string> &pois, map<string, uint32_t> &tag_mapping) {
+static bool get_poi_tags(GeoDatabase &db, std::vector<string> &pois, map<string, uint32_t> &tag_mapping) {
+#if 0
     try {
         map<string, uint64_t> tag_hist ;
 
@@ -62,6 +63,7 @@ static bool get_poi_tags(SQLite::Connection &db, std::vector<string> &pois, map<
         cerr << e.what() << endl ;
         return false ;
     }
+#endif
 }
 
 static bool query_kv(SQLite::Connection &con, const string &table, map<string, uint64_t> &tag_hist) {
@@ -89,8 +91,8 @@ static bool query_kv(SQLite::Connection &con, const string &table, map<string, u
     }
 }
 
-static bool get_way_tags(SQLite::Connection &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
-
+static bool get_way_tags(GeoDatabase &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
+/*
     map<string, uint64_t> tag_hist ;
 
     if ( !query_kv(db, "geom_lines", tag_hist)  ||
@@ -101,7 +103,7 @@ static bool get_way_tags(SQLite::Connection &db, std::vector<string> &ways, map<
 
     for( uint i=0 ; i<ways.size() ; i++ )
         tag_mapping.emplace(std::make_pair(ways[i], i)) ;
-
+*/
     return true ;
 }
 
@@ -160,7 +162,7 @@ void MapFileWriter::create(const std::string &file_path) {
     info_.projection_ = "Mercator" ;
 }
 
-void MapFileWriter::write(SQLite::Connection &db, WriteOptions &options) {
+void MapFileWriter::write(GeoDatabase &db, WriteOptions &options) {
 
     setDebug(options.debug_);
     writeHeader(db, options) ;
@@ -176,7 +178,7 @@ void MapFileWriter::write(SQLite::Connection &db, WriteOptions &options) {
 
 
 
-void MapFileWriter::writeHeader(SQLite::Connection &db, WriteOptions &options)
+void MapFileWriter::writeHeader(GeoDatabase &db, WriteOptions &options)
 {
     MapFileOSerializer so(strm_) ;
 
@@ -308,7 +310,7 @@ static bool check_is_sea( const vector<POIData> &pois, const vector<WayDataConta
     return false ;
 }
 
-void MapFileWriter::writeSubFiles(SQLite::Connection &db, const WriteOptions &options)
+void MapFileWriter::writeSubFiles(GeoDatabase &db, const WriteOptions &options)
 {
     MapFileOSerializer s(strm_) ;
 
@@ -411,7 +413,7 @@ void MapFileWriter::writeSubFiles(SQLite::Connection &db, const WriteOptions &op
         strm_.seekg(info.offset_ + info.size_) ;
     }
 }
-
+/*
 
 static string make_bbox_query(const std::string &tableName, const BBox &bbox, int min_zoom,
                               int max_zoom, bool clip, double buffer, double tol, bool centroid)
@@ -447,8 +449,10 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 
     return sql.str() ;
 }
+*/
 
-static bool fetch_pois(SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
+static bool fetch_pois(GeoDatabase &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
+#if 0
     try {
         string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0, false) ;
         SQLite::Query q(db, sql) ;
@@ -498,12 +502,14 @@ static bool fetch_pois(SQLite::Connection &db, const BBox &bbox, uint8_t min_zoo
         cerr << e.what() << endl ;
         return false ;
     }
+#endif
 }
 
 
-static bool fetch_lines(const std::string &tableName, SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
+static bool fetch_lines(const std::string &tableName, GeoDatabase &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
                         bool clip, double buffer, double tol,
                         vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
+    /*
     try {
         string sql = make_bbox_query(tableName, bbox, min_zoom, max_zoom, clip, buffer, tol, false) ;
         SQLite::Query q(db, sql) ;
@@ -569,10 +575,12 @@ static bool fetch_lines(const std::string &tableName, SQLite::Connection &db, co
         cerr << e.what() << endl ;
         return false ;
     }
+    */
 }
 
-static bool fetch_polygons(SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, bool clip,
+static bool fetch_polygons(GeoDatabase &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, bool clip,
                            double buffer, double tol, bool labels, vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
+    /*
     try {
         string sql = make_bbox_query("geom_polygons", bbox, min_zoom, max_zoom, clip, buffer, tol, labels) ;
         SQLite::Query q(db, sql) ;
@@ -662,6 +670,7 @@ static bool fetch_polygons(SQLite::Connection &db, const BBox &bbox, uint8_t min
         cerr << e.what() << endl ;
         return false ;
     }
+    */
 }
 
 // Computes the amount of latitude degrees for a given distance in pixel at a given zoom level.
@@ -677,7 +686,7 @@ static double deltaLat(double delta, double lat, uint8_t zoom) {
     return fabs(dlat - lat) ;
 }
 
-void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Connection &db, const WriteOptions &options,
+void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, GeoDatabase &db, const WriteOptions &options,
                                   vector<POIData> &pois,
                                   vector<vector<uint32_t>> &pois_per_level,
                                   vector<WayDataContainer> &ways,

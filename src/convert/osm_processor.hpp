@@ -21,16 +21,7 @@ using std::map ;
 class OSMProcessor {
 public:
 
-    // Create a new database deleting any old file if it exists.
-
-    bool create(const string &filePath) ;
-
-    // Get handle to database
-
-    SQLite::Connection &db() { return db_ ; }
-
-    bool createGeometriesTable(const std::string &desc);
-    bool createTagsTable() ;
+    OSMProcessor() {}
 
     bool processOsmFile(const string &path, TagFilter &filter) ;
 
@@ -41,6 +32,8 @@ public:
     bool addDefaultLandPolygon(const BBox &clip_box) ;
 
     BBox getBoundingBoxFromGeometries();
+
+    GeoDatabase &getDatabase() { return geodb_ ; }
 
 private:
     string insertFeatureSQL(const std::string &desc, const std::string &geomCmd = "?") ;
@@ -54,7 +47,7 @@ private:
 
 private:
 
-    SQLite::Connection db_ ;
+    GeoDatabase geodb_ ;
 };
 
 #endif

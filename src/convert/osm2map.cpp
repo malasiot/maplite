@@ -96,12 +96,12 @@ int main(int argc, char *argv[])
     cout << spatialite_db_file << endl ;
 
     OSMProcessor proc ;
-
+/*
     if ( !proc.create(spatialite_db_file) ) {
         cerr << "can't create temporary spatialite database: " << spatialite_db_file << endl ;
         exit(1) ;
     }
-
+*/
     TagFilter filter ;
     if ( !filter.parse(filter_config_file) ) {
         cerr << "Error parsing OSM tag filter configuration file: " << filter_config_file << endl ;
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    SQLite::Connection &db = proc.db() ;
+    GeoDatabase &db = proc.getDatabase() ;
 
     if ( !has_bbox )
         writer.setBoundingBox(proc.getBoundingBoxFromGeometries());

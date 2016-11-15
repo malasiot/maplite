@@ -11,6 +11,8 @@
 
 typedef int64_t osm_id_t ;
 
+enum osm_feature_t { osm_node_t = 0, osm_way_t = 1, osm_relation_t = 2} ;
+
 namespace OSM {
 
 struct Feature {
