@@ -471,19 +471,26 @@ static bool fetch_pois(GeoDatabase &db, const BBox &bbox, uint8_t min_zoom, uint
             pois_per_level[z].push_back(pois.size()-1) ;
             return ;
         }
-        const LineString *ls = dynamic_cast<const LineString *>(geom) ;
-        if ( ls ) {
+        else {
             const double tol = 0.0001 ;
-            std::unique_ptr<Geometry> clipped(ls->intersection(clip_box.get())) ;
+            Point *centroid = geom->getCentroid();
+            std::unique_ptr<Geometry> clipped(geom->intersection(clip_box.get())) ;
             std::unique_ptr<Geometry> simplified = TopologyPreservingSimplifier::simplify(clipped.get(), tol) ;
+            const Envelope *e = simplified->getEnvelopeInternal() ;
+
 
             WayDataContainer wc ;
+            tms::latlonToMeters(e->getMinY(), e->getMinX(), wc.box_.minx_, wc.box_.miny_) ;
+            tms::latlonToMeters(e->getMaxY(), e->getMaxX(), wc.box_.maxx_, wc.box_.maxy_) ;
+
             wc.id_ = id ;
             convertGeomToWayData(simplified.get(), wc) ;
         //    ways.emplace_back(wc) ;
 
-            return ;
+
+
         }
+
 
 
     }) ;
