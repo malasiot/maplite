@@ -4,6 +4,7 @@
 #include "tms.hpp"
 #include "tile_key.hpp"
 #include "progress_stream.hpp"
+#include "osm_processor.hpp"
 
 #include <string>
 #include <stdexcept>
@@ -33,69 +34,37 @@ static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &ta
     }) ;
 }
 
-static bool get_poi_tags(SQLite::Connection &db, std::vector<string> &pois, map<string, uint32_t> &tag_mapping) {
-    try {
-        map<string, uint64_t> tag_hist ;
-
-        string sql = "SELECT key, val from kv JOIN geom_pois ON geom_pois.osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ele');" ;
-        SQLite::Query q(db, sql) ;
-
-        for( const SQLite::Row &r: q.exec() ) {
-            string tag = r[0].as<string>();
-            string val = r[1].as<string>();
-
-            auto it = tag_hist.find(tag) ;
-            if ( it == tag_hist.end() )
-                tag_hist.insert(make_pair(tag + '=' + val, 1)) ;
-            else
-                it->second ++ ;
-        }
-
-        sort_histogram(tag_hist, pois) ;
-
-        for( uint i=0 ; i<pois.size() ; i++ )
-            tag_mapping.emplace(std::make_pair(pois[i], i)) ;
-
-        return true ;
-    }
-    catch ( SQLite::Exception &e ) {
-        cerr << e.what() << endl ;
-        return false ;
-    }
-}
-
-static bool query_kv(SQLite::Connection &con, const string &table, map<string, uint64_t> &tag_hist) {
-    string sql = "SELECT key, val from kv JOIN " + table + " ON " + table + ".osm_id = kv.osm_id WHERE key NOT IN ('name', 'addr:housenumber', 'ref');" ;
-
-    try {
-        SQLite::Query q(con, sql) ;
-
-        for( const SQLite::Row &r: q.exec() ) {
-            string tag = r[0].as<string>();
-            string val = r[1].as<string>();
-
-            auto it = tag_hist.find(tag) ;
-            if ( it == tag_hist.end() )
-                tag_hist.insert(make_pair(tag + '=' + val, 1)) ;
-            else
-                it->second ++ ;
-        }
-
-        return true ;
-    }
-    catch ( SQLite::Exception &e ) {
-        cerr << e.what() << endl ;
-        return false ;
-    }
-}
-
-static bool get_way_tags(SQLite::Connection &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
-
+static bool get_poi_tags(OSMProcessor &db, std::vector<string> &pois, map<string, uint32_t> &tag_mapping) {
     map<string, uint64_t> tag_hist ;
 
-    if ( !query_kv(db, "geom_lines", tag_hist)  ||
-         !query_kv(db, "geom_polygons", tag_hist)
-         ) return false ;
+    db.forAllPOITags([&](const string &tag, const string &val) {
+        if ( tag == "name" || tag == "addr:housenumber" || tag == "ele" ) return ;
+        auto it = tag_hist.find(tag) ;
+        if ( it == tag_hist.end() )
+            tag_hist.insert(std::make_pair(tag + '=' + val, 1)) ;
+        else
+            it->second ++ ;
+    }) ;
+
+    sort_histogram(tag_hist, pois) ;
+
+    for( uint i=0 ; i<pois.size() ; i++ )
+        tag_mapping.emplace(std::make_pair(pois[i], i)) ;
+
+    return true ;
+}
+
+static bool get_way_tags(OSMProcessor &db, std::vector<string> &ways, map<string, uint32_t> &tag_mapping) {
+    map<string, uint64_t> tag_hist ;
+
+    db.forAllWayTags([&](const string &tag, const string &val) {
+        if ( tag == "name" || tag == "addr:housenumber" || tag == "ref" ) return ;
+        auto it = tag_hist.find(tag) ;
+        if ( it == tag_hist.end() )
+            tag_hist.insert(std::make_pair(tag + '=' + val, 1)) ;
+        else
+            it->second ++ ;
+    }) ;
 
     sort_histogram(tag_hist, ways) ;
 
@@ -104,6 +73,7 @@ static bool get_way_tags(SQLite::Connection &db, std::vector<string> &ways, map<
 
     return true ;
 }
+
 
 void MapFileWriter::setBoundingBox(const BBox &box) {
     info_.min_lat_ = box.miny_ ;
@@ -160,7 +130,7 @@ void MapFileWriter::create(const std::string &file_path) {
     info_.projection_ = "Mercator" ;
 }
 
-void MapFileWriter::write(SQLite::Connection &db, WriteOptions &options) {
+void MapFileWriter::write(OSMProcessor &db, WriteOptions &options) {
 
     setDebug(options.debug_);
     writeHeader(db, options) ;
@@ -176,7 +146,7 @@ void MapFileWriter::write(SQLite::Connection &db, WriteOptions &options) {
 
 
 
-void MapFileWriter::writeHeader(SQLite::Connection &db, WriteOptions &options)
+void MapFileWriter::writeHeader(OSMProcessor &db, WriteOptions &options)
 {
     MapFileOSerializer so(strm_) ;
 
@@ -308,7 +278,7 @@ static bool check_is_sea( const vector<POIData> &pois, const vector<WayDataConta
     return false ;
 }
 
-void MapFileWriter::writeSubFiles(SQLite::Connection &db, const WriteOptions &options)
+void MapFileWriter::writeSubFiles(OSMProcessor &db, const WriteOptions &options)
 {
     MapFileOSerializer s(strm_) ;
 
@@ -448,220 +418,130 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
     return sql.str() ;
 }
 
-static bool fetch_pois(SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
-    try {
-        string sql = make_bbox_query("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0, false) ;
-        SQLite::Query q(db, sql) ;
+static bool fetch_pois(OSMProcessor &proc, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
+                       vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
 
-        osm_id_t prev_id ;
+    return proc.forAllGeometries("geom_pois", bbox, min_zoom, max_zoom, false, 0, 0, false,
+                          [&](gaiaGeomCollPtr geom, osm_id_t id, osm_feature_t ft, uint8_t minz, uint8_t maxz, double, double) {
 
-        for( const SQLite::Row &r: q.exec() ) {
-         // each geometry appears as many times as the number of associated tags, here we group the results
+        for( gaiaPointPtr p = geom->FirstPoint ; p != nullptr ; p = p->Next ) {
+            double lon = p->X ;
+            double lat = p->Y ;
 
-            osm_id_t osm_id = r[0].as<osm_id_t>() ;
-            string key = r[1].as<string>() ;
-            string val = r[2].as<string>() ;
-            uint8_t minz = r[3].as<int>() ;
-            uint8_t maxz = r[4].as<int>() ;
+            pois.emplace_back(ILatLon(lat, lon), id) ;
 
-            if ( osm_id != prev_id ) {
-
-               // const char *data = res.getBlob(5, blob_size) ;
-                SQLite::Blob blob = r[5].as<SQLite::Blob>() ;
-
-                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)blob.data(), blob.size());
-
-                for( gaiaPointPtr p = geom->FirstPoint ; p != nullptr ; p = p->Next ) {
-                    double lon = p->X ;
-                    double lat = p->Y ;
-
-                    pois.emplace_back(ILatLon(lat, lon), osm_id) ;
-
-                    // we add the poi at the lowest possible level
-                    int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
-                    pois_per_level[z].push_back(pois.size()-1) ;
-                }
-
-                gaiaFreeGeomColl(geom) ;
-
-            }
-
-            pois.back().tags_.add(key, val) ;
-
-            prev_id = osm_id ;
+            // we add the poi at the lowest possible level
+            int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
+            pois_per_level[z].push_back(pois.size()-1) ;
         }
 
-        return true ;
+        proc.getTags(id, ft, min_zoom, max_zoom, pois.back().tags_) ;
+    }) ;
 
-    }
-    catch ( SQLite::Exception &e) {
-        cerr << e.what() << endl ;
-        return false ;
-    }
 }
 
 
-static bool fetch_lines(const std::string &tableName, SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
+static bool fetch_lines(OSMProcessor &proc, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
                         bool clip, double buffer, double tol,
                         vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
-    try {
-        string sql = make_bbox_query(tableName, bbox, min_zoom, max_zoom, clip, buffer, tol, false) ;
-        SQLite::Query q(db, sql) ;
-        osm_id_t prev_id ;
 
-        for( const SQLite::Row &r: q.exec() ) {
-         // each geometry appears as many times as the number of associated tags, here we group the results
 
-            osm_id_t osm_id = r[0].as<osm_id_t>() ;
-            string key = r[1].as<string>() ;
-            string val = r[2].as<string>() ;
-            uint8_t minz = r[3].as<int>() ;
-            uint8_t maxz = r[4].as<int>() ;
+    return proc.forAllGeometries("geom_lines", bbox, min_zoom, max_zoom, clip, buffer, tol, false,
+                          [&](gaiaGeomCollPtr geom, osm_id_t id, osm_feature_t ft, uint8_t minz, uint8_t maxz, double, double) {
 
-            if ( osm_id != prev_id ) {
+        // each line may be broken into multiple linestrings by clipping
+        WayDataContainer wc ;
 
-                SQLite::Blob blob = r[5].as<SQLite::Blob>() ;
+        // we conveniently also get the MBR of the geometry
 
-                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)blob.data(), blob.size());
+        tms::latlonToMeters(geom->MinY, geom->MinX, wc.box_.minx_, wc.box_.miny_) ;
+        tms::latlonToMeters(geom->MaxY, geom->MaxX, wc.box_.maxx_, wc.box_.maxy_) ;
 
-                // each line may be broken into multiple linestrings by clipping
-                WayDataContainer wc ;
+        for( gaiaLinestringPtr p = geom->FirstLinestring ; p != nullptr ; p = p->Next ) {
+            double *coords = p->Coords ;
+            WayDataBlock block ;
+            block.coords_.resize(1) ;
 
-                // we conveniently also get the MBR of the geometry
-
-                tms::latlonToMeters(geom->MinY, geom->MinX, wc.box_.minx_, wc.box_.miny_) ;
-                tms::latlonToMeters(geom->MaxY, geom->MaxX, wc.box_.maxx_, wc.box_.maxy_) ;
-
-                for( gaiaLinestringPtr p = geom->FirstLinestring ; p != nullptr ; p = p->Next ) {
-                    double *coords = p->Coords ;
-                    WayDataBlock block ;
-                    block.coords_.resize(1) ;
-
-                    for( uint i=0 ; i<p->Points ; i++ ) {
-                        double lon = *coords++ ;
-                        double lat = *coords++ ;
-                        block.coords_[0].emplace_back(lat, lon) ;
-                    }
-
-                    wc.blocks_.emplace_back(block) ;
-                }
-
-                wc.id_ = osm_id ;
-                ways.emplace_back(wc) ;
-
-                // we add the way at the lowest possible level
-                int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
-                ways_per_level[z].push_back(ways.size()-1) ;
-
-                gaiaFreeGeomColl(geom) ;
-
+            for( uint i=0 ; i<p->Points ; i++ ) {
+                double lon = *coords++ ;
+                double lat = *coords++ ;
+                block.coords_[0].emplace_back(lat, lon) ;
             }
 
-            ways.back().tags_.add(key, val) ;
-
-            prev_id = osm_id ;
+            wc.blocks_.emplace_back(block) ;
         }
 
-        return true ;
+        wc.id_ = id ;
+        ways.emplace_back(wc) ;
 
-    }
-    catch ( SQLite::Exception &e) {
-        cerr << e.what() << endl ;
-        return false ;
-    }
+        // we add the way at the lowest possible level
+        int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
+        ways_per_level[z].push_back(ways.size()-1) ;
+
+        proc.getTags(id, ft, min_zoom, max_zoom, ways.back().tags_) ;
+    }) ;
+
 }
 
-static bool fetch_polygons(SQLite::Connection &db, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, bool clip,
+static bool fetch_polygons(OSMProcessor &proc, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom, bool clip,
                            double buffer, double tol, bool labels, vector<WayDataContainer> &ways, vector<vector<uint32_t>> &ways_per_level) {
-    try {
-        string sql = make_bbox_query("geom_polygons", bbox, min_zoom, max_zoom, clip, buffer, tol, labels) ;
-        SQLite::Query q(db, sql) ;
-        osm_id_t prev_id ;
 
-        for( const SQLite::Row &r: q.exec() ) { // each geometry appears as many times as the number of associated tags, here we group the results
+    return proc.forAllGeometries("geom_polygons", bbox, min_zoom, max_zoom, clip, buffer, tol, labels,
+                          [&](gaiaGeomCollPtr geom, osm_id_t id, osm_feature_t ft, uint8_t minz, uint8_t maxz, double clat, double clon) {
+        // each polygon may be broken into multiple polygons by clipping
+        WayDataContainer wc ;
 
-            osm_id_t osm_id = r[0].as<osm_id_t>() ;
-            string key = r[1].as<string>() ;
-            string val = r[2].as<string>() ;
-            uint8_t minz = r[3].as<int>() ;
+        // we conveniently also get the MBR of the geometry
 
-            if ( osm_id != prev_id ) {
+        tms::latlonToMeters(geom->MinY, geom->MinX, wc.box_.minx_, wc.box_.miny_) ;
+        tms::latlonToMeters(geom->MaxY, geom->MaxX, wc.box_.maxx_, wc.box_.maxy_) ;
 
-                SQLite::Blob blob = r[5].as<SQLite::Blob>() ;
+        for( gaiaPolygonPtr p = geom->FirstPolygon ; p != nullptr ; p = p->Next ) {
 
-                gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)blob.data(), blob.size());
+            uint n_interior_rings = p->NumInteriors ;
 
-                // each polygon may be broken into multiple polygons by clipping
-                WayDataContainer wc ;
+            WayDataBlock block ;
+            block.coords_.resize(1 + n_interior_rings) ;
 
-                // we conveniently also get the MBR of the geometry
+            gaiaRingPtr ex_ring = p->Exterior ;
+            double *coords = ex_ring->Coords ;
 
-                tms::latlonToMeters(geom->MinY, geom->MinX, wc.box_.minx_, wc.box_.miny_) ;
-                tms::latlonToMeters(geom->MaxY, geom->MaxX, wc.box_.maxx_, wc.box_.maxy_) ;
+            for( uint i=0 ; i<ex_ring->Points ; i++ ) {
+                double lon = *coords++ ;
+                double lat = *coords++ ;
+                block.coords_[0].emplace_back(lat, lon) ;
+            }
 
-                for( gaiaPolygonPtr p = geom->FirstPolygon ; p != nullptr ; p = p->Next ) {
+            for( uint k=0 ; k< n_interior_rings ; k++ ) {
+                gaiaRing &ir_ring = p->Interiors[k] ;
+                double *coords = ir_ring.Coords ;
 
-                    uint n_interior_rings = p->NumInteriors ;
-
-                    WayDataBlock block ;
-                    block.coords_.resize(1 + n_interior_rings) ;
-
-                    gaiaRingPtr ex_ring = p->Exterior ;
-                    double *coords = ex_ring->Coords ;
-
-                    for( uint i=0 ; i<ex_ring->Points ; i++ ) {
-                        double lon = *coords++ ;
-                        double lat = *coords++ ;
-                        block.coords_[0].emplace_back(lat, lon) ;
-                    }
-
-                    for( uint k=0 ; k< n_interior_rings ; k++ ) {
-                        gaiaRing &ir_ring = p->Interiors[k] ;
-                        double *coords = ir_ring.Coords ;
-
-                        for( uint i=0 ; i<ir_ring.Points ; i++ ) {
-                            double lon = *coords++ ;
-                            double lat = *coords++ ;
-                            block.coords_[k+1].emplace_back(lat, lon) ;
-                        }
-                    }
-
-                    wc.blocks_.emplace_back(block) ;
-                }
-
-                wc.id_ = osm_id ;
-                ways.emplace_back(wc) ;
-
-                // we add the way at the lowest possible level
-                int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
-                ways_per_level[z].push_back(ways.size()-1) ;
-
-                gaiaFreeGeomColl(geom) ;
-
-
-                if ( labels ) {
-                    SQLite::Blob data = r[6].as<SQLite::Blob>() ;
-
-                    geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data.data(), data.size());
-                    double lon = geom->FirstPoint->X ;
-                    double lat = geom->FirstPoint->Y ;
-                    wc.label_pos_ = ILatLon(lat, lon) ;
-                    gaiaFreeGeomColl(geom) ;
+                for( uint i=0 ; i<ir_ring.Points ; i++ ) {
+                    double lon = *coords++ ;
+                    double lat = *coords++ ;
+                    block.coords_[k+1].emplace_back(lat, lon) ;
                 }
             }
 
-            ways.back().tags_.add(key, val) ;
-
-            prev_id = osm_id ;
+            wc.blocks_.emplace_back(block) ;
         }
 
-        return true ;
+        wc.id_ = id ;
 
-    }
-    catch ( SQLite::Exception &e) {
-        cerr << e.what() << endl ;
-        return false ;
-    }
+        if ( labels )
+            wc.label_pos_ = ILatLon(clat, clon) ;
+
+        ways.emplace_back(wc) ;
+
+        // we add the way at the lowest possible level
+        int z = std::max<int>(minz, min_zoom) - (int)min_zoom;
+        ways_per_level[z].push_back(ways.size()-1) ;
+
+
+        proc.getTags(id, ft, min_zoom, max_zoom, ways.back().tags_) ;
+    }) ;
+
+
 }
 
 // Computes the amount of latitude degrees for a given distance in pixel at a given zoom level.
@@ -677,7 +557,7 @@ static double deltaLat(double delta, double lat, uint8_t zoom) {
     return fabs(dlat - lat) ;
 }
 
-void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, SQLite::Connection &db, const WriteOptions &options,
+void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, OSMProcessor &db, const WriteOptions &options,
                                   vector<POIData> &pois,
                                   vector<vector<uint32_t>> &pois_per_level,
                                   vector<WayDataContainer> &ways,
@@ -695,7 +575,7 @@ void MapFileWriter::fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t mi
     double tol = ( tz <= 12 && options.simplification_factor_ > 0 ) ? deltaLat(options.simplification_factor_, info_.max_lat_, max_zoom) : 0 ;
 
     fetch_pois(db, bbox, min_zoom, max_zoom, pois, pois_per_level) ;
-    fetch_lines("geom_lines", db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
+    fetch_lines(db, bbox, min_zoom, max_zoom, options.way_clipping_, options.bbox_enlargement_, tol, ways, ways_per_level) ;
     fetch_polygons(db, bbox, min_zoom, max_zoom, options.polygon_clipping_, options.bbox_enlargement_, tol, options.label_positions_, ways, ways_per_level) ;
 
     for( auto &way: ways) {

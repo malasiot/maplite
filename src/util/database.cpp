@@ -314,14 +314,14 @@ template<>
 long int QueryResult::get(int idx) const
 {
     cmd_.check() ;
-    return sqlite3_column_int(cmd_.handle(), idx);
+    return sqlite3_column_int64(cmd_.handle(), idx);
 }
 
 template<>
 unsigned long int QueryResult::get(int idx) const
 {
     cmd_.check() ;
-    return sqlite3_column_int(cmd_.handle(), idx);
+    return sqlite3_column_int64(cmd_.handle(), idx);
 }
 
 template<>

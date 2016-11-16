@@ -13,9 +13,9 @@ namespace po = boost::program_options ;
 
 int main(int argc, char *argv[])
 {
-    string spatialite_db_file, filter_config_file, out_map_file ;
+    string filter_config_file, out_map_file ;
     string land_shp_file ;
-    bool has_bbox ;
+    bool has_bbox = false ;
     vector<string> osm_files ;
 
     MapFileWriter writer ;
@@ -88,19 +88,7 @@ int main(int argc, char *argv[])
 
     writer.setCreator("osm2map") ;
 
-    boost::filesystem::path tmp_dir = boost::filesystem::temp_directory_path() ;
-    boost::filesystem::path tmp_file = boost::filesystem::unique_path("%%%%%.sqlite");
-
-    spatialite_db_file = ( tmp_dir / tmp_file ).native() ;
-
-    cout << spatialite_db_file << endl ;
-
     OSMProcessor proc ;
-
-    if ( !proc.create(spatialite_db_file) ) {
-        cerr << "can't create temporary spatialite database: " << spatialite_db_file << endl ;
-        exit(1) ;
-    }
 
     TagFilter filter ;
     if ( !filter.parse(filter_config_file) ) {
@@ -122,6 +110,7 @@ int main(int argc, char *argv[])
 
     BBox box = writer.getBoundingBox();
 
+
     if ( !land_shp_file.empty() )
         proc.processLandPolygon(land_shp_file, box) ;
     else
@@ -136,7 +125,7 @@ int main(int argc, char *argv[])
 
     cout << "encoding file" << endl ;
 
-    writer.write(db, woptions) ;
+    writer.write(proc, woptions) ;
 
     return 1 ;
 

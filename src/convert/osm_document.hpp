@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 typedef int64_t osm_id_t ;
+enum osm_feature_t { osm_node_t = 0, osm_way_t = 1, osm_relation_t = 2} ;
 
 namespace OSM {
 
@@ -178,8 +179,6 @@ protected:
         for( osm_id_t rel_id: r.children_ )
             memberships_.insert(std::make_pair(rel_id, r.id_)) ;
     }
-
-
 
 };
 
