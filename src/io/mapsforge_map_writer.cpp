@@ -426,19 +426,19 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 }
 */
 
-std::unique_ptr<geos::geom::Polygon> geomFromBox(const BBox &box) {
+std::unique_ptr<geos::geom::Polygon> geomFromBox(const BBox &box, uint srid, double buffer) {
     using namespace geos::geom ;
 
     PrecisionModel pm;
-    GeometryFactory factory(&pm) ;
+    GeometryFactory factory(&pm, srid) ;
 
     CoordinateArraySequence *cl = new CoordinateArraySequence();
 
-    cl->add(Coordinate(box.minx_, box.miny_));
-    cl->add(Coordinate(box.maxx_, box.miny_));
-    cl->add(Coordinate(box.maxx_, box.maxy_));
-    cl->add(Coordinate(box.minx_, box.maxy_));
-    cl->add(Coordinate(box.minx_, box.miny_));
+    cl->add(Coordinate(box.minx_ - buffer, box.miny_ - buffer));
+    cl->add(Coordinate(box.maxx_ + buffer, box.miny_ - buffer));
+    cl->add(Coordinate(box.maxx_ + buffer, box.maxy_ + buffer));
+    cl->add(Coordinate(box.minx_ - buffer, box.maxy_ + buffer));
+    cl->add(Coordinate(box.minx_ - buffer, box.miny_ - buffer));
 
     LinearRing *shell = factory.createLinearRing(cl);
     std::unique_ptr<Polygon> geom(factory.createPolygon(shell, nullptr)) ;
@@ -454,7 +454,7 @@ static bool fetch_pois(GeoDatabase &db, const BBox &bbox, uint8_t min_zoom, uint
     using namespace geos::geom ;
     using namespace geos::simplify ;
 
-    std::unique_ptr<Polygon> clip_box = geomFromBox(bbox) ;
+    std::unique_ptr<Polygon> clip_box = geomFromBox(bbox, 3857, 20) ;
 
     db.forAllGeometries(bbox, min_zoom, max_zoom, [&](const Geometry *geom, osm_id_t id, osm_feature_t ft, uint8_t zmin, uint8_t zmax) {
         const Point *p = dynamic_cast<const Point *>(geom) ;
