@@ -1,23 +1,26 @@
 SET ( OSM2MAP_SOURCES
 
-        ${SRC_ROOT}/convert/osm2map.cpp
+	${SRC_ROOT}/convert/osm2map.cpp
 
-        ${SRC_ROOT}/convert/tag_filter.cpp
-        ${SRC_ROOT}/convert/tag_filter.hpp
+	${SRC_ROOT}/convert/tag_filter.cpp
+	${SRC_ROOT}/convert/tag_filter.hpp
 
-        ${SRC_ROOT}/convert/tag_filter_context.cpp
-        ${SRC_ROOT}/convert/tag_filter_context.hpp
+	${SRC_ROOT}/convert/tag_filter_context.cpp
+	${SRC_ROOT}/convert/tag_filter_context.hpp
 
-        ${SRC_ROOT}/convert/tag_filter_config_parser.hpp
-        ${SRC_ROOT}/convert/tag_filter_config_parser.cpp
+	${SRC_ROOT}/convert/tag_filter_config_parser.hpp
+	${SRC_ROOT}/convert/tag_filter_config_parser.cpp
 
-        ${SRC_ROOT}/convert/tag_filter_rule.hpp
-        ${SRC_ROOT}/convert/tag_filter_rule.cpp
+	${SRC_ROOT}/convert/tag_filter_rule.hpp
+	${SRC_ROOT}/convert/tag_filter_rule.cpp
 
 	${SRC_ROOT}/convert/osm_processor.cpp
 	${SRC_ROOT}/convert/osm_processor.hpp
 
-        ${SRC_ROOT}/convert/osm_polygon.cpp
+	${SRC_ROOT}/convert/geom_utils.cpp
+	${SRC_ROOT}/convert/geom_utils.hpp
+
+	${SRC_ROOT}/convert/osm_polygon.cpp
 
 	${SRC_ROOT}/convert/osm_pbf_reader.cpp
 	${SRC_ROOT}/convert/osm_pbf_reader.hpp

@@ -1,4 +1,5 @@
 #include "osm_processor.hpp"
+#include "geom_utils.hpp"
 
 #include <spatialite.h>
 #include <boost/filesystem.hpp>
@@ -178,32 +179,13 @@ bool OSMProcessor::addLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &
     try {
         if ( way.nodes_.size() < 2 ) return false ;
 
-        unsigned char *blob;
-        int blob_size;
+        gaiaGeomCollAutoPtr geo_line = makeLineString(way, reader) ;
+        WKBBuffer buffer(geo_line) ;
 
-        gaiaGeomCollPtr geo_line = gaiaAllocGeomColl();
-        geo_line->Srid = 4326;
-        geo_line->DeclaredType = GAIA_MULTILINESTRING ;
+        cmd.bindm(buffer.blob(), way.id_, osm_way_t, zmin, zmax) ;
+        cmd.exec() ;
+        cmd.clear() ;
 
-        gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_line, way.nodes_.size());
-
-        int j = 0 ;
-        reader.forAllWayCoords(way.id_, [&](osm_id_t id, double lat, double lon) {
-            gaiaSetPoint (ls->Coords, j, lon, lat); ++j ;
-        }) ;
-
-        if ( gaiaIsValid(geo_line) ) {
-
-            gaiaToSpatiaLiteBlobWkb (geo_line, &blob, &blob_size);
-
-            cmd.bindm(SQLite::Blob((const char *)blob, blob_size), way.id_, osm_way_t, zmin, zmax) ;
-            cmd.exec() ;
-            cmd.clear() ;
-
-            gaiaFree(blob) ;
-        }
-
-        gaiaFreeGeomColl (geo_line);
     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
@@ -216,75 +198,34 @@ bool OSMProcessor::addLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &
 bool OSMProcessor::addMultiLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &reader, const std::vector<OSM::Way> &ways, osm_id_t id, osm_feature_t ftype, uint8_t zmin, uint8_t zmax)
 {
     try {
-        unsigned char *blob;
-        int blob_size;
-
-        gaiaGeomCollPtr geo_mline = gaiaAllocGeomColl();
-        geo_mline->Srid = 4326;
-        geo_mline->DeclaredType = GAIA_MULTILINESTRING ;
-
-        for( auto &way: ways ) {
-
-            if ( way.nodes_.size() < 2 ) continue ;
-
-            gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_mline, way.nodes_.size());
-
-            int j=0 ;
-            reader.forAllNodeCoordList(way.nodes_, [&](double lat, double lon) {
-                gaiaSetPoint (ls->Coords, j, lon, lat); ++j ;
-            }) ;
-
-        }
-
-        if ( gaiaIsValid(geo_mline) ) {
-            gaiaToSpatiaLiteBlobWkb (geo_mline, &blob, &blob_size);
-
-            cmd.bindm(SQLite::Blob((const char *)blob, blob_size), id, ftype, zmin, zmax) ;
-            cmd.exec() ;
-            cmd.clear() ;
-
-            gaiaFree(blob) ;
-        }
-
-        gaiaFreeGeomColl (geo_mline);
-    }
+        gaiaGeomCollAutoPtr geo_mline = makeMultiLineString(ways, reader) ;
+        WKBBuffer buffer(geo_mline) ;
+        cmd.bindm(buffer.blob(), id, ftype, zmin, zmax) ;
+        cmd.exec() ;
+        cmd.clear() ;
+        return true ;
+     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
         return false ;
     }
-
-    return true ;
 }
 
 bool OSMProcessor::addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi, uint8_t zmin, uint8_t zmax)
 {
     try {
-        unsigned char *blob;
-        int blob_size;
-
-        gaiaGeomCollPtr geo_pt = gaiaAllocGeomColl();
-        geo_pt->DeclaredType = GAIA_POINT ;
-        geo_pt->Srid = 4326;
-
-        gaiaAddPointToGeomColl (geo_pt, poi.lon_, poi.lat_);
-
-        gaiaToSpatiaLiteBlobWkb (geo_pt, &blob, &blob_size);
-
-        cmd.bindm(SQLite::Blob((const char *)blob, blob_size), poi.id_, osm_node_t, zmin, zmax) ;
-
+        gaiaGeomCollAutoPtr geo_pt = makePoint(poi) ;
+        WKBBuffer buffer(geo_pt) ;
+        cmd.bindm(buffer.blob(), poi.id_, osm_node_t, zmin, zmax) ;
         cmd.exec() ;
-
-        gaiaFreeGeomColl (geo_pt);
-        gaiaFree(blob) ;
-
         cmd.clear() ;
+        return true ;
 
     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
         return false ;
     }
-
 }
 
 
@@ -292,72 +233,29 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Statement &cmd, OSM::DocumentReade
                                       uint8_t zmin, uint8_t zmax)
 {
     try {
-        unsigned char *blob;
-        int blob_size;
-        gaiaGeomCollPtr geom = nullptr ;
+        gaiaGeomCollAutoPtr geom ;
 
-        if ( poly.rings_.size() == 1 ) { // simple polygon case
-            geom = gaiaAllocGeomColl();
-            geom->Srid = 4326;
-            geom->DeclaredType = GAIA_MULTIPOLYGON ;
-
-            const OSM::Ring &ring = poly.rings_[0] ;
-
-            gaiaPolygonPtr g_poly = gaiaAddPolygonToGeomColl(geom, ring.nodes_.size(), 0);
-
-            int j=0 ;
-            reader.forAllNodeCoordList(ring.nodes_, [&](double lat, double lon) {
-                gaiaSetPoint (g_poly->Exterior->Coords, j, lon, lat); ++j ;
-            }) ;
-
-        }
-        else { // multipolygon, use gaiPolygonize to find outer and inner rings
-            gaiaGeomCollPtr ls_geom = gaiaAllocGeomColl();
-            ls_geom->Srid = 4326;
-
-            for( uint i=0 ; i<poly.rings_.size() ; i++ ) {
-                const OSM::Ring &ring = poly.rings_[i] ;
-                gaiaLinestringPtr ls =  gaiaAddLinestringToGeomColl(ls_geom, ring.nodes_.size()) ;
-
-                int j=0 ;
-                reader.forAllNodeCoordList(ring.nodes_, [&](double lat, double lon) {
-                    gaiaSetPoint (ls->Coords, j, lon, lat); ++j ;
-                }) ;
-            }
-
-            // at the moment the functions bellow ignore invalid (self-intersecting) polygons
-            // self-intersection can be handled at the level of the multi-polygon parsing function (makePolygonsFromRelation)
-            gaiaGeomCollPtr ps = gaiaSanitize(ls_geom) ;
-
-            gaiaFreeGeomColl(ls_geom) ;
-
-            if ( ps ) {
-                geom = gaiaPolygonize(ps, 1) ;
-                gaiaFreeGeomColl(ps) ;
-            }
-        }
-
+        if ( poly.rings_.size() == 1 )  // simple polygon case
+            geom = makeSimplePolygon(poly.rings_[0], reader) ;
+        else  // multipolygon, use gaiaPolygonize to find outer and inner rings
+            geom = makeMultiPolygon(poly, reader) ;
 
         if ( geom ) {
-            gaiaToSpatiaLiteBlobWkb (geom, &blob, &blob_size);
-
-            cmd.bindm(SQLite::Blob((const char *)blob, blob_size), id, ftype, zmin, zmax) ;
+            WKBBuffer buffer(geom) ;
+            cmd.bindm(buffer.blob(), id, ftype, zmin, zmax) ;
             cmd.exec() ;
             cmd.clear() ;
-
-            gaiaFree(blob) ;
-            gaiaFreeGeomColl (geom);
+            return true ;
         }
         else {
             cerr << "invalid multi-polygon (" << id << ")" << endl ;
+            return false ;
         }
     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
         return false ;
     }
-
-    return true ;
 }
 
 void OSMProcessor::forAllPOITags(std::function<void (const string &, const string &)> f)
@@ -567,31 +465,10 @@ static void write_box_geometry(SQLite::Connection &con, const BBox &box, osm_id_
 
     SQLite::Statement cmd(con, insert_feature_sql("polygons", "ST_Multi(?)")) ;
 
-    unsigned char *blob;
-    int blob_size;
-
-    gaiaGeomCollPtr geo_poly = gaiaAllocGeomColl();
-    geo_poly->Srid = 4326;
-    geo_poly->DeclaredType = GAIA_POLYGON ;
-
-    gaiaPolygonPtr g_poly = gaiaAddPolygonToGeomColl (geo_poly, 5, 0) ;
-    gaiaRingPtr er = g_poly->Exterior ;
-
-    gaiaSetPoint (er->Coords, 0, box.minx_, box.miny_);
-    gaiaSetPoint (er->Coords, 1, box.maxx_, box.miny_);
-    gaiaSetPoint (er->Coords, 2, box.maxx_, box.maxy_);
-    gaiaSetPoint (er->Coords, 3, box.minx_, box.maxy_);
-    gaiaSetPoint (er->Coords, 4, box.minx_, box.miny_);
-
-    gaiaToSpatiaLiteBlobWkb (geo_poly, &blob, &blob_size);
-
-    cmd.bindm(SQLite::Blob((const char *)blob, blob_size), (osm_id_t)id, osm_way_t, 0, 255) ;
+    gaiaGeomCollAutoPtr geo_poly = makeBoxGeometry(box) ;
+    WKBBuffer buffer(geo_poly) ;
+    cmd.bindm(buffer.blob(), (osm_id_t)id, osm_way_t, 0, 255) ;
     cmd.exec() ;
-
-    gaiaFreeGeomColl (geo_poly);
-    gaiaFree(blob) ;
-
-    cmd.clear() ;
 }
 
 namespace fs = boost::filesystem ;
@@ -656,7 +533,7 @@ bool OSMProcessor::processLandPolygon(const string &shp_file, const BBox &clip_b
 
         SHPObject *obj = SHPReadObject( shp_handle, i );
 
-        gaiaGeomCollPtr geom = gaiaAllocGeomColl() ;
+        gaiaGeomCollAutoPtr geom(gaiaAllocGeomColl()) ;
         geom->Srid = 4326;
 
         geom->DeclaredType = GAIA_POLYGON;
@@ -680,25 +557,18 @@ bool OSMProcessor::processLandPolygon(const string &shp_file, const BBox &clip_b
                 gaiaInsertInteriorRing(gpoly, ring);
             }
             else {
-                gpoly = gaiaInsertPolygonInGeomColl (geom, ring);
+                gpoly = gaiaInsertPolygonInGeomColl (geom.get(), ring);
             }
 
         }
 
         SHPDestroyObject(obj) ;
 
-        unsigned char *blob ;
-        int blob_sz ;
-
-        gaiaToSpatiaLiteBlobWkb (geom, &blob, &blob_sz) ;
-
-        cmd.bindm(SQLite::Blob((const char *)blob, blob_sz), (osm_id_t)id, (int)osm_way_t) ;
+        WKBBuffer buffer(geom) ;
+        cmd.bindm(buffer.blob(), (osm_id_t)id, (int)osm_way_t) ;
 
         cmd.exec() ;
         cmd.clear() ;
-
-        gaiaFree(blob);
-        gaiaFreeGeomColl(geom);
 
         if ( db_.changes() ) { // if a non-null geometry resulted from intersection
             addTag(id, osm_way_t, "natural", "nosea", 0, 255) ;
@@ -725,6 +595,7 @@ bool OSMProcessor::addDefaultLandPolygon(const BBox &clip_box)
     addTag(id, osm_way_t, "natural", "nosea", 0, 255) ;
 }
 
+
 static string make_bbox_query(const std::string &tableName, const BBox &bbox, int min_zoom,
                               int max_zoom, bool clip, double buffer, double tol, bool centroid)
 {
@@ -737,9 +608,7 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
     if ( tol != 0.0 ) sql << "SimplifyPreserveTopology(" ;
 
     if ( clip ) {
-        sql << "ST_ForceLHR(ST_Intersection(geom, ST_Transform(BuildMBR(" ;
-        sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 ;
-        sql << "),4326)))" ;
+        sql << "ST_ForceLHR(ST_Intersection(geom, box))" ;
     }
     else sql << "geom" ;
 
@@ -747,17 +616,15 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 
     sql << " AS _geom_ " ;
     if ( centroid ) sql << ", ST_Centroid(geom) " ;
-    sql << " FROM " << tableName << " AS g ";
+    sql << " FROM " << tableName << " AS g, (SELECT ST_Transform(?, 4326) AS box) ";
 
     sql << " WHERE " ;
-    sql << "g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = ST_Transform(BuildMBR(" ;
-    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << "),4326)) " ;
+    sql << "g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = box) " ;
     sql << "AND (( g.zmin BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( g.zmax BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( g.zmin <= " << min_zoom << " AND g.zmax >= " << max_zoom << "))" ;
     sql << "AND _geom_ NOT NULL AND ST_IsValid(_geom_) " ;
 
     return sql.str() ;
 }
-
 bool OSMProcessor::forAllGeometries(const std::string &tableName, const BBox &bbox, uint8_t minz, uint8_t maxz,
                                     bool clip, double buffer, double tol, bool centroid,
                                     std::function<void (gaiaGeomCollPtr, osm_id_t, osm_feature_t, uint8_t, uint8_t, double, double)> f)
@@ -768,6 +635,10 @@ bool OSMProcessor::forAllGeometries(const std::string &tableName, const BBox &bb
         string sql = make_bbox_query(tableName, bbox, minz, maxz, clip, buffer, tol, centroid) ;
         SQLite::Query q(db_, sql) ;
 
+        gaiaGeomCollAutoPtr clip_box = makeBoxGeometry(bbox, buffer, 3857) ;
+        WKBBuffer buffer(clip_box) ;
+        q.bind(1, buffer.blob()) ;
+
         for( const SQLite::Row &r: q.exec() ) {
 
             osm_id_t osm_id = r[0].as<osm_id_t>() ;
@@ -777,28 +648,23 @@ bool OSMProcessor::forAllGeometries(const std::string &tableName, const BBox &bb
             uint8_t maxz = r[3].as<int>() ;
 
             // get geometry
-            SQLite::Blob blob = r[4].as<SQLite::Blob>() ;
-            gaiaGeomCollPtr geom = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)blob.data(), blob.size());
+            gaiaGeomCollAutoPtr geom = readWKB(r[4].as<SQLite::Blob>());
 
             // get centroid if requested
             double clat, clon ;
             if ( centroid ) {
-                SQLite::Blob data = r[5].as<SQLite::Blob>() ;
-                gaiaGeomCollPtr cg = gaiaFromSpatiaLiteBlobWkb ((const unsigned char *)data.data(), data.size());
+                gaiaGeomCollAutoPtr cg = readWKB(r[5].as<SQLite::Blob>());
 
                 clon = cg->FirstPoint->X ;
                 clat = cg->FirstPoint->Y ;
-
-                gaiaFreeGeomColl(cg) ;
             }
 
             // call the handler
-            f(geom, osm_id, osm_type, minz, maxz, clat, clon) ;
-
-            gaiaFreeGeomColl(geom) ;
+            f(geom.get(), osm_id, osm_type, minz, maxz, clat, clon) ;
         }
     }
     catch ( SQLite::Exception &e ) {
+        cout << e.what() << endl;
         return false ;
     }
 }

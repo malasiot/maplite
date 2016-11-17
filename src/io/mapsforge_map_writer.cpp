@@ -383,41 +383,6 @@ void MapFileWriter::writeSubFiles(OSMProcessor &db, const WriteOptions &options)
 }
 
 
-static string make_bbox_query(const std::string &tableName, const BBox &bbox, int min_zoom,
-                              int max_zoom, bool clip, double buffer, double tol, bool centroid)
-{
-    stringstream sql ;
-
-    sql.precision(16) ;
-
-    sql << "SELECT osm_id, kv.key, kv.val, kv.zoom_min, kv.zoom_max, " ;
-
-    if ( tol != 0.0 )
-        sql << "SimplifyPreserveTopology(" ;
-
-    if ( clip ) {
-        sql << "ST_ForceLHR(ST_Intersection(geom, ST_Transform(BuildMBR(" ;
-        sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 ;
-        sql << "),4326)))" ;
-    }
-    else sql << "geom" ;
-
-    if ( tol != 0 )
-        sql << ", " << tol << ")" ;
-
-    sql << " AS _geom_ " ;
-    if ( centroid ) sql << ", ST_Centroid(geom) " ;
-    sql << " FROM " << tableName << " AS g JOIN kv USING (osm_id, osm_type) ";
-
-    sql << " WHERE " ;
-    sql << "(( g.zmin BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( g.zmax BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( g.zmin <= " << min_zoom << " AND g.zmax >= " << max_zoom << "))" ;
-    sql << "AND _geom_ NOT NULL AND ST_IsValid(_geom_) " ;
-    sql << "AND g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = ST_Transform(BuildMBR(" ;
-    sql << bbox.minx_-buffer << ',' << bbox.miny_-buffer << ',' << bbox.maxx_+buffer << ',' << bbox.maxy_+buffer << "," << 3857 << "),4326)) " ;
-
-    return sql.str() ;
-}
-
 static bool fetch_pois(OSMProcessor &proc, const BBox &bbox, uint8_t min_zoom, uint8_t max_zoom,
                        vector<POIData> &pois, vector<vector<uint32_t>> &pois_per_level) {
 
@@ -437,7 +402,6 @@ static bool fetch_pois(OSMProcessor &proc, const BBox &bbox, uint8_t min_zoom, u
 
         proc.getTags(id, ft, min_zoom, max_zoom, pois.back().tags_) ;
     }) ;
-
 }
 
 
