@@ -44,7 +44,7 @@ MainWindow::MainWindow(int &argc, char *argv[])
 
     overlay_manager_ = QSharedPointer<MapOverlayManager>(new MapOverlayManager) ;
 
-    QString overlay_manager_path = QDesktopServices::storageLocation(QDesktopServices::DataLocation)  ;
+    QString overlay_manager_path = QStandardPaths::standardLocations(QStandardPaths::DataLocation).at(0)  ;
     QDir(overlay_manager_path).mkpath(".") ;
 
     if ( !overlay_manager_->open(overlay_manager_path + "/features") )
@@ -132,7 +132,7 @@ void MainWindow::createWidgets()
     setCentralWidget(map_widget_);
 
     map_widget_->setTool(pan_tool_) ;
-    map_widget_->setCacheDir(QDesktopServices::storageLocation(QDesktopServices::CacheLocation)) ;
+    map_widget_->setCacheDir(QStandardPaths::standardLocations(QStandardPaths::CacheLocation).at(0)) ;
 
     if ( !current_map_.isEmpty() && maps_.hasMap(current_map_) )
     {

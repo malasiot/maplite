@@ -5,7 +5,7 @@
 using namespace std ;
 namespace tms {
 
-const double tile_size = 256 ;
+constexpr double tile_size = 256 ;
 constexpr double gm_initial_resolution = 2 * M_PI * 6378137 / tile_size ;
 constexpr double gm_origin_shift = 2 * M_PI * 6378137 / 2.0 ;
 

@@ -1,8 +1,9 @@
 #include "map_server_handler_factory.hpp"
 #include "request.hpp"
-#include "raster_request_handler.hpp"
+//#include "raster_request_handler.hpp"
 #include "mapsforge_tile_request_handler.hpp"
 #include "pugixml.hpp"
+#include "logger.hpp"
 
 #include <boost/range/iterator_range.hpp>
 #include <boost/algorithm/string.hpp>
@@ -20,7 +21,7 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &cfg_file, const s
     pugi::xml_parse_result result = doc.load_file(cfg_file.c_str());
 
     if ( !result ) {
-        LOG_FATAL_STREAM("XML [" << cfg_file << "] parsed with errors: " << result.description() ) ;
+        LOG_FATAL_STREAM( "XML [" << cfg_file << "] parsed with errors: " << result.description() ) ;
         return ;
     }
 
@@ -94,9 +95,10 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &cfg_file, const s
             return ;
         }
 
-        if ( type == "raster" )
-            tile_request_handlers_[key] = make_shared<RasterRequestHandler>(key, src) ;
-        else if ( type == "mapsforge" )
+     //   if ( type == "raster" )
+     //       tile_request_handlers_[key] = make_shared<RasterRequestHandler>(key, src) ;
+     //   else
+        if ( type == "mapsforge" )
             tile_request_handlers_[key] = make_shared<MapsforgeTileRequestHandler>(key, src, theme, layer, cache, debug_flag) ;
     }
 

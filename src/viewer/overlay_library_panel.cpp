@@ -12,6 +12,7 @@
 #include <QUrl>
 #include <QClipboard>
 #include <QApplication>
+#include <QMimeData>
 
 
 using namespace std ;

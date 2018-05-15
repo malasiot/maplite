@@ -33,7 +33,7 @@ QStringList application_data_dirs_ ;
 void setupDirs(int &argc, char **argv)
 {
     // location of user data folder default
-    QString userDataDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation) ;
+    QStringList userDataDir = QStandardPaths::standardLocations(QStandardPaths::DataLocation) ;
 
     // or provided in command line
     int i ;

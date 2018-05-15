@@ -28,7 +28,7 @@ QImage NetworkTileProvider::getTile(int x, int y, int z)
     QNetworkRequest req(url) ;
 
     req.setRawHeader( "User-Agent" , UserAgentString );
-    req.setRawHeader( "Host" , url.host().toAscii() );
+    req.setRawHeader( "Host" , url.host().toLatin1() );
 
     QNetworkReply *reply = manager_->get(req) ;
     reply->setProperty("key", tileKey(x, y, z)) ;
@@ -53,7 +53,7 @@ void NetworkTileProvider::finished()
 
         QNetworkRequest req(possibleRedirectUrl) ;
         req.setRawHeader( "User-Agent" , UserAgentString );
-        req.setRawHeader( "Host" , possibleRedirectUrl.host().toAscii() );
+        req.setRawHeader( "Host" , possibleRedirectUrl.host().toLatin1() );
 
         QNetworkReply *redirect = manager_->get(req);
         redirect->setProperty("url", possibleRedirectUrl) ;

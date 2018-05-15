@@ -54,14 +54,14 @@ SET ( TILE_SERVER_SOURCES
 	${SRC_ROOT}/server/kml_reader.hpp
 	${SRC_ROOT}/server/gpx_reader.cpp
 	${SRC_ROOT}/server/gpx_reader.hpp
-	${SRC_ROOT}/server/jp2_decoder.cpp
-	${SRC_ROOT}/server/jp2_decoder.hpp
+#	${SRC_ROOT}/server/jp2_decoder.cpp
+#	${SRC_ROOT}/server/jp2_decoder.hpp
 	${SRC_ROOT}/server/raster_tile_cache.cpp
 	${SRC_ROOT}/server/raster_tile_cache.hpp
 	${SRC_ROOT}/server/raster_tile_source.cpp
 	${SRC_ROOT}/server/raster_tile_source.hpp
-	${SRC_ROOT}/server/raster_request_handler.cpp
-	${SRC_ROOT}/server/raster_request_handler.hpp
+#	${SRC_ROOT}/server/raster_request_handler.cpp
+#	${SRC_ROOT}/server/raster_request_handler.hpp
 	${SRC_ROOT}/server/png_writer.cpp
 	${SRC_ROOT}/server/png_writer.hpp
 
@@ -78,5 +78,5 @@ TARGET_LINK_LIBRARIES(mapserver mapsforge_renderer ${SQLITE3_LIBRARY} ${Boost_LI
 ADD_EXECUTABLE(tileserver ${SRC_ROOT}/server/tile_server.cpp)
 TARGET_LINK_LIBRARIES(tileserver mapserver)
 
-ADD_EXECUTABLE(testjpeg ${SRC_ROOT}/server/test_jpeg.cpp)
-TARGET_LINK_LIBRARIES(testjpeg mapserver)
+#ADD_EXECUTABLE(testjpeg ${SRC_ROOT}/server/test_jpeg.cpp)
+#TARGET_LINK_LIBRARIES(testjpeg mapserver)

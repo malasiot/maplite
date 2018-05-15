@@ -877,8 +877,8 @@ string MapFileWriter::writeWayData(const vector<WayDataContainer> &ways, const v
                 double label_position_lat = way.label_pos_.get().lat_ - orig.lat_;
                 double label_position_lon = way.label_pos_.get().lon_ - orig.lon_ ;
 
-                wbuffer.write_var_int64(round(label_position_lat*1.0e6)) ;
-                wbuffer.write_var_int64(round(label_position_lon*1.0e6)) ;
+                wbuffer.write_var_int64(round(label_position_lat)) ;
+                wbuffer.write_var_int64(round(label_position_lon)) ;
             }
 
             if ( cflag & 0x08 )

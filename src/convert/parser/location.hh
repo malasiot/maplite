@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.2.
+// A Bison parser, made by GNU Bison 3.0.4.
 
 // Locations for Bison parsers in C++
 
-// Copyright (C) 2002-2013 Free Software Foundation, Inc.
+// Copyright (C) 2002-2015 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,18 +31,18 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/mftools/src/convert/parser/location.hh
+ ** \file /home/malasiot/source/old/maplite/src/convert/parser/location.hh
  ** Define the tag_filter::location class.
  */
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED
 
 # include "position.hh"
 
-#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // location.cc:291
+#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // location.cc:296
 namespace tag_filter {
-#line 46 "/home/malasiot/source/mftools/src/convert/parser/location.hh" // location.cc:291
+#line 46 "/home/malasiot/source/old/maplite/src/convert/parser/location.hh" // location.cc:296
   /// Abstract a location.
   class location
   {
@@ -111,36 +111,42 @@ namespace tag_filter {
     position end;
   };
 
-  /// Join two location objects to create a location.
-  inline location operator+ (location res, const location& end)
+  /// Join two locations, in place.
+  inline location& operator+= (location& res, const location& end)
   {
     res.end = end.end;
     return res;
   }
 
-  /// Change end position in place.
+  /// Join two locations.
+  inline location operator+ (location res, const location& end)
+  {
+    return res += end;
+  }
+
+  /// Add \a width columns to the end position, in place.
   inline location& operator+= (location& res, int width)
   {
     res.columns (width);
     return res;
   }
 
-  /// Change end position.
+  /// Add \a width columns to the end position.
   inline location operator+ (location res, int width)
   {
     return res += width;
   }
 
-  /// Change end position in place.
+  /// Subtract \a width columns to the end position, in place.
   inline location& operator-= (location& res, int width)
   {
     return res += -width;
   }
 
-  /// Change end position.
-  inline location operator- (const location& begin, int width)
+  /// Subtract \a width columns to the end position.
+  inline location operator- (location res, int width)
   {
-    return begin + -width;
+    return res -= width;
   }
 
   /// Compare two location objects.
@@ -168,8 +174,7 @@ namespace tag_filter {
   operator<< (std::basic_ostream<YYChar>& ostr, const location& loc)
   {
     unsigned int end_col = 0 < loc.end.column ? loc.end.column - 1 : 0;
-    ostr << loc.begin// << "(" << loc.end << ") "
-;
+    ostr << loc.begin;
     if (loc.end.filename
         && (!loc.begin.filename
             || *loc.begin.filename != *loc.end.filename))
@@ -181,7 +186,7 @@ namespace tag_filter {
     return ostr;
   }
 
-#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // location.cc:291
+#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // location.cc:296
 } // tag_filter
-#line 187 "/home/malasiot/source/mftools/src/convert/parser/location.hh" // location.cc:291
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED
+#line 192 "/home/malasiot/source/old/maplite/src/convert/parser/location.hh" // location.cc:296
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_LOCATION_HH_INCLUDED

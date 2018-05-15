@@ -52,7 +52,7 @@ bool MapManager::parseConfig(const QString &cfg_path) {
 
         for( QDomElement q = p.firstChildElement("theme") ; !q.isNull() ; q = q.nextSiblingElement("theme") ) {
 
-            QByteArray id = q.attribute("id").toAscii() ;
+            QByteArray id = q.attribute("id").toLatin1() ;
             QString src = q.attribute("src") ;
             QString name = q.attribute("name") ;
             bool is_default = q.attribute("default") == "true" ;
@@ -104,7 +104,7 @@ bool MapManager::parseConfig(const QString &cfg_path) {
         for( QDomElement q = p.firstChildElement("offline") ; !q.isNull() ; q = q.nextSiblingElement("offline") ) {
 
 
-            QByteArray id = q.attribute("id").toAscii() ;
+            QByteArray id = q.attribute("id").toLatin1() ;
             QString src = q.attribute("src") ;
             QString name = q.attribute("name") ;
             bool is_default = q.attribute("default") == "true" ;
@@ -184,11 +184,11 @@ bool MapManager::parseConfig(const QString &cfg_path) {
         for( QDomElement q = p.firstChildElement("online") ; !q.isNull() ; q = q.nextSiblingElement("online") ) {
 
 
-            QByteArray id = q.attribute("id").toAscii() ;
+            QByteArray id = q.attribute("id").toLatin1() ;
             QString url = q.attribute("url") ;
             QString name = q.attribute("name") ;
             bool is_default = q.attribute("default") == "true" ;
-            QByteArray image_format = q.attribute("format", "png").toAscii() ;
+            QByteArray image_format = q.attribute("format", "png").toLatin1() ;
 
             QString attribution, description ;
             int start_zoom = -1, minz = 0, maxz = 20 ;

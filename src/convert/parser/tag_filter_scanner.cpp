@@ -1,6 +1,6 @@
-#line 2 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
+#line 2 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_scanner.cpp"
 
-#line 4 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
+#line 4 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_scanner.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -16,8 +16,8 @@
 
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
-#define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_MINOR_VERSION 6
+#define YY_FLEX_SUBMINOR_VERSION 0
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -212,8 +212,13 @@ typedef unsigned int flex_uint32_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
 /* %if-not-reentrant */
-extern int yyleng;
+extern yy_size_t yyleng;
 /* %endif */
 
 /* %if-c-only */
@@ -226,6 +231,7 @@ extern int yyleng;
 #define EOB_ACT_LAST_MATCH 2
 
     #define YY_LESS_LINENO(n)
+    #define YY_LINENO_REWIND_TO(ptr)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -243,11 +249,6 @@ extern int yyleng;
 
 #define unput(c) yyunput( c, (yytext_ptr)  )
 
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
-
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
 struct yy_buffer_state
@@ -256,7 +257,7 @@ struct yy_buffer_state
 /* %endif */
 
 /* %if-c++-only */
-	std::istream* yy_input_file;
+	std::streambuf* yy_input_file; 
 /* %endif */
 
 	char *yy_ch_buf;		/* input buffer */
@@ -401,6 +402,8 @@ int yyFlexLexer::yylex()
 
 #define YY_DECL int tag_filter::Scanner::yylex()
 
+/* %% [1.5] DFA */
+
 /* %if-c-only Standard (non-C++) definition */
 /* %endif */
 
@@ -447,7 +450,7 @@ static yyconst flex_int16_t yy_accept[144] =
        35,   34,    0
     } ;
 
-static yyconst flex_int32_t yy_ec[256] =
+static yyconst YY_CHAR yy_ec[256] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
         4,    4,    4,    1,    1,    1,    1,    1,    1,    1,
@@ -479,7 +482,7 @@ static yyconst flex_int32_t yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static yyconst flex_int32_t yy_meta[70] =
+static yyconst YY_CHAR yy_meta[70] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
@@ -490,7 +493,7 @@ static yyconst flex_int32_t yy_meta[70] =
         2,    2,    2,    2,    2,    1,    1,    1,    1
     } ;
 
-static yyconst flex_int16_t yy_base[150] =
+static yyconst flex_uint16_t yy_base[150] =
     {   0,
         0,    0,   67,   68,   69,   70,  318,  372,   72,  314,
        52,   69,  313,  306,  372,  372,  372,  372,  372,  372,
@@ -530,7 +533,7 @@ static yyconst flex_int16_t yy_def[150] =
       143,  143,    0,  143,  143,  143,  143,  143,  143
     } ;
 
-static yyconst flex_int16_t yy_nxt[442] =
+static yyconst flex_uint16_t yy_nxt[442] =
     {   0,
         8,    9,   10,    8,    9,   11,   12,   13,   14,   12,
        15,   16,   17,   18,   19,   20,   21,   22,   23,    8,
@@ -653,8 +656,8 @@ static yyconst flex_int16_t yy_rule_linenum[61] =
 #define yymore() ((yy_more_flag) = 1)
 #define YY_MORE_ADJ (yy_more_len)
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
-#line 2 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 1 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
+#line 2 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 #include "tag_filter_config_scanner.hpp"
 #include "tag_filter_config_parser.hpp"
 
@@ -663,9 +666,9 @@ static yyconst flex_int16_t yy_rule_linenum[61] =
 
 void comment() ;
 
-#line 21 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 21 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 # define YY_USER_ACTION  yylloc->columns (yyleng);
-#line 669 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
+#line 672 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_scanner.cpp"
 
 #define INITIAL 0
 #define COMMENT 1
@@ -749,7 +752,7 @@ static int yy_flex_strlen (yyconst char * );
 /* %% [5.0] fread()/read() definition of YY_INPUT goes here unless we're doing C++ \ */\
 \
 /* %if-c++-only C++ definition \ */\
-	if ( (result = LexerInput( (char *) buf, max_size )) < 0 ) \
+	if ( (int)(result = LexerInput( (char *) buf, max_size )) < 0 ) \
 		YY_FATAL_ERROR( "input in flex scanner failed" );
 /* %endif */
 
@@ -811,7 +814,7 @@ static int yy_flex_strlen (yyconst char * );
 
 /* Code executed at the end of each rule. */
 #ifndef YY_BREAK
-#define YY_BREAK break;
+#define YY_BREAK /*LINTED*/break;
 #endif
 
 /* %% [6.0] YY_RULE_SETUP definition goes here */
@@ -824,20 +827,10 @@ static int yy_flex_strlen (yyconst char * );
  */
 YY_DECL
 {
-	register yy_state_type yy_current_state;
-	register char *yy_cp, *yy_bp;
-	register int yy_act;
+	yy_state_type yy_current_state;
+	char *yy_cp, *yy_bp;
+	int yy_act;
     
-/* %% [7.0] user's declarations go here */
-#line 23 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
-
-
-
-   yylloc->step();
-
-
-#line 840 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
-
 	if ( !(yy_init) )
 		{
 		(yy_init) = 1;
@@ -853,14 +846,14 @@ YY_DECL
 /* %if-c-only */
 /* %endif */
 /* %if-c++-only */
-			yyin = & std::cin;
+			yyin.rdbuf(std::cin.rdbuf());
 /* %endif */
 
 		if ( ! yyout )
 /* %if-c-only */
 /* %endif */
 /* %if-c++-only */
-			yyout = & std::cout;
+			yyout.rdbuf(std::cout.rdbuf());
 /* %endif */
 
 		if ( ! YY_CURRENT_BUFFER ) {
@@ -872,7 +865,18 @@ YY_DECL
 		yy_load_buffer_state(  );
 		}
 
-	while ( 1 )		/* loops until end-of-file is reached */
+	{
+/* %% [7.0] user's declarations go here */
+#line 23 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
+
+
+
+   yylloc->step();
+
+
+#line 878 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_scanner.cpp"
+
+	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
 /* %% [8.0] yymore()-related code goes here */
 		(yy_more_len) = 0;
@@ -896,7 +900,7 @@ YY_DECL
 yy_match:
 		do
 			{
-			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
+			YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
 			if ( yy_accept[yy_current_state] )
 				{
 				(yy_last_accepting_state) = yy_current_state;
@@ -957,230 +961,230 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 29 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 29 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_AND(*yylloc); }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 30 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 30 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_AND(*yylloc) ; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 31 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 31 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_OR(*yylloc); }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 32 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 32 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_OR(*yylloc); }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 33 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 33 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_IN(*yylloc); }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 34 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 34 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_NOT(*yylloc); }
 	YY_BREAK
 /* punctuation */
 case 7:
 YY_RULE_SETUP
-#line 38 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 38 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_ASSIGN(*yylloc) ; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 39 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 39 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 40 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 40 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_NOT_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 41 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 41 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_NOT_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 42 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 42 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_LESS_THAN(*yylloc) ; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 43 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 43 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_GREATER_THAN(*yylloc) ; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 44 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 44 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_LESS_THAN_OR_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 45 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 45 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_GREATER_THAN_OR_EQUAL(*yylloc) ; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 46 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 46 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_MATCHES(*yylloc) ; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 47 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 47 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_NOT_MATCHES(*yylloc) ; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 48 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 48 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_NOT(*yylloc) ; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 49 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 49 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_EXISTS(*yylloc) ; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 50 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 50 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_LPAR(*yylloc) ; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 51 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 51 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_RPAR(*yylloc) ; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 52 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 52 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_PLUS(*yylloc) ; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 53 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 53 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_MINUS(*yylloc) ; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 54 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 54 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_STAR(*yylloc) ; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 55 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 55 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_DIV(*yylloc) ; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 56 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 56 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_COMMA(*yylloc) ; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 57 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 57 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_DOT(*yylloc) ; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 58 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 58 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_LEFT_BRACE(*yylloc) ; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 59 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 59 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_RIGHT_BRACE(*yylloc) ; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 60 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 60 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_COLON(*yylloc) ; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 61 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 61 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_RIGHT_BRACKET(*yylloc) ; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 62 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 62 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_LEFT_BRACKET(*yylloc) ; }
 	YY_BREAK
 case 32:
 /* rule 32 can match eol */
 YY_RULE_SETUP
-#line 64 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 64 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_ADD_CMD(*yylloc) ; }
 	YY_BREAK
 case 33:
 /* rule 33 can match eol */
 YY_RULE_SETUP
-#line 65 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 65 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_SET_CMD(*yylloc) ; }
 	YY_BREAK
 case 34:
 /* rule 34 can match eol */
 YY_RULE_SETUP
-#line 66 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 66 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_DELETE_CMD(*yylloc) ; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 67 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 67 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_WRITE_ALL_CMD(*yylloc) ; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 68 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 68 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_WRITE_CMD(*yylloc) ; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 69 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 69 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_EXCLUDE_CMD(*yylloc) ; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 70 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 70 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_CONTINUE_CMD(*yylloc) ; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 71 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 71 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_ATTACH_CMD(*yylloc) ; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 73 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 73 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { return tag_filter::Parser::make_ZOOM_SPEC(atoi(yytext+1), *yylloc) ; }
 	YY_BREAK
 case 41:
-#line 76 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 76 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 case 42:
 YY_RULE_SETUP
-#line 76 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 76 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 {
         return tag_filter::Parser::make_IDENTIFIER(yytext, *yylloc);
 }
 	YY_BREAK
 case 43:
-#line 81 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 81 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 case 44:
-#line 82 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 82 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 case 45:
-#line 83 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 83 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 case 46:
-#line 84 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 84 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 case 47:
-#line 85 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 85 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 case 48:
 YY_RULE_SETUP
-#line 85 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 85 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 {
     return tag_filter::Parser::make_NUMBER(atof(yytext), *yylloc) ;
 }
@@ -1188,7 +1192,7 @@ YY_RULE_SETUP
 case 49:
 /* rule 49 can match eol */
 YY_RULE_SETUP
-#line 89 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 89 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 {
     return tag_filter::Parser::make_STRING(std::string(yytext+1, yyleng-2), *yylloc) ;
 }
@@ -1196,74 +1200,74 @@ YY_RULE_SETUP
 case 50:
 /* rule 50 can match eol */
 YY_RULE_SETUP
-#line 93 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 93 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 yylloc->lines (yyleng); yylloc->step ();
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 95 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 95 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 yylloc->step ();
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(COMMENT):
 case YY_STATE_EOF(LUA):
-#line 97 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 97 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 return tag_filter::Parser::make_END(*yylloc);
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 99 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 99 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { BEGIN(COMMENT); }
 	YY_BREAK
 case 53:
 /* rule 53 can match eol */
 YY_RULE_SETUP
-#line 100 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 100 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { yylloc->lines (); yylloc->step ();}
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 101 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 101 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { BEGIN(INITIAL) ; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 102 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 102 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { yylloc->step (); }
 	YY_BREAK
 case 56:
 /* rule 56 can match eol */
 YY_RULE_SETUP
-#line 104 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 104 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { yylloc->step();}
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 106 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 106 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { BEGIN(LUA); }
 	YY_BREAK
 case 58:
 /* rule 58 can match eol */
 YY_RULE_SETUP
-#line 107 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 107 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { yylloc->lines (); yylloc->step (); yymore() ;}
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 108 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 108 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { BEGIN(INITIAL) ; return tag_filter::Parser::make_LUA_SCRIPT(std::string(yytext, yyleng-2), *yylloc) ; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 109 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 109 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 { yylloc->step (); yymore(); }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 111 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 111 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 ECHO;
 	YY_BREAK
-#line 1267 "/home/malasiot/source/mftools/src/convert/parser/tag_filter_scanner.cpp"
+#line 1271 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_scanner.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1286,7 +1290,11 @@ ECHO;
 			 * back-up) that will match for the new input source.
 			 */
 			(yy_n_chars) = YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
-			YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin;
+/* %if-c-only */
+/* %endif */
+/* %if-c++-only */
+			YY_CURRENT_BUFFER_LVALUE->yy_input_file = yyin.rdbuf();
+/* %endif */
 			YY_CURRENT_BUFFER_LVALUE->yy_buffer_status = YY_BUFFER_NORMAL;
 			}
 
@@ -1393,6 +1401,7 @@ ECHO;
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
+	} /* end of user's declarations */
 } /* end of yylex */
 /* %ok-for-header */
 
@@ -1400,11 +1409,29 @@ ECHO;
 /* %not-for-header */
 
 /* The contents of this function are C++ specific, so the () macro is not used.
+ * This constructor simply maintains backward compatibility.
+ * DEPRECATED
  */
-yyFlexLexer::yyFlexLexer( std::istream* arg_yyin, std::ostream* arg_yyout )
+yyFlexLexer::yyFlexLexer( FLEX_STD istream* arg_yyin, FLEX_STD ostream* arg_yyout ):
+	yyin(arg_yyin ? arg_yyin->rdbuf() : std::cin.rdbuf()),
+	yyout(arg_yyout ? arg_yyout->rdbuf() : std::cout.rdbuf())
 {
-	yyin = arg_yyin;
-	yyout = arg_yyout;
+	ctor_common();
+}
+
+/* The contents of this function are C++ specific, so the () macro is not used.
+ */
+yyFlexLexer::yyFlexLexer( std::istream& arg_yyin, std::ostream& arg_yyout ):
+	yyin(arg_yyin.rdbuf()),
+	yyout(arg_yyout.rdbuf())
+{
+	ctor_common();
+}
+
+/* The contents of this function are C++ specific, so the () macro is not used.
+ */
+void yyFlexLexer::ctor_common()
+{
 	yy_c_buf_p = 0;
 	yy_init = 0;
 	yy_start = 0;
@@ -1441,16 +1468,29 @@ yyFlexLexer::~yyFlexLexer()
 
 /* The contents of this function are C++ specific, so the () macro is not used.
  */
+void yyFlexLexer::switch_streams( std::istream& new_in, std::ostream& new_out )
+{
+	// was if( new_in )
+	yy_delete_buffer( YY_CURRENT_BUFFER );
+	yy_switch_to_buffer( yy_create_buffer( new_in, YY_BUF_SIZE  ) );
+
+	// was if( new_out )
+	yyout.rdbuf(new_out.rdbuf());
+}
+
+/* The contents of this function are C++ specific, so the () macro is not used.
+ */
 void yyFlexLexer::switch_streams( std::istream* new_in, std::ostream* new_out )
 {
-	if ( new_in )
-		{
-		yy_delete_buffer( YY_CURRENT_BUFFER );
-		yy_switch_to_buffer( yy_create_buffer( new_in, YY_BUF_SIZE  ) );
-		}
+	if( ! new_in ) {
+		new_in = &yyin;
+	}
 
-	if ( new_out )
-		yyout = new_out;
+	if ( ! new_out ) {
+		new_out = &yyout;
+	}
+
+	switch_streams(*new_in, *new_out);
 }
 
 #ifdef YY_INTERACTIVE
@@ -1459,33 +1499,33 @@ int yyFlexLexer::LexerInput( char* buf, int /* max_size */ )
 int yyFlexLexer::LexerInput( char* buf, int max_size )
 #endif
 {
-	if ( yyin->eof() || yyin->fail() )
+	if ( yyin.eof() || yyin.fail() )
 		return 0;
 
 #ifdef YY_INTERACTIVE
-	yyin->get( buf[0] );
+	yyin.get( buf[0] );
 
-	if ( yyin->eof() )
+	if ( yyin.eof() )
 		return 0;
 
-	if ( yyin->bad() )
+	if ( yyin.bad() )
 		return -1;
 
 	return 1;
 
 #else
-	(void) yyin->read( buf, max_size );
+	(void) yyin.read( buf, max_size );
 
-	if ( yyin->bad() )
+	if ( yyin.bad() )
 		return -1;
 	else
-		return yyin->gcount();
+		return yyin.gcount();
 #endif
 }
 
 void yyFlexLexer::LexerOutput( const char* buf, int size )
 {
-	(void) yyout->write( buf, size );
+	(void) yyout.write( buf, size );
 }
 /* %ok-for-header */
 
@@ -1504,9 +1544,9 @@ void yyFlexLexer::LexerOutput( const char* buf, int size )
 int yyFlexLexer::yy_get_next_buffer()
 /* %endif */
 {
-    	register char *dest = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
-	register char *source = (yytext_ptr);
-	register int number_to_move, i;
+    	char *dest = YY_CURRENT_BUFFER_LVALUE->yy_ch_buf;
+	char *source = (yytext_ptr);
+	yy_size_t number_to_move, i;
 	int ret_val;
 
 	if ( (yy_c_buf_p) > &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[(yy_n_chars) + 1] )
@@ -1535,7 +1575,7 @@ int yyFlexLexer::yy_get_next_buffer()
 	/* Try to read more data. */
 
 	/* First move last chars to start of buffer. */
-	number_to_move = (int) ((yy_c_buf_p) - (yytext_ptr)) - 1;
+	number_to_move = (yy_size_t) ((yy_c_buf_p) - (yytext_ptr)) - 1;
 
 	for ( i = 0; i < number_to_move; ++i )
 		*(dest++) = *(source++);
@@ -1548,21 +1588,21 @@ int yyFlexLexer::yy_get_next_buffer()
 
 	else
 		{
-			int num_to_read =
+			yy_size_t num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
 			{ /* Not enough room in the buffer - grow it. */
 
 			/* just a shorter name for the current buffer */
-			YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+			YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 			int yy_c_buf_p_offset =
 				(int) ((yy_c_buf_p) - b->yy_ch_buf);
 
 			if ( b->yy_is_our_buffer )
 				{
-				int new_size = b->yy_buf_size * 2;
+				yy_size_t new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -1593,7 +1633,7 @@ int yyFlexLexer::yy_get_next_buffer()
 
 		/* Read in more data. */
 		YY_INPUT( (&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-			(yy_n_chars), (size_t) num_to_read );
+			(yy_n_chars), num_to_read );
 
 		YY_CURRENT_BUFFER_LVALUE->yy_n_chars = (yy_n_chars);
 		}
@@ -1617,9 +1657,9 @@ int yyFlexLexer::yy_get_next_buffer()
 	else
 		ret_val = EOB_ACT_CONTINUE_SCAN;
 
-	if ((yy_size_t) ((yy_n_chars) + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
+	if ((int) ((yy_n_chars) + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
 		/* Extend the array by 50%, plus the number we really need. */
-		yy_size_t new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
+		int new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) TagFilterConfigrealloc((void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf,new_size  );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
 			YY_FATAL_ERROR( "out of dynamic memory in yy_get_next_buffer()" );
@@ -1644,8 +1684,8 @@ int yyFlexLexer::yy_get_next_buffer()
     yy_state_type yyFlexLexer::yy_get_previous_state()
 /* %endif */
 {
-	register yy_state_type yy_current_state;
-	register char *yy_cp;
+	yy_state_type yy_current_state;
+	char *yy_cp;
     
 /* %% [15.0] code to get the start state into yy_current_state goes here */
 	yy_current_state = (yy_start);
@@ -1653,7 +1693,7 @@ int yyFlexLexer::yy_get_next_buffer()
 	for ( yy_cp = (yytext_ptr) + YY_MORE_ADJ; yy_cp < (yy_c_buf_p); ++yy_cp )
 		{
 /* %% [16.0] code to find the next state goes here */
-		register YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
+		YY_CHAR yy_c = (*yy_cp ? yy_ec[YY_SC_TO_UI(*yy_cp)] : 1);
 		if ( yy_accept[yy_current_state] )
 			{
 			(yy_last_accepting_state) = yy_current_state;
@@ -1682,11 +1722,11 @@ int yyFlexLexer::yy_get_next_buffer()
     yy_state_type yyFlexLexer::yy_try_NUL_trans( yy_state_type yy_current_state )
 /* %endif */
 {
-	register int yy_is_jam;
+	int yy_is_jam;
     /* %% [17.0] code to find the next state, and perhaps do backing up, goes here */
-	register char *yy_cp = (yy_c_buf_p);
+	char *yy_cp = (yy_c_buf_p);
 
-	register YY_CHAR yy_c = 1;
+	YY_CHAR yy_c = 1;
 	if ( yy_accept[yy_current_state] )
 		{
 		(yy_last_accepting_state) = yy_current_state;
@@ -1701,16 +1741,17 @@ int yyFlexLexer::yy_get_next_buffer()
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 	yy_is_jam = (yy_current_state == 143);
 
-	return yy_is_jam ? 0 : yy_current_state;
+		return yy_is_jam ? 0 : yy_current_state;
 }
 
+#ifndef YY_NO_UNPUT
 /* %if-c-only */
 /* %endif */
 /* %if-c++-only */
-    void yyFlexLexer::yyunput( int c, register char* yy_bp)
+    void yyFlexLexer::yyunput( int c, char* yy_bp)
 /* %endif */
 {
-	register char *yy_cp;
+	char *yy_cp;
     
     yy_cp = (yy_c_buf_p);
 
@@ -1720,10 +1761,10 @@ int yyFlexLexer::yy_get_next_buffer()
 	if ( yy_cp < YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + 2 )
 		{ /* need to shift things up to make room */
 		/* +2 for EOB chars. */
-		register int number_to_move = (yy_n_chars) + 2;
-		register char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
+		yy_size_t number_to_move = (yy_n_chars) + 2;
+		char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
 					YY_CURRENT_BUFFER_LVALUE->yy_buf_size + 2];
-		register char *source =
+		char *source =
 				&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move];
 
 		while ( source > YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
@@ -1748,6 +1789,7 @@ int yyFlexLexer::yy_get_next_buffer()
 }
 /* %if-c-only */
 /* %endif */
+#endif
 
 /* %if-c-only */
 /* %endif */
@@ -1771,7 +1813,7 @@ int yyFlexLexer::yy_get_next_buffer()
 
 		else
 			{ /* need more input */
-			int offset = (yy_c_buf_p) - (yytext_ptr);
+			yy_size_t offset = (yy_c_buf_p) - (yytext_ptr);
 			++(yy_c_buf_p);
 
 			switch ( yy_get_next_buffer(  ) )
@@ -1832,7 +1874,7 @@ int yyFlexLexer::yy_get_next_buffer()
 /* %if-c-only */
 /* %endif */
 /* %if-c++-only */
-    void yyFlexLexer::yyrestart( std::istream* input_file )
+    void yyFlexLexer::yyrestart( std::istream& input_file )
 /* %endif */
 {
     
@@ -1845,6 +1887,18 @@ int yyFlexLexer::yy_get_next_buffer()
 	yy_init_buffer( YY_CURRENT_BUFFER, input_file );
 	yy_load_buffer_state(  );
 }
+
+/* %if-c++-only */
+/** Delegate to the new version that takes an istream reference.
+ * @param input_file A readable stream.
+ * 
+ * @note This function does not reset the start condition to @c INITIAL .
+ */
+void yyFlexLexer::yyrestart( std::istream* input_file )
+{
+	yyrestart( *input_file );
+}
+/* %endif */
 
 /** Switch to a different input buffer.
  * @param new_buffer The new input buffer.
@@ -1893,7 +1947,11 @@ int yyFlexLexer::yy_get_next_buffer()
 {
     	(yy_n_chars) = YY_CURRENT_BUFFER_LVALUE->yy_n_chars;
 	(yytext_ptr) = (yy_c_buf_p) = YY_CURRENT_BUFFER_LVALUE->yy_buf_pos;
-	yyin = YY_CURRENT_BUFFER_LVALUE->yy_input_file;
+/* %if-c-only */
+/* %endif */
+/* %if-c++-only */
+	yyin.rdbuf(YY_CURRENT_BUFFER_LVALUE->yy_input_file);
+/* %endif */
 	(yy_hold_char) = *(yy_c_buf_p);
 }
 
@@ -1906,7 +1964,7 @@ int yyFlexLexer::yy_get_next_buffer()
 /* %if-c-only */
 /* %endif */
 /* %if-c++-only */
-    YY_BUFFER_STATE yyFlexLexer::yy_create_buffer( std::istream* file, int size )
+    YY_BUFFER_STATE yyFlexLexer::yy_create_buffer( std::istream& file, int size )
 /* %endif */
 {
 	YY_BUFFER_STATE b;
@@ -1915,7 +1973,7 @@ int yyFlexLexer::yy_get_next_buffer()
 	if ( ! b )
 		YY_FATAL_ERROR( "out of dynamic memory in yy_create_buffer()" );
 
-	b->yy_buf_size = size;
+	b->yy_buf_size = (yy_size_t)size;
 
 	/* yy_ch_buf has to be 2 characters longer than the size given because
 	 * we need to put in 2 end-of-buffer characters.
@@ -1930,6 +1988,19 @@ int yyFlexLexer::yy_get_next_buffer()
 
 	return b;
 }
+
+/* %if-c++-only */
+/** Delegate creation of buffers to the new version that takes an istream reference.
+ * @param file A readable stream.
+ * @param size The character buffer size in bytes. When in doubt, use @c YY_BUF_SIZE.
+ * 
+ * @return the allocated buffer state.
+ */
+	YY_BUFFER_STATE yyFlexLexer::yy_create_buffer( std::istream* file, int size )
+{
+	return yy_create_buffer( *file, size );
+}
+/* %endif */
 
 /** Destroy the buffer.
  * @param b a buffer created with yy_create_buffer()
@@ -1954,15 +2025,6 @@ int yyFlexLexer::yy_get_next_buffer()
 	TagFilterConfigfree((void *) b  );
 }
 
-/* %if-c-only */
-/* %endif */
-
-/* %if-c++-only */
-
-extern "C" int isatty (int );
-
-/* %endif */
-
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a yyrestart() or at EOF.
@@ -1970,7 +2032,7 @@ extern "C" int isatty (int );
 /* %if-c-only */
 /* %endif */
 /* %if-c++-only */
-    void yyFlexLexer::yy_init_buffer( YY_BUFFER_STATE b, std::istream* file )
+    void yyFlexLexer::yy_init_buffer( YY_BUFFER_STATE b, std::istream& file )
 /* %endif */
 
 {
@@ -1978,7 +2040,11 @@ extern "C" int isatty (int );
     
 	yy_flush_buffer( b );
 
-	b->yy_input_file = file;
+/* %if-c-only */
+/* %endif */
+/* %if-c++-only */
+	b->yy_input_file = file.rdbuf();
+/* %endif */
 	b->yy_fill_buffer = 1;
 
     /* If b is the current buffer, then yy_init_buffer was _probably_
@@ -2103,7 +2169,7 @@ void yyFlexLexer::yypop_buffer_state (void)
 void yyFlexLexer::yyensure_buffer_stack(void)
 /* %endif */
 {
-	int num_to_alloc;
+	yy_size_t num_to_alloc;
     
 	if (!(yy_buffer_stack)) {
 
@@ -2111,7 +2177,7 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 		 * scanner will even need a stack. We use 2 instead of 1 to avoid an
 		 * immediate realloc on the next call.
          */
-		num_to_alloc = 1;
+		num_to_alloc = 1; /* After all that talk, this was set to 1 anyways... */
 		(yy_buffer_stack) = (struct yy_buffer_state**)TagFilterConfigalloc
 								(num_to_alloc * sizeof(struct yy_buffer_state*)
 								);
@@ -2128,7 +2194,7 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 	if ((yy_buffer_stack_top) >= ((yy_buffer_stack_max)) - 1){
 
 		/* Increase the buffer to prepare for a possible push. */
-		int grow_size = 8 /* arbitrary grow size */;
+		yy_size_t grow_size = 8 /* arbitrary grow size */;
 
 		num_to_alloc = (yy_buffer_stack_max) + grow_size;
 		(yy_buffer_stack) = (struct yy_buffer_state**)TagFilterConfigrealloc
@@ -2157,7 +2223,7 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 /* %if-c-only */
 /* %endif */
 /* %if-c++-only */
-    void yyFlexLexer::yy_push_state( int new_state )
+    void yyFlexLexer::yy_push_state( int _new_state )
 /* %endif */
 {
     	if ( (yy_start_stack_ptr) >= (yy_start_stack_depth) )
@@ -2179,7 +2245,7 @@ void yyFlexLexer::yyensure_buffer_stack(void)
 
 	(yy_start_stack)[(yy_start_stack_ptr)++] = YY_START;
 
-	BEGIN(new_state);
+	BEGIN(_new_state);
 }
 
 /* %if-c-only */
@@ -2263,7 +2329,8 @@ void yyFlexLexer::LexerError( yyconst char msg[] )
 #ifndef yytext_ptr
 static void yy_flex_strncpy (char* s1, yyconst char * s2, int n )
 {
-	register int i;
+		
+	int i;
 	for ( i = 0; i < n; ++i )
 		s1[i] = s2[i];
 }
@@ -2272,7 +2339,7 @@ static void yy_flex_strncpy (char* s1, yyconst char * s2, int n )
 #ifdef YY_NEED_STRLEN
 static int yy_flex_strlen (yyconst char * s )
 {
-	register int n;
+	int n;
 	for ( n = 0; s[n]; ++n )
 		;
 
@@ -2282,11 +2349,12 @@ static int yy_flex_strlen (yyconst char * s )
 
 void *TagFilterConfigalloc (yy_size_t  size )
 {
-	return (void *) malloc( size );
+			return (void *) malloc( size );
 }
 
 void *TagFilterConfigrealloc  (void * ptr, yy_size_t  size )
 {
+		
 	/* The cast to (char *) in the following accommodates both
 	 * implementations that use char* generic pointers, and those
 	 * that use void* generic pointers.  It works with the latter
@@ -2299,7 +2367,7 @@ void *TagFilterConfigrealloc  (void * ptr, yy_size_t  size )
 
 void TagFilterConfigfree (void * ptr )
 {
-	free( (char *) ptr );	/* see TagFilterConfigrealloc() for (char *) cast */
+			free( (char *) ptr );	/* see TagFilterConfigrealloc() for (char *) cast */
 }
 
 /* %if-tables-serialization definitions */
@@ -2309,7 +2377,7 @@ void TagFilterConfigfree (void * ptr )
 
 /* %ok-for-header */
 
-#line 111 "/home/malasiot/source/mftools/src/convert/tag_filter.l"
+#line 111 "/home/malasiot/source/old/maplite/src/convert/tag_filter.l"
 
 
 

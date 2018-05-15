@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.2.
+// A Bison parser, made by GNU Bison 3.0.4.
 
 // Stack handling for Bison parsers in C++
 
-// Copyright (C) 2002-2013 Free Software Foundation, Inc.
+// Copyright (C) 2002-2015 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,18 +31,18 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/mftools/src/convert/parser/stack.hh
+ ** \file /home/malasiot/source/old/maplite/src/convert/parser/stack.hh
  ** Define the tag_filter::stack class.
  */
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_STACK_HH_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_STACK_HH_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_STACK_HH_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_STACK_HH_INCLUDED
 
 # include <vector>
 
-#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // stack.hh:133
+#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // stack.hh:132
 namespace tag_filter {
-#line 46 "/home/malasiot/source/mftools/src/convert/parser/stack.hh" // stack.hh:133
+#line 46 "/home/malasiot/source/old/maplite/src/convert/parser/stack.hh" // stack.hh:132
   template <class T, class S = std::vector<T> >
   class stack
   {
@@ -54,12 +54,12 @@ namespace tag_filter {
     stack ()
       : seq_ ()
     {
+      seq_.reserve (200);
     }
 
     stack (unsigned int n)
       : seq_ (n)
-    {
-    }
+    {}
 
     inline
     T&
@@ -136,8 +136,7 @@ namespace tag_filter {
     slice (const S& stack, unsigned int range)
       : stack_ (stack)
       , range_ (range)
-    {
-    }
+    {}
 
     inline
     const T&
@@ -151,8 +150,8 @@ namespace tag_filter {
     unsigned int range_;
   };
 
-#line 9 "/home/malasiot/source/mftools/src/convert/tag_filter.y" // stack.hh:133
+#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // stack.hh:132
 } // tag_filter
-#line 157 "/home/malasiot/source/mftools/src/convert/parser/stack.hh" // stack.hh:133
+#line 156 "/home/malasiot/source/old/maplite/src/convert/parser/stack.hh" // stack.hh:132
 
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_MFTOOLS_SRC_CONVERT_PARSER_STACK_HH_INCLUDED
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_STACK_HH_INCLUDED

@@ -68,7 +68,7 @@ MapWidget::MapWidget(QWidget *parent): QWidget(parent), overlay_cache_(10 * 1024
 
     popup_ = new Popup(QSize(300, 300), this) ;
 
-    QString cache_path = QDesktopServices::storageLocation(QDesktopServices::DataLocation)  ;
+    QString cache_path = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).at(0)  ;
     persistent_cache_.open((const char *)cache_path.toUtf8()) ;
 
 }
