@@ -23,8 +23,8 @@ class Renderer {
 
 public:
 
-    Renderer(const std::shared_ptr<RenderTheme> &theme, const std::string &languages, bool debug=false) ;
-    Renderer(const std::string &languages, bool debug=false) ;
+    Renderer(const std::shared_ptr<RenderTheme> &theme, const std::string &pref_language, bool debug=false) ;
+    Renderer(const std::string &pref_language, bool debug=false) ;
 
     // render a single tile
     bool render(const TileKey &key,                 // tile key
@@ -40,6 +40,7 @@ private:
     ResourceCache cache_ ;
     std::shared_ptr<RenderTheme> theme_ ;
     TextEngine text_engine_ ;
+    std::string pref_language_ ;
 
 private:
 
@@ -84,6 +85,8 @@ private:
     cairo_surface_t *renderGraphic(cairo_t *cr, const std::string &src, double width, double height, cairo_rectangle_t &rect, double scale) ;
     cairo_surface_t *renderOSMCGraphic(cairo_t *cr, const std::string &desc, double width, double height, cairo_rectangle_t &rect, double scale) ;
     void getSymbolSize(const RenderInstruction &r, double &sw, double &sh);
+
+    std::string langString(const std::string &label);
 
     const double collision_extra = 10 ;
 

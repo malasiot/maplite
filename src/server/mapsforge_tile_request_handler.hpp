@@ -19,6 +19,7 @@ public:
                                 const std::string &map_file_name,
                                 const std::string &theme_file_name,
                                 const std::string &layer,
+                                const std::string &language,
                                 const std::shared_ptr<FileSystemTileCache> &cache,
                                 bool debug) ;
     void handle_request(const http::Request &request, http::Response &resp) ;
@@ -29,7 +30,7 @@ private:
     std::shared_ptr<MapFileReader> map_file_ ;
     std::shared_ptr<RenderTheme> theme_ ;
     std::shared_ptr<Renderer> renderer_ ;
-    std::string layer_ ;
+    std::string layer_, lang_ ;
     std::shared_ptr<FileSystemTileCache> cache_ ;
 };
 

@@ -63,6 +63,7 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &cfg_file, const s
         string type = p.attribute("type").as_string() ;
         string theme = p.attribute("theme").as_string() ;
         string layer = p.attribute("layer").as_string() ;
+        string lang = p.attribute("lang").as_string() ;
         bool debug_flag = p.attribute("debug").as_bool(false) ;
 
         if ( key.empty() ) {
@@ -99,7 +100,7 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &cfg_file, const s
      //       tile_request_handlers_[key] = make_shared<RasterRequestHandler>(key, src) ;
      //   else
         if ( type == "mapsforge" )
-            tile_request_handlers_[key] = make_shared<MapsforgeTileRequestHandler>(key, src, theme, layer, cache, debug_flag) ;
+            tile_request_handlers_[key] = make_shared<MapsforgeTileRequestHandler>(key, src, theme, layer, lang, cache, debug_flag) ;
     }
 
 

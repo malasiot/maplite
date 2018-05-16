@@ -231,7 +231,7 @@ void Renderer::filterPOIs(const string &layer, uint8_t zoom, const BBox &box, ca
 
                     double gap = ( line.repeat_ ) ? line.repeat_gap_ : 0.0 ;
                     double initial_gap = ( line.repeat_ ) ? line.repeat_start_ : 0.0 ;
-                    string label = way.tags_.get(line.key_) ;
+                    string label = langString(way.tags_.get(line.key_)) ;
 
                     sample_linear_geometry(coords, cmm, gap, initial_gap, line.font_size_ * label.length(), true, pts, angles) ;
 
@@ -404,7 +404,7 @@ bool Renderer::render(const TileKey &key, ImageBuffer &target, const VectorTile 
         RenderInstructionPtr ri = ip.ri_ ;
         double mx = ip.x_, my = ip.y_ ;
         double angle = ip.angle_ ;
-        string label = ip.label_ ;
+        string label = langString(ip.label_) ;
 
         switch ( ri->type() ) {
         case RenderInstruction::Circle:
@@ -790,6 +790,37 @@ void Renderer::getSymbolSize(const RenderInstruction &r, double &sw, double &sh)
         sh *= r.symbol_percent_ ;
     }
 
+}
+
+string Renderer::langString(const string &s)
+{
+    if ( s.empty() || boost::trim_copy(s).empty() ) return s ;
+
+    vector<string> names ;
+    boost::split(names, s, boost::is_any_of("\r"), boost::token_compress_on );
+
+    if ( pref_language_.empty() || boost::trim_copy(pref_language_).empty() ) return names[0] ;
+
+    string fallback ;
+
+    for ( const string &name: names ) {
+        vector<string> name_tokens ;
+        boost::split(name_tokens, name, boost::is_any_of("\b"), boost::token_compress_on );
+        if ( name_tokens.size() != 2 ) continue ;
+
+        if ( boost::iequals(name_tokens[0], pref_language_ ) )
+            return name_tokens[1] ;
+
+        // Fall back to base, e.g. zh-min-lan -> zh
+        if ( fallback.empty() && !boost::contains(name_tokens[0], "-") && ( boost::contains(pref_language_, "-") || boost::contains(pref_language_, "_"))
+                        && boost::starts_with(boost::to_lower_copy(pref_language_), boost::to_lower_copy(name_tokens[0]))) {
+                    fallback = name_tokens[1];
+        }
+
+        return ( !fallback.empty() ) ? fallback : name_tokens[1];
+    }
+
+    return fallback ;
 }
 
 void Renderer::drawArea(RenderingContext &ctx, const std::vector<std::vector<Coord>> &coords, const RenderInstruction &area) {

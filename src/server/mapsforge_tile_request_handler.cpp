@@ -16,8 +16,9 @@ bool MapsforgeTileRequestHandler::g_init_tile_index_ = false ;
 
 MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const string &map_file, const string &theme_file,
                                                          const std::string &layer,
+                                                         const std::string &lang,
                                                          const std::shared_ptr<FileSystemTileCache> &cache, bool debug):
-    TileRequestHandler(id, map_file), layer_(layer), cache_(cache)
+    TileRequestHandler(id, map_file), layer_(layer), cache_(cache), lang_(lang)
 {
     if ( !g_init_tile_index_) {
         MapFileReader::initTileCache(1000000) ;
@@ -44,7 +45,7 @@ MapsforgeTileRequestHandler::MapsforgeTileRequestHandler(const string &id, const
 
     if ( layer.empty() ) layer_ = theme_->defaultLayer() ;
 
-    renderer_.reset(new Renderer(theme_, map_file_->getMapFileInfo().lang_preference_, debug)) ;
+    renderer_.reset(new Renderer(theme_, lang, debug)) ;
 }
 
 

@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 
     ImageBuffer buf(256, 256) ;
 
-    r.render(key, buf, tile, mapLayer.empty() ? theme->defaultLayer() : mapLayer) ;
+    r.render(key, buf, tile, mapLayer.empty() ? theme->defaultLayer() : mapLayer, 256) ;
 
     buf.saveToPNG(out_file) ;
 
