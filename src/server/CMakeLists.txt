@@ -73,7 +73,7 @@ SET ( TILE_SERVER_SOURCES
 )
 
 ADD_LIBRARY(mapserver STATIC ${TILE_SERVER_SOURCES} ${MT_PROTO_SOURCES} ${MT_PROTO_HEADERS})
-TARGET_LINK_LIBRARIES(mapserver mapsforge_renderer ${SQLITE3_LIBRARY} ${Boost_LIBRARIES} ${OPENJPEG_LIBRARIES} dl z )
+TARGET_LINK_LIBRARIES(mapserver mapsforge_renderer sqlite3 ${Boost_LIBRARIES} ${OPENJPEG_LIBRARIES} dl z )
 
 ADD_EXECUTABLE(tileserver ${SRC_ROOT}/server/tile_server.cpp)
 TARGET_LINK_LIBRARIES(tileserver mapserver)

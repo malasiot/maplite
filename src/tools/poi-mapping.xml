@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<category id="root">
+    <category id="amenities">
+    	<name lang="en">Amenities</name>
+        <category id="food">
+           	<name lang="en">Food</name>
+            <category id="restaurants">
+              	<name lang="en">Restaurants</name>
+            </category>
+            <category id="food_counter">
+               	<name lang="en">Food counter areas</name>
+            </category>
+            <category id="fast_food">
+	           	<name lang="en">Fast food restaurants</name>
+            </category>
+            <category id="drinking_water">
+   	           	<name lang="en">Drinking water sources</name>
+            </category>
+            <category id="public_grills">
+   	           	<name lang="en">Public grills</name>
+            </category>
+            <category id="pubs">
+   	           	<name lang="en">Pubs</name>
+            </category>
+            <category id="bars">
+				<name lang="en">Bars</name>
+            </category>
+            <category id="cafes">
+   	           	<name lang="en">Cafes</name>
+            </category>
+            <category id="beer_gardens">
+   	           	<name lang="en">Beer gardens</name>
+            </category>
+            <category id="ice_cream_shops">
+		     	<name lang="en">Ice cream shops</name>
+            </category>
+        </category>
+	</category>
+
+    <!-- Places / added OAM -->
+    <category id="places">
+    	<name lang="en">Places</name>
+        <category id="cities">
+          	<name lang="en">Cities</name>
+        </category>
+        <category id="towns">
+        	<name lang="en">Town</name>
+        </category>
+        <category id="villages">
+           	<name lang="en">Villages</name>
+        </category>
+        <category id="hamlets">
+           	<name lang="en">Hamlets</name>
+        </category>
+        <category id="isolated_dwellings">
+           	<name lang="en">Isolated dwellings</name>
+        </category>
+    </category>
+
+    <!-- Address search -->
+    <category id="address">
+    	<name lang="en">Address</name>
+    </category>
+
+</category>
