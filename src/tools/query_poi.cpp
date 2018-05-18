@@ -22,12 +22,29 @@ int main(int argc, char *argv[])
     POIReader reader ;
 
     try {
-        reader.open("/home/malasiot/Downloads/Greece.poi") ;
+        reader.open("/home/malasiot/Downloads/greece.poi") ;
     }
     catch ( std::runtime_error &e ) {
         cerr << e.what() << endl ;
         exit(1) ;
     }
+
+    POICategoryFilter filter ;
+
+    filter.addCategory(reader.categories().getByID("147")) ;
+
+    string target ;
+    while ( 1 ) {
+        char c = getchar() ;
+        if ( c == '\n' ) continue ;
+        if ( c == '\b' ) target.pop_back() ;
+        else target += c ;
+
+        cout << target << endl ;
+        reader.query(filter, BBox(20.89, 30.55, 30.02, 45.65),target + '%');
+    }
+
+
 
     /*
     string map_file, map_theme, mapLayer, out_file ;

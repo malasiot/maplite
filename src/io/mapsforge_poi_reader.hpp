@@ -1,5 +1,5 @@
-#ifndef __MAPSFORGE_POI_READER_HPP__
-#define __MAPSFORGE_POI_READER_HPP__
+#ifndef MAPSFORGE_POI_READER_HPP
+#define MAPSFORGE_POI_READER_HPP
 
 #include <string>
 #include <memory>
@@ -16,6 +16,8 @@
 #include <boost/enable_shared_from_this.hpp>
 
 struct POIData {
+    using Collection = std::vector<POIData> ;
+
     double lat_, lon_ ;
     Dictionary tags_ ;
 };
@@ -28,7 +30,7 @@ struct POIFileInfo {
     bool has_ways_ ;
 } ;
 
-class POICategory: public boost::enable_shared_from_this<POICategory> {
+class POICategory {
 public:
 
     using Ptr = std::shared_ptr<POICategory> ;
@@ -73,7 +75,7 @@ class POICategoryContainer {
 
     bool loadFromPOIFile(SQLite::Connection &db) ;
 
-    POICategory::Ptr getByID(const std::string &id) ;
+    POICategory::Ptr getByID(const std::string &id) const ;
 
 private:
 
@@ -91,13 +93,15 @@ public:
 
     void open(const std::string &file_path) ;
 
+    POIData::Collection query(const POICategoryFilter &filter, const BBox &bbox, const std::string &pattern, uint max_results = 10) ;
+
     ~POIReader() {}
 
+    const POICategoryContainer &categories() const { return categories_ ; }
 
 private:
 
     POICategoryContainer categories_ ;
-    std::string poi_file_path_ ;
     SQLite::Connection db_ ;
 };
 
