@@ -23,6 +23,8 @@ class NullType;
 class Connection ;
 class Blob ;
 
+class NullType {} ;
+
 extern NullType Nil;
 
 class Connection: boost::noncopyable {

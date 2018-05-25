@@ -7,9 +7,7 @@ using namespace std ;
 
 namespace SQLite {
 
-class NullType {} ;
-
-NullType Nil;
+NullType Nil ;
 
 Connection::Connection(): handle_(NULL) {
 

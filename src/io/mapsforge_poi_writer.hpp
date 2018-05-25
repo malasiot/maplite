@@ -15,6 +15,9 @@
 #include "osm_document.hpp"
 #include "osm_processor.hpp"
 
+#include "mapsforge_poi_file_info.hpp"
+#include "poi_categories.hpp"
+
 #include <boost/optional.hpp>
 
 
@@ -37,7 +40,7 @@ struct POIData {
 };
 
 struct POIWriteOptions {
-
+    bool debug_ ;
 
 };
 
@@ -49,41 +52,28 @@ public:
     void create(const std::string &file_path);
 
     // write data from spatialite database to mapsforge binary format
-    void write(OSMProcessor &db, POIWriteOptions &options) ;
+    void write(OSMProcessor &db, const POICategoryContainer &categories, POIWriteOptions &options) ;
 
     void setBoundingBox(const BBox &box) ;
     void setPreferredLanguages(const std::string &langs) ;
     void setComment(const std::string &comment) ;
     void setCreator(const std::string &creator) ;
     void setDebug(bool debug);
+    void setDate(time_t t) ;
+
+    BBox getBoundingBox() const {
+        return BBox(info_.min_lon_, info_.min_lat_, info_.max_lon_, info_.max_lat_) ;
+    }
 
 private:
 
+    void writeMetadata();
+    void writeCategories(const POICategoryContainer &categories) ;
+    void writePOIData(OSMProcessor &db, const POICategoryContainer &categories, POIWriteOptions &options) ;
 
-private:
-    void writeHeader(OSMProcessor &db, WriteOptions &options) ;
-    void writeMapInfo();
-    void writeTagList(const std::vector<std::string> &tags) ;
-    void writeSubFileInfo(const WriteOptions &options);
-    void writeSubFiles(OSMProcessor &db, const WriteOptions &options);
-    void fetchTileData(int32_t tx, int32_t ty, int32_t tz, uint8_t min_zoom, uint8_t max_zoom, OSMProcessor &db, const WriteOptions &options,
-                       std::vector<POIData> &pois, std::vector<std::vector<uint32_t> > &pois_per_level,
-                       std::vector<WayDataContainer> &ways, std::vector<std::vector<uint32_t> > &ways_per_level);
-    std::string writeTileData(int32_t tx, int32_t ty, int32_t tz, const WriteOptions &options, const std::vector<POIData> &pois,
-                           const std::vector<std::vector<uint32_t> > &pois_per_level,
-                           const std::vector<WayDataContainer> &ways, const std::vector<std::vector<uint32_t> > &ways_per_level);
-    std::string writePOIData(const std::vector<POIData> &pois, const std::vector<std::vector<uint32_t>> &pois_per_level, const ILatLon &orig) ;
-    std::string writeWayData(const std::vector<WayDataContainer> &ways, const std::vector<std::vector<uint32_t>> &ways_per_level, const ILatLon &orig) ;
-    void computeSubTileMask(int tx, int ty, int tz, WayDataContainer &way, float bbox_enlargement) ;
-private:
-
-    MapFileInfo info_ ;
-    std::fstream strm_ ;
-
-    std::vector<std::string> way_tags_, poi_tags_ ;
-    std::map<std::string, uint32_t> poi_tag_mapping_, way_tag_mapping_ ;
-    std::vector<SubFileInfo> sub_files_ ;
-    bool has_debug_info_ ;
+    POIFileInfo info_ ;
+    SQLite::Connection db_ ;
+    std::map<std::string, uint> cat_id_map_ ;
 
 };
 

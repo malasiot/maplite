@@ -31,6 +31,8 @@ ADD_EXECUTABLE(query_poi
     ${SRC_ROOT}/util/dictionary.cpp
     ${SRC_ROOT}/util/dictionary.hpp
     ${SRC_ROOT}/3rdparty/pugixml/pugixml.cpp
+    ${SRC_ROOT}/io/poi_categories.hpp
+    ${SRC_ROOT}/io/poi_categories.cpp
     ${SRC_ROOT}/tools/query_poi.cpp
     )
 
