@@ -6,13 +6,14 @@
 #include <sstream>
 #include <memory>
 
+#include <util/dictionary.hpp>
+
 class XmlStreamWrapper ;
 // Simple and fast XML pull style reader that follows the Java XmlPullParse API
 
 class XmlPullParser {
 public:
     XmlPullParser(std::istream &strm) ;
-    ~XmlPullParser() ;
 
     enum TokenType
     {
@@ -24,7 +25,7 @@ public:
         END_DOCUMENT,
         START_TAG,
         END_TAG,
-        TEX
+        TEXT
     } ;
 
     //  Returns the number of attributes on the current element; -1 if the current event is not START_TAG
@@ -104,30 +105,47 @@ public:
 
 private:
 
-    bool parseCDATA();
-    void parseClosingXMLElement();
-    void parseOpeningXMLElement();
-    void parseComment();
-    void ignoreDefinition();
-    bool setText(char *start, char *end);
-    void parseCurrentNode();
+   bool next(char &c) ;
+   void putback(char c) ;
+   bool expect(const char *seq) ;
+   bool skipWhite() ;
 
-    void flush();
-    void advance();
+   bool escapeString(std::string &value) ;
+
+   char peek() ;
+   bool parseBOM() ;
 
 private:
 
-    std::unique_ptr<XmlStreamWrapper> stream_ ;
-    char *cp_, *be_ ;
-    std::string current_node_name_ ;
-    TokenType current_node_type_ ;
-    char * buf_ ;
-    size_t buf_size_ ;
-    std::istream *strm_ ;
-    FILE *fdesc_ ;
-    std::map<std::string, std::string> attrs_ ;
-    bool is_empty_elem_ ;
-    int lineno_, colno_ ;
+    bool parseXmlDecl() ;
+
+    bool parseName(std::string &name);
+    bool parseAttributeValue(std::string &val);
+     bool parseStartElement();
+     bool parseEndElement() ;
+    bool fatal() ;
+    bool parseAttributeList(Dictionary &attrs);
+    bool parseCharacters();
+
+private:
+
+    std::istream &strm_ ;
+    size_t line_, chars_, column_ ;
+    char look_ahead_[8] ;
+    size_t nla_ ;
+
+private:
+
+    TokenType token_ = START_DOCUMENT ;
+    Dictionary attributes_ ;
+    std::string name_, text_ ;
+    bool is_empty_element_tag_ = false ;
+
+private:
+
+
+
+
 };
 
 

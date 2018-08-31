@@ -76,7 +76,7 @@ void FileImportWorker::run()
 {
     for(int i=0 ; i<files_.size() ; i++)
     {
-        if ( stop_flag_ ) break ;
+        if ( stop_flag_.load() ) break ;
         const QString &file_name = files_[i] ;
         emit importStarted(QFileInfo(file_name).fileName()) ;
 

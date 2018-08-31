@@ -8,11 +8,20 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 
+#include <util/xml_pull_parser.hpp>
 using namespace std ;
 namespace po = boost::program_options ;
 
 int main(int argc, char *argv[])
 {
+    ifstream strm("/home/malasiot/Downloads/oo.xml");
+
+    XmlPullParser parser(strm) ;
+
+    while ( parser.nextToken() != XmlPullParser::END_DOCUMENT) {
+
+    }
+
     string filter_config_file, out_map_file ;
     string land_shp_file ;
     bool has_bbox = false ;

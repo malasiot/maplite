@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.4.
+// A Bison parser, made by GNU Bison 3.0.2.
 
 // Positions for Bison parsers in C++
 
-// Copyright (C) 2002-2015 Free Software Foundation, Inc.
+// Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,12 +31,12 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/old/maplite/src/convert/parser/position.hh
+ ** \file /home/malasiot/source/maplite/src/convert/parser/position.hh
  ** Define the tag_filter::position class.
  */
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_MAPLITE_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_MAPLITE_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED
 
 # include <algorithm> // std::max
 # include <iostream>
@@ -50,9 +50,9 @@
 #  endif
 # endif
 
-#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // location.cc:296
+#line 9 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // location.cc:291
 namespace tag_filter {
-#line 56 "/home/malasiot/source/old/maplite/src/convert/parser/position.hh" // location.cc:296
+#line 56 "/home/malasiot/source/maplite/src/convert/parser/position.hh" // location.cc:291
   /// Abstract a position.
   class position
   {
@@ -114,7 +114,7 @@ namespace tag_filter {
     }
   };
 
-  /// Add \a width columns, in place.
+  /// Add and assign a position.
   inline position&
   operator+= (position& res, int width)
   {
@@ -122,21 +122,21 @@ namespace tag_filter {
     return res;
   }
 
-  /// Add \a width columns.
+  /// Add two position objects.
   inline position
   operator+ (position res, int width)
   {
     return res += width;
   }
 
-  /// Subtract \a width columns, in place.
+  /// Add and assign a position.
   inline position&
   operator-= (position& res, int width)
   {
     return res += -width;
   }
 
-  /// Subtract \a width columns.
+  /// Add two position objects.
   inline position
   operator- (position res, int width)
   {
@@ -174,7 +174,7 @@ namespace tag_filter {
     return ostr << pos.line << '.' << pos.column;
   }
 
-#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // location.cc:296
+#line 9 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // location.cc:291
 } // tag_filter
-#line 180 "/home/malasiot/source/old/maplite/src/convert/parser/position.hh" // location.cc:296
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED
+#line 180 "/home/malasiot/source/maplite/src/convert/parser/position.hh" // location.cc:291
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_MAPLITE_SRC_CONVERT_PARSER_POSITION_HH_INCLUDED

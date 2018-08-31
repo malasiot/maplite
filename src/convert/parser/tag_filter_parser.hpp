@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.4.
+// A Bison parser, made by GNU Bison 3.0.2.
 
 // Skeleton interface for Bison LALR(1) parsers in C++
 
-// Copyright (C) 2002-2015 Free Software Foundation, Inc.
+// Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,28 +31,27 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.hpp
+ ** \file /home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.hpp
  ** Define the tag_filter::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
 
-#ifndef YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED
-# define YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED
+#ifndef YY_YY_HOME_MALASIOT_SOURCE_MAPLITE_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED
+# define YY_YY_HOME_MALASIOT_SOURCE_MAPLITE_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED
 // //                    "%code requires" blocks.
-#line 19 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:377
+#line 19 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:372
 
 #include "tag_filter_rule.hpp"
 class TagFilterConfigParser ;
 
-#line 49 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:377
+#line 49 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:372
 
 
-# include <cstdlib> // std::abort
+# include <vector>
 # include <iostream>
 # include <stdexcept>
 # include <string>
-# include <vector>
 # include "stack.hh"
 # include "location.hh"
 
@@ -120,9 +119,9 @@ class TagFilterConfigParser ;
 # define YYDEBUG 1
 #endif
 
-#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:377
+#line 9 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:372
 namespace tag_filter {
-#line 126 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:377
+#line 125 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:372
 
 
 
@@ -402,11 +401,8 @@ namespace tag_filter {
     /// (External) token type, as returned by yylex.
     typedef token::yytokentype token_type;
 
-    /// Symbol type: an internal symbol number.
+    /// Internal symbol number.
     typedef int symbol_number_type;
-
-    /// The symbol type number to denote an empty symbol.
-    enum { empty_symbol = -2 };
 
     /// Internal symbol number for tokens (subsumed by symbol_number_type).
     typedef unsigned char token_number_type;
@@ -465,14 +461,7 @@ namespace tag_filter {
                     const semantic_type& v,
                     const location_type& l);
 
-      /// Destroy the symbol.
       ~basic_symbol ();
-
-      /// Destroy contents, and record that is empty.
-      void clear ();
-
-      /// Whether empty.
-      bool empty () const;
 
       /// Destructive move, \a s is emptied into this.
       void move (basic_symbol& s);
@@ -503,23 +492,21 @@ namespace tag_filter {
       /// Constructor from (external) token numbers.
       by_type (kind_type t);
 
-      /// Record that this symbol is empty.
-      void clear ();
-
       /// Steal the symbol type from \a that.
       void move (by_type& that);
 
       /// The (internal) type number (corresponding to \a type).
-      /// \a empty when empty.
+      /// -1 when this symbol is empty.
       symbol_number_type type_get () const;
 
       /// The token.
       token_type token () const;
 
+      enum { empty = 0 };
+
       /// The symbol type.
-      /// \a empty_symbol when empty.
-      /// An int, not token_number_type, to be able to store empty_symbol.
-      int type;
+      /// -1 when this symbol is empty.
+      token_number_type type;
     };
 
     /// "External" symbols: returned by the scanner.
@@ -747,9 +734,9 @@ namespace tag_filter {
 
     /// Generate an error message.
     /// \param yystate   the state where the error occurred.
-    /// \param yyla      the lookahead token.
+    /// \param yytoken   the lookahead token type, or yyempty_.
     virtual std::string yysyntax_error_ (state_type yystate,
-                                         const symbol_type& yyla) const;
+                                         symbol_number_type yytoken) const;
 
     /// Compute post-reduction state.
     /// \param yystate   the current state
@@ -852,21 +839,16 @@ namespace tag_filter {
       /// Copy constructor.
       by_state (const by_state& other);
 
-      /// Record that this symbol is empty.
-      void clear ();
-
       /// Steal the symbol type from \a that.
       void move (by_state& that);
 
       /// The (internal) type number (corresponding to \a state).
-      /// \a empty_symbol when empty.
+      /// "empty" when empty.
       symbol_number_type type_get () const;
 
-      /// The state number used to denote an empty symbol.
-      enum { empty_state = -1 };
+      enum { empty = 0 };
 
       /// The state.
-      /// \a empty when empty.
       state_type state;
     };
 
@@ -907,12 +889,13 @@ namespace tag_filter {
     /// Pop \a n symbols the three stacks.
     void yypop_ (unsigned int n = 1);
 
-    /// Constants.
+    // Constants.
     enum
     {
       yyeof_ = 0,
       yylast_ = 173,     ///< Last index in yytable_.
       yynnts_ = 32,  ///< Number of nonterminal symbols.
+      yyempty_ = -2,
       yyfinal_ = 47, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
@@ -1275,18 +1258,8 @@ namespace tag_filter {
   inline
   Parser::basic_symbol<Base>::~basic_symbol ()
   {
-    clear ();
-  }
-
-  template <typename Base>
-  inline
-  void
-  Parser::basic_symbol<Base>::clear ()
-  {
     // User destructor.
     symbol_number_type yytype = this->type_get ();
-    basic_symbol<Base>& yysym = *this;
-    (void) yysym;
     switch (yytype)
     {
    default:
@@ -1374,15 +1347,6 @@ namespace tag_filter {
         break;
     }
 
-    Base::clear ();
-  }
-
-  template <typename Base>
-  inline
-  bool
-  Parser::basic_symbol<Base>::empty () const
-  {
-    return Base::type_get () == empty_symbol;
   }
 
   template <typename Base>
@@ -1477,7 +1441,7 @@ namespace tag_filter {
   // by_type.
   inline
   Parser::by_type::by_type ()
-    : type (empty_symbol)
+     : type (empty)
   {}
 
   inline
@@ -1492,17 +1456,10 @@ namespace tag_filter {
 
   inline
   void
-  Parser::by_type::clear ()
-  {
-    type = empty_symbol;
-  }
-
-  inline
-  void
   Parser::by_type::move (by_type& that)
   {
     type = that.type;
-    that.clear ();
+    that.type = empty;
   }
 
   inline
@@ -1802,11 +1759,11 @@ namespace tag_filter {
   }
 
 
-#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:377
+#line 9 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:372
 } // tag_filter
-#line 1808 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:377
+#line 1765 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.hpp" // lalr1.cc:372
 
 
 
 
-#endif // !YY_YY_HOME_MALASIOT_SOURCE_OLD_MAPLITE_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED
+#endif // !YY_YY_HOME_MALASIOT_SOURCE_MAPLITE_SRC_CONVERT_PARSER_TAG_FILTER_PARSER_HPP_INCLUDED

@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.4.
+// A Bison parser, made by GNU Bison 3.0.2.
 
 // Skeleton implementation for Bison LALR(1) parsers in C++
 
-// Copyright (C) 2002-2015 Free Software Foundation, Inc.
+// Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 
 // First part of user declarations.
 
-#line 37 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:404
+#line 37 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:399
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -47,14 +47,14 @@
 
 // User implementation prologue.
 
-#line 51 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:412
+#line 51 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:407
 // Unqualified %code blocks.
-#line 24 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:413
+#line 24 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:408
 
 #include "tag_filter_config_parser.hpp"
 static tag_filter::Parser::symbol_type yylex(TagFilterConfigParser &driver, tag_filter::Parser::location_type &loc);
 
-#line 58 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:413
+#line 58 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:408
 
 
 #ifndef YY_
@@ -131,16 +131,16 @@ static tag_filter::Parser::symbol_type yylex(TagFilterConfigParser &driver, tag_
 #endif // !YYDEBUG
 
 #define yyerrok         (yyerrstatus_ = 0)
-#define yyclearin       (yyla.clear ())
+#define yyclearin       (yyempty = true)
 
 #define YYACCEPT        goto yyacceptlab
 #define YYABORT         goto yyabortlab
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:479
+#line 9 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:474
 namespace tag_filter {
-#line 144 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:479
+#line 144 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:474
 
   /* Return YYSTR after stripping away unnecessary quotes and
      backslashes, so that it's suitable for yyerror.  The heuristic is
@@ -204,7 +204,7 @@ namespace tag_filter {
   // by_state.
   inline
   Parser::by_state::by_state ()
-    : state (empty_state)
+    : state (empty)
   {}
 
   inline
@@ -214,17 +214,10 @@ namespace tag_filter {
 
   inline
   void
-  Parser::by_state::clear ()
-  {
-    state = empty_state;
-  }
-
-  inline
-  void
   Parser::by_state::move (by_state& that)
   {
     state = that.state;
-    that.clear ();
+    that.state = empty;
   }
 
   inline
@@ -236,10 +229,7 @@ namespace tag_filter {
   Parser::symbol_number_type
   Parser::by_state::type_get () const
   {
-    if (state == empty_state)
-      return empty_symbol;
-    else
-      return yystos_[state];
+    return state == empty ? 0 : yystos_[state];
   }
 
   inline
@@ -332,7 +322,7 @@ namespace tag_filter {
     }
 
     // that is emptied.
-    that.type = empty_symbol;
+    that.type = empty;
   }
 
   inline
@@ -443,10 +433,6 @@ namespace tag_filter {
     std::ostream& yyoutput = yyo;
     YYUSE (yyoutput);
     symbol_number_type yytype = yysym.type_get ();
-    // Avoid a (spurious) G++ 4.8 warning about "array subscript is
-    // below array bounds".
-    if (yysym.empty ())
-      std::abort ();
     yyo << (yytype < yyntokens_ ? "token" : "nterm")
         << ' ' << yytname_[yytype] << " ("
         << yysym.location << ": ";
@@ -531,6 +517,9 @@ namespace tag_filter {
   int
   Parser::parse ()
   {
+    /// Whether yyla contains a lookahead.
+    bool yyempty = true;
+
     // State.
     int yyn;
     /// Length of the RHS of the rule being reduced.
@@ -582,7 +571,7 @@ namespace tag_filter {
       goto yydefault;
 
     // Read a lookahead token.
-    if (yyla.empty ())
+    if (yyempty)
       {
         YYCDEBUG << "Reading a token: ";
         try
@@ -595,6 +584,7 @@ namespace tag_filter {
             error (yyexc);
             goto yyerrlab1;
           }
+        yyempty = false;
       }
     YY_SYMBOL_PRINT ("Next token is", yyla);
 
@@ -613,6 +603,9 @@ namespace tag_filter {
         yyn = -yyn;
         goto yyreduce;
       }
+
+    // Discard the token being shifted.
+    yyempty = true;
 
     // Count tokens shifted since error; after three, turn off error status.
     if (yyerrstatus_)
@@ -736,496 +729,496 @@ namespace tag_filter {
           switch (yyn)
             {
   case 3:
-#line 105 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 105 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { driver.script_ = yystack_[1].value.as< std::string > () ; }
-#line 742 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 735 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 4:
-#line 107 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 107 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { driver.rules_.push_back(yystack_[0].value.as< tag_filter::RulePtr > ()) ; }
-#line 748 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 741 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 5:
-#line 108 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 108 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { driver.rules_.push_front(yystack_[1].value.as< tag_filter::RulePtr > ()) ; }
-#line 754 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 747 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 6:
-#line 111 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 111 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::RulePtr > () = std::make_shared<tag_filter::Rule>(yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::CommandListPtr > ()->commands_) ; }
-#line 760 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 753 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 7:
-#line 112 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 112 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::RulePtr > () = std::make_shared<tag_filter::Rule>(nullptr, yystack_[0].value.as< tag_filter::CommandListPtr > ()->commands_) ; }
-#line 766 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 759 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 8:
-#line 117 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 117 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandListPtr > () = yystack_[1].value.as< tag_filter::CommandListPtr > () ; }
-#line 772 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 765 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 9:
-#line 122 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 122 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandListPtr > () = std::make_shared<tag_filter::CommandList>() ; yylhs.value.as< tag_filter::CommandListPtr > ()->commands_.push_back(yystack_[0].value.as< tag_filter::CommandPtr > ()) ;  }
-#line 778 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 771 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 10:
-#line 123 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 123 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandListPtr > () = yystack_[0].value.as< tag_filter::CommandListPtr > () ; yylhs.value.as< tag_filter::CommandListPtr > ()->commands_.push_front(yystack_[1].value.as< tag_filter::CommandPtr > ()) ; }
-#line 784 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 777 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 11:
-#line 127 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 127 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ZoomRangePtr > () = std::make_shared<tag_filter::ZoomRange>(yystack_[1].value.as< uint8_t > (), 255) ; }
-#line 790 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 783 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 12:
-#line 128 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 128 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ZoomRangePtr > () = std::make_shared<tag_filter::ZoomRange>(yystack_[3].value.as< uint8_t > (), yystack_[1].value.as< uint8_t > ()); }
-#line 796 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 789 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 13:
-#line 129 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 129 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ZoomRangePtr > () = std::make_shared<tag_filter::ZoomRange>(yystack_[2].value.as< uint8_t > (), 255); }
-#line 802 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 795 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 14:
-#line 130 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 130 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ZoomRangePtr > () = std::make_shared<tag_filter::ZoomRange>(0, yystack_[1].value.as< uint8_t > ()); }
-#line 808 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 801 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 15:
-#line 133 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 133 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::TagDeclarationPtr > () = std::make_shared<tag_filter::TagDeclaration>(yystack_[0].value.as< std::string > (), nullptr); }
-#line 814 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 807 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 16:
-#line 134 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 134 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::TagDeclarationPtr > () = std::make_shared<tag_filter::TagDeclaration>(yystack_[2].value.as< std::string > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()); }
-#line 820 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 813 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 17:
-#line 137 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 137 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::TagListPtr > () = std::make_shared<tag_filter::TagList>() ; yylhs.value.as< tag_filter::TagListPtr > ()->tags_.push_back(yystack_[0].value.as< std::string > ()) ; }
-#line 826 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 819 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 18:
-#line 138 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 138 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::TagListPtr > () = yystack_[2].value.as< tag_filter::TagListPtr > () ; yylhs.value.as< tag_filter::TagListPtr > ()->tags_.push_back(yystack_[0].value.as< std::string > ()) ; }
-#line 832 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 825 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 19:
-#line 141 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 141 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::TagDeclarationListPtr > () = std::make_shared<tag_filter::TagDeclarationList>() ; yylhs.value.as< tag_filter::TagDeclarationListPtr > ()->tags_.push_back(yystack_[0].value.as< tag_filter::TagDeclarationPtr > ()) ; }
-#line 838 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 831 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 20:
-#line 142 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 142 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::TagDeclarationListPtr > () = yystack_[2].value.as< tag_filter::TagDeclarationListPtr > () ; yylhs.value.as< tag_filter::TagDeclarationListPtr > ()->tags_.push_back(yystack_[0].value.as< tag_filter::TagDeclarationPtr > ()) ; }
-#line 844 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 837 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 21:
-#line 146 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 146 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::SimpleCommand>(tag_filter::Command::Add, yystack_[3].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 850 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 843 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 22:
-#line 148 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 148 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::SimpleCommand>(tag_filter::Command::Set, yystack_[3].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionNodePtr > ()) ;}
-#line 856 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 849 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 23:
-#line 150 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 150 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::SimpleCommand>(tag_filter::Command::Delete, yystack_[1].value.as< std::string > ()) ; }
-#line 862 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 855 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 24:
-#line 152 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 152 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::WriteCommand>(*yystack_[2].value.as< tag_filter::ZoomRangePtr > (), *yystack_[1].value.as< tag_filter::TagDeclarationListPtr > ()) ; }
-#line 868 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 861 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 25:
-#line 153 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 153 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::AttachCommand>(*yystack_[1].value.as< tag_filter::TagListPtr > ()) ; }
-#line 874 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 867 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 26:
-#line 154 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 154 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::WriteCommand>( tag_filter::ZoomRange(0, 255), *yystack_[1].value.as< tag_filter::TagDeclarationListPtr > ()) ; }
-#line 880 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 873 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 27:
-#line 156 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 156 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::WriteAllCommand>(*yystack_[1].value.as< tag_filter::ZoomRangePtr > ()) ; }
-#line 886 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 879 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 28:
-#line 157 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 157 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::WriteAllCommand>( tag_filter::ZoomRange(0, 255)) ; }
-#line 892 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 885 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 29:
-#line 159 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 159 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::ExcludeCommand>(*yystack_[2].value.as< tag_filter::ZoomRangePtr > (), *yystack_[1].value.as< tag_filter::TagListPtr > ()) ; }
-#line 898 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 891 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 30:
-#line 160 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 160 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::ExcludeCommand>( tag_filter::ZoomRange(0, 255), *yystack_[1].value.as< tag_filter::TagListPtr > ()) ; }
-#line 904 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 897 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 31:
-#line 162 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 162 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::SimpleCommand>( tag_filter::SimpleCommand::Continue) ;}
-#line 910 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 903 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 32:
-#line 164 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 164 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::RuleCommand>( yystack_[0].value.as< tag_filter::RulePtr > ()) ;}
-#line 916 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 909 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 33:
-#line 165 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 165 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::CommandPtr > () = std::make_shared<tag_filter::FunctionCommand>(yystack_[1].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 922 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 915 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 34:
-#line 170 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 170 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 928 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 921 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 35:
-#line 171 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 171 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BooleanOperator>( tag_filter::BooleanOperator::Or, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 934 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 927 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 36:
-#line 175 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 175 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 940 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 933 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 37:
-#line 176 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 176 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BooleanOperator>( tag_filter::BooleanOperator::And, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 946 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 939 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 38:
-#line 180 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 180 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 952 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 945 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 39:
-#line 181 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 181 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BooleanOperator>( tag_filter::BooleanOperator::Not, yystack_[0].value.as< tag_filter::ExpressionNodePtr > (), nullptr) ; }
-#line 958 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 951 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 40:
-#line 185 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 185 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 964 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 957 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 41:
-#line 186 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 186 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[1].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 970 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 963 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 42:
-#line 190 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 190 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 976 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 969 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 43:
-#line 191 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 191 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 982 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 975 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 44:
-#line 192 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 192 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 988 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 981 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 45:
-#line 193 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 193 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 994 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 987 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 46:
-#line 197 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 197 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::UnaryPredicate>( yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ;}
-#line 1000 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 993 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 47:
-#line 200 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 200 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::Equal, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
-#line 1006 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 999 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 48:
-#line 201 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 201 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::NotEqual, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
-#line 1012 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1005 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 49:
-#line 202 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 202 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::Less, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
-#line 1018 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1011 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 50:
-#line 203 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 203 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::Greater, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
-#line 1024 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1017 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 51:
-#line 204 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 204 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::LessOrEqual, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
-#line 1030 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1023 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 52:
-#line 205 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 205 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ComparisonPredicate>( tag_filter::ComparisonPredicate::GreaterOrEqual, yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ) ; }
-#line 1036 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1029 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 53:
-#line 209 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 209 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LikeTextPredicate>(yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< std::string > (), true) ; }
-#line 1042 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1035 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 54:
-#line 210 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 210 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LikeTextPredicate>(yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< std::string > (), false) ; }
-#line 1048 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1041 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 55:
-#line 214 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 214 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ListPredicate>(yystack_[4].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionListPtr > ()->children(), true) ; }
-#line 1054 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1047 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 56:
-#line 215 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 215 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::ListPredicate>(yystack_[5].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionListPtr > ()->children(), false) ; }
-#line 1060 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1053 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 57:
-#line 219 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 219 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionListPtr > () = std::make_shared<tag_filter::ExpressionList>() ;  yylhs.value.as< tag_filter::ExpressionListPtr > ()->append(yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ;  }
-#line 1066 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1059 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 58:
-#line 220 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 220 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionListPtr > () = yystack_[0].value.as< tag_filter::ExpressionListPtr > () ; yystack_[0].value.as< tag_filter::ExpressionListPtr > ()->prepend(yystack_[2].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 1072 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1065 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 59:
-#line 224 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 224 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1078 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1071 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 60:
-#line 225 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 225 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('+',yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 1084 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1077 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 61:
-#line 226 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 226 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('.',yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 1090 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1083 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 62:
-#line 227 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 227 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('-', yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 1096 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1089 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 63:
-#line 231 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 231 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1102 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1095 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 64:
-#line 232 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 232 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('*', yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 1108 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1101 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 65:
-#line 233 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 233 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::BinaryOperator>('/', yystack_[2].value.as< tag_filter::ExpressionNodePtr > (), yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 1114 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1107 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 66:
-#line 237 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 237 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1120 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1113 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 67:
-#line 238 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 238 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1126 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1119 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 68:
-#line 239 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 239 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1132 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1125 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 69:
-#line 240 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 240 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[1].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1138 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1131 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 70:
-#line 244 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 244 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::Function>(yystack_[2].value.as< std::string > (), &driver.lua_) ; }
-#line 1144 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1137 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 71:
-#line 245 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 245 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     {
                         yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::Function>(yystack_[3].value.as< std::string > (), yystack_[1].value.as< tag_filter::ExpressionListPtr > ()->children(), &driver.lua_) ;
 		 }
-#line 1152 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1145 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 72:
-#line 251 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 251 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     {
                                 yylhs.value.as< tag_filter::ExpressionListPtr > () = std::make_shared<tag_filter::ExpressionList>() ;
 				yylhs.value.as< tag_filter::ExpressionListPtr > ()->append(yystack_[0].value.as< tag_filter::ExpressionNodePtr > ()) ;
 			}
-#line 1161 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1154 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 73:
-#line 255 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 255 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionListPtr > () = yystack_[0].value.as< tag_filter::ExpressionListPtr > () ; yystack_[0].value.as< tag_filter::ExpressionListPtr > ()->prepend(yystack_[2].value.as< tag_filter::ExpressionNodePtr > ()) ; }
-#line 1167 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1160 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 74:
-#line 259 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 259 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1173 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1166 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 75:
-#line 263 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 263 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1179 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1172 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 76:
-#line 264 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 264 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1185 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1178 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 77:
-#line 268 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 268 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LiteralExpressionNode>(yystack_[0].value.as< std::string > ()) ; }
-#line 1191 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1184 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 78:
-#line 269 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 269 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = yystack_[0].value.as< tag_filter::ExpressionNodePtr > () ; }
-#line 1197 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1190 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 79:
-#line 274 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 274 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LiteralExpressionNode>(true) ; }
-#line 1203 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1196 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 80:
-#line 275 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 275 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     { yylhs.value.as< tag_filter::ExpressionNodePtr > () =  std::make_shared<tag_filter::LiteralExpressionNode>(false) ; }
-#line 1209 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1202 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 81:
-#line 279 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 279 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     {
                 yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::LiteralExpressionNode>((double)yystack_[0].value.as< double > ()) ;
 	}
-#line 1217 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1210 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
   case 82:
-#line 285 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:859
+#line 285 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:847
     {
                 yylhs.value.as< tag_filter::ExpressionNodePtr > () = std::make_shared<tag_filter::Attribute>(yystack_[0].value.as< std::string > ()) ;
 	}
-#line 1225 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1218 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
     break;
 
 
-#line 1229 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:859
+#line 1222 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:847
             default:
               break;
             }
@@ -1253,7 +1246,8 @@ namespace tag_filter {
     if (!yyerrstatus_)
       {
         ++yynerrs_;
-        error (yyla.location, yysyntax_error_ (yystack_[0].state, yyla));
+        error (yyla.location, yysyntax_error_ (yystack_[0].state,
+                                           yyempty ? yyempty_ : yyla.type_get ()));
       }
 
 
@@ -1266,10 +1260,10 @@ namespace tag_filter {
         // Return failure if at end of input.
         if (yyla.type_get () == yyeof_)
           YYABORT;
-        else if (!yyla.empty ())
+        else if (!yyempty)
           {
             yy_destroy_ ("Error: discarding", yyla);
-            yyla.clear ();
+            yyempty = true;
           }
       }
 
@@ -1345,7 +1339,7 @@ namespace tag_filter {
     goto yyreturn;
 
   yyreturn:
-    if (!yyla.empty ())
+    if (!yyempty)
       yy_destroy_ ("Cleanup: discarding lookahead", yyla);
 
     /* Do not reclaim the symbols of the rule whose action triggered
@@ -1365,7 +1359,7 @@ namespace tag_filter {
                  << std::endl;
         // Do not try to display the values of the reclaimed symbols,
         // as their printer might throw an exception.
-        if (!yyla.empty ())
+        if (!yyempty)
           yy_destroy_ (YY_NULLPTR, yyla);
 
         while (1 < yystack_.size ())
@@ -1385,8 +1379,9 @@ namespace tag_filter {
 
   // Generate an error message.
   std::string
-  Parser::yysyntax_error_ (state_type yystate, const symbol_type& yyla) const
+  Parser::yysyntax_error_ (state_type yystate, symbol_number_type yytoken) const
   {
+    std::string yyres;
     // Number of reported tokens (one for the "unexpected", one per
     // "expected").
     size_t yycount = 0;
@@ -1400,7 +1395,7 @@ namespace tag_filter {
          the only way this function was invoked is if the default action
          is an error action.  In that case, don't check for expected
          tokens because there are none.
-       - The only way there can be no lookahead present (in yyla) is
+       - The only way there can be no lookahead present (in yytoken) is
          if this state is a consistent state with a default action.
          Thus, detecting the absence of a lookahead is sufficient to
          determine that there is no unexpected or expected token to
@@ -1420,9 +1415,8 @@ namespace tag_filter {
          token that will not be accepted due to an error action in a
          later state.
     */
-    if (!yyla.empty ())
+    if (yytoken != yyempty_)
       {
-        int yytoken = yyla.type_get ();
         yyarg[yycount++] = yytname_[yytoken];
         int yyn = yypact_[yystate];
         if (!yy_pact_value_is_default_ (yyn))
@@ -1465,7 +1459,6 @@ namespace tag_filter {
 #undef YYCASE_
       }
 
-    std::string yyres;
     // Argument number.
     size_t yyi = 0;
     for (char const* yyp = yyformat; *yyp; ++yyp)
@@ -1709,10 +1702,10 @@ namespace tag_filter {
 #endif // YYDEBUG
 
 
-#line 9 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:1167
+#line 9 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:1155
 } // tag_filter
-#line 1715 "/home/malasiot/source/old/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:1167
-#line 290 "/home/malasiot/source/old/maplite/src/convert/tag_filter.y" // lalr1.cc:1168
+#line 1708 "/home/malasiot/source/maplite/src/convert/parser/tag_filter_parser.cpp" // lalr1.cc:1155
+#line 290 "/home/malasiot/source/maplite/src/convert/tag_filter.y" // lalr1.cc:1156
 
 #define YYDEBUG 1
 
