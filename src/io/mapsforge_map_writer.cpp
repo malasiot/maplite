@@ -14,9 +14,10 @@
 #include <spatialite.h>
 #include <omp.h>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+
 using namespace std ;
-
-
 
 static void sort_histogram(const map<string, uint64_t> &hist, vector<string> &tags) {
     vector<uint64_t> freq ;
@@ -113,6 +114,22 @@ void MapFileWriter::setCreator(const std::string &creator) {
 void MapFileWriter::setDebug(bool debug) {
     has_debug_info_ = debug ;
     if ( debug ) info_.flags_ |= 0x80 ;
+}
+
+void WriteOptions::setZoomInterval(const string &str)
+{
+    zoom_interval_conf_.clear() ;
+
+    vector<string> tokens;
+    boost::split(tokens, str, boost::is_any_of(" ,"));
+    for( const auto &s: tokens ) {
+        try {
+            zoom_interval_conf_.push_back(boost::lexical_cast<int>(s));
+        }
+        catch (const boost::bad_lexical_cast & ) {
+            zoom_interval_conf_.push_back(0) ;
+        }
+    }
 }
 
 void MapFileWriter::create(const std::string &file_path) {
@@ -233,7 +250,7 @@ void MapFileWriter::writeSubFileInfo(const WriteOptions &options)
     info_.min_zoom_level_ = std::numeric_limits<uint8_t>::max();
     info_.max_zoom_level_ = std::numeric_limits<uint8_t>::min();
 
-    const vector<uint8_t> &conf = options.zoom_interval_conf_ ;
+    const vector<int> &conf = options.zoom_interval_conf_ ;
 
     for( uint i=0 ; i<conf.size() ; ) {
         SubFileInfo info ;

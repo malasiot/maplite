@@ -100,6 +100,7 @@ static void get_geometry_extent(SQLite::Connection &con, const string &desc, dou
 
     if ( res ) {
 
+
         SQLite::Blob blob = res.get<SQLite::Blob>(0) ;
 
         if ( blob.data() == nullptr ) return ;

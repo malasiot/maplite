@@ -37,7 +37,7 @@ void POIWriter::write(OSMProcessor &db, const POICategoryContainer &categories, 
 {
     writeMetadata() ;
     writeCategories(categories) ;
-    writePOIData(proc, categories, options) ;
+ //   writePOIData(proc, categories, options) ;
 }
 
 void POIWriter::setBoundingBox(const BBox &box) {

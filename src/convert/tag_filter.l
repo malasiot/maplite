@@ -86,7 +86,7 @@ z[0-9][0-9]?	{ return tag_filter::Parser::make_ZOOM_SPEC(atoi(yytext+1), *yylloc
     return tag_filter::Parser::make_NUMBER(atof(yytext), *yylloc) ;
 }
 
-['\"]([^\\\']|\\.)*['\"] {
+["]([^\\\"]|\\.)*["] {
     return tag_filter::Parser::make_STRING(std::string(yytext+1, yyleng-2), *yylloc) ;
 }
 

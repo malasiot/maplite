@@ -58,6 +58,9 @@ SET ( OSM2MAP_SOURCES
 	${SRC_ROOT}/util/progress_stream.hpp
 	${SRC_ROOT}/util/progress_stream.cpp
 
+        ${SRC_ROOT}/util/xml_pull_parser.hpp
+        ${SRC_ROOT}/util/xml_pull_parser.cpp
+
 )
 
 SET ( OSM2POI_SOURCES

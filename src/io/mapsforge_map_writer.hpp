@@ -54,7 +54,10 @@ struct WayDataContainer {
 
 struct WriteOptions {
 
-    std::vector<uint8_t> zoom_interval_conf_ = { 5,0,7, 10,8,11, 14,12,21 } ;
+    std::vector<int> zoom_interval_conf_ = { 5,0,7, 10,8,11, 14,12,21 } ;
+
+    void setZoomInterval(const std::string &s) ;
+
     float bbox_enlargement_ = 20 ;
     bool debug_ = false ;
     float simplification_factor_ = 2.5 ;
@@ -81,6 +84,8 @@ public:
     void setComment(const std::string &comment) ;
     void setCreator(const std::string &creator) ;
     void setDebug(bool debug);
+
+    void setZoomIntervalConf(const std::string &str) ;
 
     BBox getBoundingBox() const {
         return BBox(info_.min_lon_, info_.min_lat_, info_.max_lon_, info_.max_lat_) ;
