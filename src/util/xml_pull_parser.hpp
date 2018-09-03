@@ -8,19 +8,22 @@
 
 #include <util/dictionary.hpp>
 
+#include <util/detail/read_ahead_stream_adapter.hpp>
+
 class XmlStreamWrapper ;
 // Simple and fast XML pull style reader that follows the Java XmlPullParse API
 
 class XmlPullParser {
 public:
-    XmlPullParser(std::istream &strm) ;
+    XmlPullParser(std::istream &strm, bool process_namespace = false) ;
 
     enum TokenType
     {
         CDSECT,
         COMMENT,
         DOCDECL,
-        IGNORABLE_WHITSPACE,
+        IGNORABLE_WHITESPACE,
+        PROCESSING_INSTRUCTION,
         START_DOCUMENT,
         END_DOCUMENT,
         START_TAG,
@@ -28,67 +31,34 @@ public:
         TEXT
     } ;
 
-    //  Returns the number of attributes on the current element; -1 if the current event is not START_TAG
-    int	getAttributeCount() const ;
-
-    // Returns the local name of the specified attribute if namespaces are enabled or just attribute name if namespaces are disabled.
-    std::string getAttributeName(int idx) const ;
-
-    // Returns the namespace URI of the specified attribute number index (starts from 0).
-    std::string getAttributeNamespace(int idx) const ;
-
-    // Returns the prefix of the specified attribute. Returns empty string if the element has no prefix.
-    std::string getAttributePrefix(int idx) const ;
-
-    // Returns the attributes value identified by namespace URI and namespace localName.
-    std::string getAttributeValue(const std::string &ns, const std::string &name) const ;
-
-    // Current column: numbering starts from 0 (returned when parser is in START_DOCUMENT state!)
-    int getColumnNumber() const ;
-
-    // Returns the current depth of the element.
-    int	getDepth() const ;
+    const Dictionary &getAttributes() const { return attributes_ ; }
 
     // Returns the type of the current event (START_TAG, END_TAG, TEXT, etc.)
-    TokenType getEventType() const ;
-
-    // Current line number: numebering starts from 1.
-    int	getLineNumber() const ;
+    TokenType getEventType() const { return event_ ; }
 
     // Returns the (local) name of the current element when namespaces are enabled or raw name when namespaces are disabled.
-    std::string getName() const ;
+    const std::string &getName() const { return local_name_ ;}
 
     // Returns the namespace URI of the current element.
-    std::string getNamespace() const ;
+    std::string getNamespace() const { return ns_ ; }
 
     // Return uri for the given prefix.
     std::string getNamespace(const std::string &prefix) const ;
 
-    // Return position in stack of first namespace slot for element at passed depth.
-    int	getNamespaceCount(int depth) ;
-
-    // Return namespace prefixes for position pos in namespace stack
-    std::string getNamespacePrefix(int pos) const ;
-
-    // Return namespace URIs for position pos in namespace stack If pos is out of range it throw exception.
-    std::string getNamespaceUri(int pos) const ;
-
     // Returns the prefix of the current element or empty if elemet has no prefix (is in defualt namespace).
-    std::string getPrefix() const ;
+    std::string getPrefix() const { return prefix_ ; }
 
     // Look up the value of a property.
     std::string getProperty(const std::string &prop_name) const ;
 
     // Read text content of the current event as String.
-    std::string getText() const ;
-
-   //char[] 	getTextCharacters(int[] holderForStartAndLength)
+    const std::string &getText() const { return text_ ; }
 
     //  Returns true if the current event is START_TAG and the tag is degenerated
-   bool	isEmptyElementTag() const ;
+    bool isEmptyElementTag() const { return is_empty_element_tag_ ; }
 
    // Check if current TEXT event contains only whitespace characters.
-   bool isWhitespace() const ;
+    bool isWhitespace() const { return is_whitespace_ ; }
 
    // Get next parsing event - element content wil be coalesced and only one TEXT event must be returned for whole element content (comments and processing instructions will be ignored and emtity references must be expanded or exception mus be thrown if entity reerence can not be exapnded).
    TokenType next() ;
@@ -105,20 +75,16 @@ public:
 
 private:
 
-   bool next(char &c) ;
-   void putback(char c) ;
-   bool expect(const char *seq) ;
-   bool skipWhite() ;
-
    bool escapeString(std::string &value) ;
-
-   char peek() ;
    bool parseBOM() ;
 
 private:
 
     bool parseXmlDecl() ;
-
+    bool parseDocType() ;
+    bool parseCData() ;
+    bool parseComment() ;
+    bool parsePI() ;
     bool parseName(std::string &name);
     bool parseAttributeValue(std::string &val);
      bool parseStartElement();
@@ -126,20 +92,28 @@ private:
     bool fatal() ;
     bool parseAttributeList(Dictionary &attrs);
     bool parseCharacters();
+    bool nextEvent(std::string &text) ;
+    void parseNameSpaceAttributes() ;
+    std::string resolveUri(const std::string ns_prefix) const ;
 
 private:
 
-    std::istream &strm_ ;
-    size_t line_, chars_, column_ ;
-    char look_ahead_[8] ;
-    size_t nla_ ;
+    ReadAheadStreamAdapter<8> cursor_ ;
 
-private:
+    struct Element {
+        Element(std::string local_name, std::string &prefix, std::string ns):
+            name_(local_name), prefix_(prefix), ns_(ns) {}
+        std::string name_, prefix_, ns_ ;
+    };
 
-    TokenType token_ = START_DOCUMENT ;
+    TokenType token_ = START_DOCUMENT, event_ ;
     Dictionary attributes_ ;
-    std::string name_, text_ ;
-    bool is_empty_element_tag_ = false ;
+    std::string name_, prefix_, local_name_, text_, ns_ ;
+    bool is_empty_element_tag_ = false, is_whitespace_ = true ;
+    int depth_ = 0 ;
+    std::vector<Dictionary> ns_stack_ ;
+    std::vector<Element> element_stack_ ;
+    bool process_ns_ = false ;
 
 private:
 

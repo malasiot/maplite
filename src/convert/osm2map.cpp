@@ -14,13 +14,21 @@ namespace po = boost::program_options ;
 
 int main(int argc, char *argv[])
 {
-    ifstream strm("/home/malasiot/Downloads/oo.xml");
+    ifstream strm("/home/malasiot/Downloads/books.xml");
 
-    XmlPullParser parser(strm) ;
+    XmlPullParser parser(strm, true) ;
 
-    while ( parser.nextToken() != XmlPullParser::END_DOCUMENT) {
-
+    XmlPullParser::TokenType evt ;
+    while ( ( evt = parser.next() ) != XmlPullParser::END_DOCUMENT) {
+        if ( evt == XmlPullParser::START_TAG )
+            cout << "START_TAG: " << parser.getNamespace() << ' ' << parser.getName() << endl ;
+        else if ( evt == XmlPullParser::END_TAG )
+            cout << "END_TAG: " << parser.getNamespace() << ' ' << parser.getName() << endl ;
+        else if ( evt == XmlPullParser::TEXT )
+            cout << "TEXT: " << parser.getText() << endl ;
     }
+
+    exit(1) ;
 
     string filter_config_file, out_map_file ;
     string land_shp_file ;

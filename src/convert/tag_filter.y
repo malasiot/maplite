@@ -74,7 +74,7 @@ static tag_filter::Parser::symbol_type yylex(TagFilterConfigParser &driver, tag_
 %token <uint8_t> ZOOM_SPEC "zoom specifier"
 %token END  0  "end of file";
 
-%type <tag_filter::ExpressionNodePtr> boolean_value_expression boolean_term boolean_factor boolean_primary predicate comparison_predicate like_text_predicate exists_predicate
+%type <tag_filter::ExpressionNodePtr> boolean_value_expression boolean_term boolean_factor boolean_primary predicate comparison_predicate like_text_predicate
 %type <tag_filter::ExpressionNodePtr> expression term factor numeric_literal boolean_literal general_literal literal function function_argument attribute
 %type <tag_filter::ExpressionNodePtr> list_predicate unary_predicate
 %type <tag_filter::ExpressionListPtr> literal_list function_argument_list
