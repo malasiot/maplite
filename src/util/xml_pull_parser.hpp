@@ -67,18 +67,12 @@ public:
    TokenType nextToken() ;
 
    // If the current event is text, the value of getText is returned and next() is called.
-   std::string readText() ;
-
-   // test if the current event is of the given type and if the namespace and name do match.
-   void require(TokenType type, const std::string &ns, const std::string &name) ;
-
+   std::string nextText() ;
 
 private:
 
    bool escapeString(std::string &value) ;
    bool parseBOM() ;
-
-private:
 
     bool parseXmlDecl() ;
     bool parseDocType() ;
