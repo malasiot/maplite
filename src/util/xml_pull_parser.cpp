@@ -1,29 +1,58 @@
 #include <util/xml_pull_parser.hpp>
 #include <stdexcept>
+#include <cstdlib>
 
 #include <util/dictionary.hpp>
 
 using namespace std ;
 
-static bool is_valid_name_char(char c) {
-    return ( isalnum(c) || c == '-' || c == '_' || c == '.' || c == ':' ) ;
+static bool is_valid_name_char(char c, int idx) {
+    if ( idx == 0 )
+        return ( isalpha(c) || c == '_' || c == ':' ) ;
+    else
+        return ( isalnum(c) || c == '-' || c == '_' || c == '.' || c == ':' ) ;
 }
 
 bool XmlPullParser::parseBOM() {
     static const char c[4] = {  char(0xef), char(0xbb), char(0xbf), char(0) } ;
     return cursor_.expect(c) ;
+}
 
+static bool utf8_encode(string &out, uint32_t utf)
+{
+    if ( utf <= 0x7F ) {
+        out.push_back((char) utf);
+    }
+    else if ( utf <= 0x07FF ) {
+        // 2-byte unicode
+        out.push_back((char) (((utf >> 6) & 0x1F) | 0xC0));
+        out.push_back((char) (((utf >> 0) & 0x3F) | 0x80));
+    }
+    else if ( utf <= 0xFFFF ) {
+        // 3-byte unicode
+        out.push_back((char) (((utf >> 12) & 0x0F) | 0xE0));
+        out.push_back((char) (((utf >>  6) & 0x3F) | 0x80));
+        out.push_back((char) (((utf >>  0) & 0x3F) | 0x80));
+    }
+    else if ( utf <= 0x10FFFF ) {
+        // 4-byte unicode
+        out.push_back((char) (((utf >> 18) & 0x07) | 0xF0));
+        out.push_back((char) (((utf >> 12) & 0x3F) | 0x80));
+        out.push_back((char) (((utf >>  6) & 0x3F) | 0x80));
+        out.push_back((char) (((utf >>  0) & 0x3F) | 0x80));
+    } else return false ;
+
+    return true ;
 }
 
 bool XmlPullParser::escapeString(string &value) {
 
     uint k = 0 ;
     string quot ;
-    int c = cursor_.read() ;
+    char c ;
 
-    while ( ( c = cursor_.read() ) > 0 && c != ';' && k < 5 )  {
+    while ( cursor_.next(c) && c != ';' && k < 5 )  {
         quot += char(c) ;
-        c = cursor_.read() ;
         ++k ;
     };
 
@@ -32,6 +61,19 @@ bool XmlPullParser::escapeString(string &value) {
     else if ( quot == "lt" ) value += '<' ;
     else if ( quot == "gt" ) value += '>' ;
     else if ( quot == "apos") value += '\'' ;
+    else if ( quot.size() > 2 && quot[0] == '#' ) {
+        uint32_t c ;
+        try {
+            if ( quot[1] == 'x' )
+                c = (uint32_t)std::stoul(quot.substr(2), nullptr, 16) ;
+            else
+                c = (uint32_t)std::stoul(quot.substr(1), nullptr, 10) ;
+
+            if ( !utf8_encode(value, c) ) return false ;
+        } catch ( invalid_argument & ) {
+            return false ;
+        }
+    }
     else return false ;
 
     return true ;
@@ -39,6 +81,10 @@ bool XmlPullParser::escapeString(string &value) {
 
 
 XmlPullParser::XmlPullParser(istream &strm, bool ns): cursor_(strm), process_ns_(ns) {
+}
+
+string XmlPullParser::getAttribute(const string &name, const string &val) const {
+    return attributes_.get(name, val) ;
 }
 
 
@@ -50,15 +96,15 @@ string XmlPullParser::getNamespace(const string &prefix) const
         return resolveUri(prefix) ;
 }
 
-
+static const char *parse_attributes_error = "Error parsing attribute list" ;
 
 bool XmlPullParser::parseXmlDecl() {
     if ( cursor_.expect("<?xml") ) {
         cursor_.skipWhite() ;
         Dictionary attrs ;
-        if ( !parseAttributeList(attrs) ) return fatal() ;
+        if ( !parseAttributeList(attrs) ) return fatal(parse_attributes_error) ;
         cursor_.skipWhite() ;
-        if ( !cursor_.expect("?>") ) return fatal() ;
+        if ( !cursor_.expect("?>") ) return fatal(parse_attributes_error) ;
         return true ;
     }
 
@@ -76,7 +122,7 @@ bool XmlPullParser::parseAttributeValue(std::string &val) {
     while ( cursor_.next(c) ) {
 
         if ( c == '&' ) {
-           if ( !escapeString(val) ) return false ;
+            if ( !escapeString(val) ) return false ;
         }
         else if ( c == '<' ) return false ;
         else if ( c == oc ) {
@@ -107,33 +153,33 @@ bool XmlPullParser::parseName(std::string &name) {
     name.clear() ;
 
     char c ;
+    int count = 0 ;
     while ( cursor_.next(c) ) {
-        if ( !is_valid_name_char(c) ) {
+        if ( !is_valid_name_char(c, count) ) {
             cursor_.putback(c) ;
             break ;
         }
-        else name += c ;
+
+        name += c ;
+        count ++ ;
     }
 
     if ( name.empty() ) return false ;
-
-
 
     return true ;
 }
 
 
-bool XmlPullParser::parseAttributeList(Dictionary &attrs)
-{
+bool XmlPullParser::parseAttributeList(Dictionary &attrs) {
     attributes_.clear() ;
 
     do {
         string attrName, attrValue ;
         if ( !parseName(attrName) ) return false ;
         cursor_.skipWhite() ;
-        if ( !cursor_.expect("=") ) fatal() ;
+        if ( !cursor_.expect("=") ) fatal(parse_attributes_error) ;
         cursor_.skipWhite() ;
-        if ( !parseAttributeValue(attrValue) ) fatal() ;
+        if ( !parseAttributeValue(attrValue) ) fatal(parse_attributes_error) ;
         attrs.add(attrName, attrValue) ;
         cursor_.skipWhite() ;
         char c = cursor_.peek() ;
@@ -150,7 +196,7 @@ bool XmlPullParser::parseStartElement()
     if ( c < 0 || c == '/' ) return false ;
 
     cursor_.skipWhite() ;
-    if ( !parseName(name_) ) return fatal() ;
+    if ( !parseName(name_) ) return fatal("Error parsing start element name") ;
     cursor_.skipWhite() ;
 
     parseAttributeList(attributes_) ;
@@ -165,8 +211,8 @@ bool XmlPullParser::parseStartElement()
     element_stack_.emplace_back(local_name_, prefix_, ns_) ;
 
     if ( cursor_.expect("/>") ) {
-       is_empty_element_tag_ = true ;
-       return true ;
+        is_empty_element_tag_ = true ;
+        return true ;
     }
     else if ( cursor_.expect(">") ) {
         is_empty_element_tag_ = false ;
@@ -184,9 +230,10 @@ bool XmlPullParser::parseEndElement()
     if ( c == '/' ) {
         cursor_.read() ;
         cursor_.skipWhite() ;
-        if ( !parseName(name_) ) return fatal() ;
+        if ( !parseName(name_) ) return fatal("Error parsing end element name") ;
         cursor_.skipWhite() ;
         if ( cursor_.expect(">") ) return true ;
+        fatal("Invalid end element tag") ;
     }
 
     return false ;
@@ -209,9 +256,9 @@ bool XmlPullParser::parseCharacters()
             break ;
         }
         else if ( c == '&' ) {
-           is_whitespace_ = false ;
-           if ( !escapeString(text_) )
-               fatal() ;
+            is_whitespace_ = false ;
+            if ( !escapeString(text_) )
+                fatal("Escape string parsing error") ;
         }
         else {
             if ( c != ' ' && c != '\n' )
@@ -261,8 +308,8 @@ string XmlPullParser::resolveUri(const string ns_prefix) const
     return string() ;
 }
 
-bool XmlPullParser::fatal() {
-    // throw XMLSAXException(code, cursor_.line_, cursor_.column_) ;
+bool XmlPullParser::fatal(const string &msg) {
+    throw XmlPullParserException(msg, cursor_.line(), cursor_.column()) ;
     return false ;
 }
 
@@ -281,9 +328,9 @@ bool XmlPullParser::parseDocType() {
                     if ( depth == 0 ) break ;
                 }
             }
-       }
+        }
 
-       return true ;
+        return true ;
     }
 
     return false ;
@@ -313,7 +360,7 @@ bool XmlPullParser::parseComment()
         text_.clear() ;
         char c ;
         while ( cursor_.next(c) && !cursor_.expect("-->") ) text_ += c ;
-        if ( !cursor_ ) fatal() ;
+        if ( !cursor_ ) fatal("End of input reached while parsing comment") ;
         else return true ;
     }
     return false ;
@@ -343,7 +390,9 @@ XmlPullParser::TokenType XmlPullParser::nextToken() {
         is_empty_element_tag_ = false ;
         depth_ -- ;
         if ( process_ns_ ) ns_stack_.pop_back() ;
-        return END_TAG ;
+        element_stack_.pop_back() ;
+        token_ = END_TAG ;
+        return token_ ;
     }
 
     char c ;
@@ -376,7 +425,7 @@ XmlPullParser::TokenType XmlPullParser::nextToken() {
                 }
             }
 
-            fatal() ;
+            fatal("Unmatched end tag '" + local_name_ + "'") ;
         }
         else if ( parseDocType() ) token_ = DOCDECL ;
         else if ( parseCData() ) token_ = CDSECT ;
@@ -398,9 +447,9 @@ XmlPullParser::TokenType XmlPullParser::next() {
     } while ( token_ == COMMENT || token_ == DOCDECL || token_ == PROCESSING_INSTRUCTION ) ;
 
     if ( token_ == START_TAG )
-       event_ = START_TAG ;
+        event_ = START_TAG ;
     else if ( token_ == END_TAG )
-       event_ = END_TAG ;
+        event_ = END_TAG ;
     else if ( token_ == CDSECT || token_ == TEXT ) {
         event_ = TEXT ;
     } else if ( token_ == END_DOCUMENT ) {
@@ -408,4 +457,10 @@ XmlPullParser::TokenType XmlPullParser::next() {
     }
 
     return event_ ;
+}
+
+string XmlPullParserException::make_message(const string &msg, int line, int col) {
+    stringstream msg_strm ;
+    msg_strm << msg << " (near " << line << ':' << col ;
+    return msg_strm.str() ;
 }

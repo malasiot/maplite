@@ -92,7 +92,7 @@ static bool uncompress_blob(PBF::Blob &bmsg, char *ubuf)
 }
 
 
-bool PBFReader::process_osm_data_nodes(DocumentReader &doc, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
+bool PBFReader::process_osm_data_nodes(Storage &doc, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
 {
     for ( unsigned node_id = 0; node_id < group.nodes_size() ; node_id++ )
     {
@@ -122,7 +122,7 @@ bool PBFReader::process_osm_data_nodes(DocumentReader &doc, const PrimitiveGroup
 
 }
 
-bool PBFReader::process_osm_data_dense_nodes(DocumentReader &doc, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
+bool PBFReader::process_osm_data_dense_nodes(Storage &doc, const PrimitiveGroup &group, const StringTable &string_table, double lat_offset, double lon_offset, double granularity)
 {
     if ( !group.has_dense() ) return true ;
 
@@ -174,7 +174,7 @@ bool PBFReader::process_osm_data_dense_nodes(DocumentReader &doc, const Primitiv
 }
 
 
-bool PBFReader::process_osm_data_ways(DocumentReader &doc, const PrimitiveGroup &group, const StringTable &string_table)
+bool PBFReader::process_osm_data_ways(Storage &doc, const PrimitiveGroup &group, const StringTable &string_table)
 {
     for ( unsigned way_id = 0; way_id < group.ways_size() ; way_id++ )
     {
@@ -213,7 +213,7 @@ bool PBFReader::process_osm_data_ways(DocumentReader &doc, const PrimitiveGroup 
 }
 
 
-bool PBFReader::process_osm_data_relations(DocumentReader &doc, const PrimitiveGroup &group, const StringTable &string_table)
+bool PBFReader::process_osm_data_relations(Storage &doc, const PrimitiveGroup &group, const StringTable &string_table)
 {
     for ( unsigned rel_id = 0; rel_id < group.relations_size() ; rel_id++ )
     {
@@ -267,12 +267,14 @@ bool PBFReader::process_osm_data_relations(DocumentReader &doc, const PrimitiveG
 
 }
 
-bool PBFReader::read(istream &input, DocumentReader &doc)
+bool PBFReader::read(istream &input, Storage &doc)
 {
     BlockHeader header_msg;
     Blob blob_msg ;
 
     if ( !input ) return false ;
+
+    doc.writeBegin() ;
 
     while ( input.good() )
     {
@@ -325,6 +327,8 @@ bool PBFReader::read(istream &input, DocumentReader &doc)
         }
 
     }
+
+    doc.writeEnd() ;
 
     return true ;
 

@@ -31,6 +31,10 @@ SET ( OSM2MAP_SOURCES
         ${SRC_ROOT}/convert/osm_document.cpp
         ${SRC_ROOT}/convert/osm_document.hpp
 
+        ${SRC_ROOT}/convert/osm_storage.hpp
+
+        ${SRC_ROOT}/convert/osm_storage_memory.hpp
+
 	${SRC_ROOT}/convert/lua_context.hpp
 	${SRC_ROOT}/convert/lua_context.cpp
 
@@ -60,6 +64,11 @@ SET ( OSM2MAP_SOURCES
 
         ${SRC_ROOT}/util/xml_pull_parser.hpp
         ${SRC_ROOT}/util/xml_pull_parser.cpp
+
+        ${SRC_ROOT}/convert/osm_storage_memory.hpp
+        ${SRC_ROOT}/convert/osm_storage_db.hpp
+        ${SRC_ROOT}/convert/osm_storage_db.cpp
+
 
 )
 
@@ -91,6 +100,10 @@ SET ( OSM2POI_SOURCES
         ${SRC_ROOT}/convert/osm_pbf_reader.hpp
         ${SRC_ROOT}/convert/osm_xml_reader.cpp
         ${SRC_ROOT}/convert/osm_xml_reader.hpp
+
+        ${SRC_ROOT}/convert/osm_storage_memory.hpp
+        ${SRC_ROOT}/convert/osm_storage_db.hpp
+        ${SRC_ROOT}/convert/osm_storage_db.cpp
 
         ${SRC_ROOT}/convert/osm_document.cpp
         ${SRC_ROOT}/convert/osm_document.hpp
@@ -126,6 +139,9 @@ SET ( OSM2POI_SOURCES
         ${SRC_ROOT}/util/base64.hpp
         ${SRC_ROOT}/util/progress_stream.hpp
         ${SRC_ROOT}/util/progress_stream.cpp
+
+        ${SRC_ROOT}/util/xml_pull_parser.hpp
+        ${SRC_ROOT}/util/xml_pull_parser.cpp
 
 )
 

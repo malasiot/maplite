@@ -20,7 +20,7 @@ gaiaGeomCollAutoPtr makeBoxGeometry(const BBox &bbox, double buffer, int srid)
     return gaiaGeomCollAutoPtr(box) ;
 }
 
-gaiaGeomCollAutoPtr makeLineString(const OSM::Way &way, OSM::DocumentReader &reader, int srid) {
+gaiaGeomCollAutoPtr makeLineString(const OSM::Way &way, OSM::Storage &reader, int srid) {
 
     gaiaGeomCollPtr geo_line = gaiaAllocGeomColl();
     geo_line->Srid = srid;
@@ -36,7 +36,7 @@ gaiaGeomCollAutoPtr makeLineString(const OSM::Way &way, OSM::DocumentReader &rea
     return gaiaGeomCollAutoPtr(geo_line) ;
 }
 
-gaiaGeomCollAutoPtr makeMultiLineString(const vector<OSM::Way> &ways, OSM::DocumentReader &reader, int srid) {
+gaiaGeomCollAutoPtr makeMultiLineString(const vector<OSM::Way> &ways, OSM::Storage &reader, int srid) {
 
     gaiaGeomCollPtr geo_mline = gaiaAllocGeomColl();
     geo_mline->Srid = srid ;
@@ -57,7 +57,7 @@ gaiaGeomCollAutoPtr makeMultiLineString(const vector<OSM::Way> &ways, OSM::Docum
     return gaiaGeomCollAutoPtr(geo_mline) ;
 }
 
-gaiaGeomCollAutoPtr makeSimplePolygon(const OSM::Ring &ring, OSM::DocumentReader &reader, int srid)
+gaiaGeomCollAutoPtr makeSimplePolygon(const OSM::Ring &ring, OSM::Storage &reader, int srid)
 {
     gaiaGeomCollPtr geom = gaiaAllocGeomColl();
     geom->Srid = srid;
@@ -74,7 +74,7 @@ gaiaGeomCollAutoPtr makeSimplePolygon(const OSM::Ring &ring, OSM::DocumentReader
 }
 
 
-gaiaGeomCollAutoPtr makeMultiPolygon(const OSM::Polygon &poly, OSM::DocumentReader &reader, int srid)
+gaiaGeomCollAutoPtr makeMultiPolygon(const OSM::Polygon &poly, OSM::Storage &reader, int srid)
 {
     gaiaGeomCollPtr geom = nullptr ;
 

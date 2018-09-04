@@ -10,13 +10,13 @@ namespace OSM {
 class PBFReader {
 public:
 
-    bool read(std::istream &, DocumentReader &doc) ;
+    bool read(std::istream &, Storage &doc) ;
 private:
 
-    bool process_osm_data_nodes(DocumentReader &doc, const PBF::PrimitiveGroup &group, const PBF::StringTable &string_table, double lat_offset, double lon_offset, double granularity);
-    bool process_osm_data_dense_nodes(DocumentReader &doc, const PBF::PrimitiveGroup &group, const PBF::StringTable &string_table, double lat_offset, double lon_offset, double granularity);
-    bool process_osm_data_ways(DocumentReader &doc, const PBF::PrimitiveGroup &group, const PBF::StringTable &string_table);
-    bool process_osm_data_relations(DocumentReader &doc, const PBF::PrimitiveGroup &group, const PBF::StringTable &string_table);
+    bool process_osm_data_nodes(Storage &doc, const PBF::PrimitiveGroup &group, const PBF::StringTable &string_table, double lat_offset, double lon_offset, double granularity);
+    bool process_osm_data_dense_nodes(Storage &doc, const PBF::PrimitiveGroup &group, const PBF::StringTable &string_table, double lat_offset, double lon_offset, double granularity);
+    bool process_osm_data_ways(Storage &doc, const PBF::PrimitiveGroup &group, const PBF::StringTable &string_table);
+    bool process_osm_data_relations(Storage &doc, const PBF::PrimitiveGroup &group, const PBF::StringTable &string_table);
 } ;
 
 } // osm

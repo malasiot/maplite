@@ -14,7 +14,7 @@ namespace po = boost::program_options ;
 
 int main(int argc, char *argv[])
 {
-    ifstream strm("/home/malasiot/Downloads/books.xml");
+  /*  ifstream strm("/home/malasiot/Downloads/books.xml");
 
     XmlPullParser parser(strm, true) ;
 
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
             cout << "TEXT: " << parser.getText() << endl ;
     }
 
-    exit(1) ;
+  */
 
     string filter_config_file, out_map_file ;
     string land_shp_file ;
@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 
     MapFileWriter writer ;
     WriteOptions woptions ;
+    OSMProcessor proc ;
 
     po::options_description desc;
     desc.add_options()
@@ -105,13 +106,15 @@ int main(int argc, char *argv[])
 
     writer.setCreator("osm2map") ;
 
-    OSMProcessor proc ;
+
 
     TagFilter filter ;
     if ( !filter.parse(filter_config_file) ) {
         cerr << "Error parsing OSM tag filter configuration file: " << filter_config_file << endl ;
         return 0 ;
     }
+
+    SQLite::Connection &db = proc.db() ;
 
     for( const string &fp: osm_files ) {
         if ( !proc.processOsmFile(fp, filter) ) {
@@ -120,7 +123,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    SQLite::Connection &db = proc.db() ;
+
 
     if ( !has_bbox )
         writer.setBoundingBox(proc.getBoundingBoxFromGeometries());

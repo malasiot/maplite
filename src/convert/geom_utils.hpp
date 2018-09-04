@@ -16,10 +16,10 @@ typedef std::unique_ptr<gaiaGeomColl, gaiaGeomCollDeleter> gaiaGeomCollAutoPtr ;
 
 gaiaGeomCollAutoPtr makeBoxGeometry(const BBox &box, double buffer = 0, int srid = 4326) ;
 gaiaGeomCollAutoPtr makePoint(const OSM::Node &node, int srid = 4326) ;
-gaiaGeomCollAutoPtr makeLineString(const OSM::Way &way, OSM::DocumentReader &reader, int srid = 4326) ;
-gaiaGeomCollAutoPtr makeMultiLineString(const std::vector<OSM::Way> &ways, OSM::DocumentReader &reader, int srid = 4326) ;
-gaiaGeomCollAutoPtr makeSimplePolygon(const OSM::Ring &ring, OSM::DocumentReader &reader, int srid = 4326) ;
-gaiaGeomCollAutoPtr makeMultiPolygon(const OSM::Polygon &poly, OSM::DocumentReader &reader, int srid = 4326) ;
+gaiaGeomCollAutoPtr makeLineString(const OSM::Way &way, OSM::Storage &reader, int srid = 4326) ;
+gaiaGeomCollAutoPtr makeMultiLineString(const std::vector<OSM::Way> &ways, OSM::Storage &reader, int srid = 4326) ;
+gaiaGeomCollAutoPtr makeSimplePolygon(const OSM::Ring &ring, OSM::Storage &reader, int srid = 4326) ;
+gaiaGeomCollAutoPtr makeMultiPolygon(const OSM::Polygon &poly, OSM::Storage &reader, int srid = 4326) ;
 
 struct WKBBuffer {
     WKBBuffer(const gaiaGeomCollAutoPtr &geom) {

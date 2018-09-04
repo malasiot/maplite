@@ -95,6 +95,9 @@ public:
 
      operator bool () const { return (bool)strm_ ; }
 
+    int column() const  { return column_ ; }
+    int line() const  { return line_ ; }
+
 private:
     std::istream &strm_ ;
     size_t line_, chars_, column_ ;

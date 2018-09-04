@@ -1,5 +1,6 @@
 #include "osm_processor.hpp"
 #include "geom_utils.hpp"
+#include "osm_storage_memory.hpp"
 
 #include <spatialite.h>
 #include <boost/filesystem.hpp>
@@ -7,6 +8,8 @@
 #include <shapefil.h>
 #include <iomanip>
 #include <iostream>
+
+#include "osm_storage_db.hpp"
 
 using namespace std ;
 
@@ -175,7 +178,7 @@ bool OSMProcessor::create(const std::string &name) {
     }
 }
 
-bool OSMProcessor::addLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &reader, const OSM::Way &way, uint8_t zmin, uint8_t zmax)
+bool OSMProcessor::addLineGeometry(SQLite::Statement &cmd, OSM::Storage &reader, const OSM::Way &way, uint8_t zmin, uint8_t zmax)
 {
     try {
         if ( way.nodes_.size() < 2 ) return false ;
@@ -196,7 +199,7 @@ bool OSMProcessor::addLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &
     return true ;
 }
 
-bool OSMProcessor::addMultiLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &reader, const std::vector<OSM::Way> &ways, osm_id_t id, osm_feature_t ftype, uint8_t zmin, uint8_t zmax)
+bool OSMProcessor::addMultiLineGeometry(SQLite::Statement &cmd, OSM::Storage &reader, const std::vector<OSM::Way> &ways, osm_id_t id, osm_feature_t ftype, uint8_t zmin, uint8_t zmax)
 {
     try {
         gaiaGeomCollAutoPtr geo_mline = makeMultiLineString(ways, reader) ;
@@ -230,7 +233,7 @@ bool OSMProcessor::addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi
 }
 
 
-bool OSMProcessor::addPolygonGeometry(SQLite::Statement &cmd, OSM::DocumentReader &reader, const OSM::Polygon &poly, osm_id_t id, osm_feature_t ftype,
+bool OSMProcessor::addPolygonGeometry(SQLite::Statement &cmd, OSM::Storage &reader, const OSM::Polygon &poly, osm_id_t id, osm_feature_t ftype,
                                       uint8_t zmin, uint8_t zmax)
 {
     try {
@@ -340,11 +343,12 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 
     try {
 
+        OSM::DBStorage storage(db_) ;
         OSM::DocumentReader reader ;
 
         cout << "Parsing file: " << osm_file << endl ;
 
-        if ( !reader.read(osm_file) ) {
+        if ( !reader.read(osm_file, storage) ) {
             cerr << "Error reading from " << osm_file << endl ;
             return false ;
         }
@@ -360,11 +364,11 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 
         // POIs
 
-        reader.forAllNodes([&] ( const OSM::Node &node )
+        storage.forAllNodes([&] ( const OSM::Node &node )
         {
             if ( node.tags_.empty() ) return ;
 
-            TagFilterContext ctx(node, &reader) ;
+            TagFilterContext ctx(node, &storage) ;
             if ( !cfg.match(ctx, zmin, zmax) ) return ;
 
             addPointGeometry(cmd_pois, node, zmin, zmax) ;
@@ -374,7 +378,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
         // relations of type route, merge ways into chunks
 
 
-        reader.forAllRelations([&] ( const OSM::Relation &relation )
+        storage.forAllRelations([&] ( const OSM::Relation &relation )
         {
             string rel_type = relation.tags_.get("type") ;
 
@@ -384,10 +388,10 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
                 if ( !cfg.match(ctx, zmin, zmax) ) return ;
 
                 vector<OSM::Way> chunks ;
-                if ( !reader.makeWaysFromRelation(relation, chunks) ) return ;
+                if ( !storage.makeWaysFromRelation(relation, chunks) ) return ;
 
                 if ( !chunks.empty() ) {
-                    addMultiLineGeometry(cmd_lines, reader, chunks, relation.id_, osm_relation_t, zmin, zmax) ;
+                    addMultiLineGeometry(cmd_lines, storage, chunks, relation.id_, osm_relation_t, zmin, zmax) ;
                     addTags(ctx.tw_, relation.id_, osm_relation_t) ;
                 }
             }
@@ -397,10 +401,10 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
                 if ( !cfg.match(ctx, zmin, zmax) ) return ;
 
                 OSM::Polygon polygon ;
-                if ( !reader.makePolygonsFromRelation(relation, polygon) ) return ;
+                if ( !storage.makePolygonsFromRelation(relation, polygon) ) return ;
 
                 if ( !polygon.rings_.empty() ) {
-                    addPolygonGeometry(cmd_polygons, reader, polygon, relation.id_, osm_relation_t, zmin, zmax) ;
+                    addPolygonGeometry(cmd_polygons, storage, polygon, relation.id_, osm_relation_t, zmin, zmax) ;
                     addTags(ctx.tw_, relation.id_, osm_relation_t) ;
                 }
             }
@@ -408,13 +412,13 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 
         // ways
 
-        reader.forAllWays([&] ( const OSM::Way &way )
+        storage.forAllWays([&] ( const OSM::Way &way )
         {
             if ( way.tags_.empty() ) return ;
 
             // match feature with filter rules
 
-            TagFilterContext ctx(way, &reader) ;
+            TagFilterContext ctx(way, &storage) ;
             if ( !cfg.match(ctx, zmin, zmax) ) return ;
 
             // deal with closed ways, potential polygon geometries (areas) are those indicated by area tag or those other than highway, barrier and contour
@@ -431,11 +435,11 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
                 ring.nodes_.insert(ring.nodes_.end(), way.nodes_.begin(), way.nodes_.end()) ;
                 poly.rings_.push_back(ring) ;
 
-                addPolygonGeometry(cmd_polygons, reader, poly, way.id_, osm_way_t, zmin, zmax) ;
+                addPolygonGeometry(cmd_polygons, storage, poly, way.id_, osm_way_t, zmin, zmax) ;
                 addTags(ctx.tw_, way.id_, osm_way_t) ;
             }
             else {
-                addLineGeometry(cmd_lines, reader, way, zmin, zmax) ;
+                addLineGeometry(cmd_lines, storage, way, zmin, zmax) ;
                 addTags(ctx.tw_, way.id_, osm_way_t) ;
             }
 

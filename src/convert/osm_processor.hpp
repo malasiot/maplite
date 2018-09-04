@@ -59,10 +59,10 @@ private:
 
     string insertFeatureSQL(const std::string &desc, const std::string &geomCmd = "?") ;
 
-    bool addLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &doc, const OSM::Way &way, uint8_t zmin, uint8_t zmax) ;
-    bool addMultiLineGeometry(SQLite::Statement &cmd, OSM::DocumentReader &doc, const std::vector<OSM::Way> &ways, osm_id_t id, osm_feature_t ft, uint8_t zmin, uint8_t zmax) ;
+    bool addLineGeometry(SQLite::Statement &cmd, OSM::Storage &doc, const OSM::Way &way, uint8_t zmin, uint8_t zmax) ;
+    bool addMultiLineGeometry(SQLite::Statement &cmd, OSM::Storage &doc, const std::vector<OSM::Way> &ways, osm_id_t id, osm_feature_t ft, uint8_t zmin, uint8_t zmax) ;
     bool addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi, uint8_t zmin, uint8_t zmax) ;
-    bool addPolygonGeometry(SQLite::Statement &cmd,  OSM::DocumentReader &doc, const OSM::Polygon &poly, osm_id_t id, osm_feature_t ft, uint8_t zmin, uint8_t zmax) ;
+    bool addPolygonGeometry(SQLite::Statement &cmd,  OSM::Storage &doc, const OSM::Polygon &poly, osm_id_t id, osm_feature_t ft, uint8_t zmin, uint8_t zmax) ;
 
     void addTags(const TagWriteList &tags, osm_id_t id, osm_feature_t ft);
     void addTag(osm_id_t id, osm_feature_t ftype, const std::string &key, const std::string &val, uint8_t zmin, uint8_t zmax);

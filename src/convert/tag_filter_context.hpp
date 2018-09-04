@@ -23,9 +23,9 @@ public:
     enum FeatureType { Way, Node, Relation } ;
 
     TagFilterContext() {}
-    TagFilterContext(const OSM::Node &node, OSM::DocumentReader *doc):
+    TagFilterContext(const OSM::Node &node, OSM::Storage *doc):
         tags_(node.tags_), id_(node.id_), type_(Node), doc_(doc) {}
-    TagFilterContext(const OSM::Way &way,  OSM::DocumentReader *doc):
+    TagFilterContext(const OSM::Way &way,  OSM::Storage *doc):
         tags_(way.tags_), id_(way.id_), type_(Way), doc_(doc) {}
     TagFilterContext(const Dictionary &tags, osm_id_t id, FeatureType t): tags_(tags), id_(id), type_(t), doc_(nullptr) {}
 
@@ -38,7 +38,7 @@ public:
     Dictionary tags_ ;
     osm_id_t id_ ;
     FeatureType type_ ;
-    OSM::DocumentReader *doc_ ;
+    OSM::Storage *doc_ ;
     TagWriteList tw_ ;
 };
 

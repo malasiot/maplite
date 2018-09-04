@@ -8,7 +8,7 @@ namespace OSM {
 class XMLReader {
 public:
 
-    bool read(std::istream &strm, DocumentReader &doc ) ;
+    bool read(std::istream &strm, Storage &doc ) ;
 } ;
 
 } // osm

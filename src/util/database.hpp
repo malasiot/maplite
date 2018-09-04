@@ -182,7 +182,7 @@ public:
 
     template<typename ...Args>
     Query(Connection& con, const std::string & sql, Args... args): Query(con, sql) {
-        mbind(args...) ;
+        bindm(args...) ;
     }
 
     QueryResult exec() ;

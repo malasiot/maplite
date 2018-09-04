@@ -1,8 +1,8 @@
-#include "osm_document.hpp"
+#include "osm_storage.hpp"
 
+#include <set>
 #include <list>
 #include <iostream>
-#include <set>
 
 using namespace std ;
 
@@ -25,7 +25,6 @@ void checkSelfIntersection(vector<Ring> &rings) {
     }) ;
 
 }
-
 // the function will create linear rings from relation members ignoring inner, outer roles
 // the topology will be fixed by spatialite function ST_BuildArea
 
@@ -254,3 +253,4 @@ bool Storage::makeWaysFromRelation(const Relation &rel, std::vector<Way> &ways)
 }
 
 }
+
