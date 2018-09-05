@@ -184,6 +184,8 @@ bool OSMProcessor::addLineGeometry(SQLite::Statement &cmd, OSM::Storage &reader,
         if ( way.nodes_.size() < 2 ) return false ;
 
         gaiaGeomCollAutoPtr geo_line = makeLineString(way, reader) ;
+        if ( geo_line == nullptr ) return false ;
+
         WKBBuffer buffer(geo_line) ;
 
         cmd.bindm(buffer.blob(), way.id_, osm_way_t, zmin, zmax) ;
@@ -203,6 +205,8 @@ bool OSMProcessor::addMultiLineGeometry(SQLite::Statement &cmd, OSM::Storage &re
 {
     try {
         gaiaGeomCollAutoPtr geo_mline = makeMultiLineString(ways, reader) ;
+        if ( geo_mline == nullptr ) return false ;
+
         WKBBuffer buffer(geo_mline) ;
         cmd.bindm(buffer.blob(), id, ftype, zmin, zmax) ;
         cmd.exec() ;
@@ -343,7 +347,7 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 
     try {
 
-        OSM::DBStorage storage(db_) ;
+        OSM::InMemoryStorage storage;
         OSM::DocumentReader reader ;
 
         cout << "Parsing file: " << osm_file << endl ;

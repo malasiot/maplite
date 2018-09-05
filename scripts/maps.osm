@@ -1,0 +1,128 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version='0.6' generator='JOSM'>
+  <node id='-40986' action='modify' visible='true' lat='41.45096551845' lon='21.65404724121' />
+  <node id='-40989' action='modify' visible='true' lat='39.87286183375' lon='21.67327331543' />
+  <node id='-40995' action='modify' visible='true' lat='39.85915900963' lon='24.51598571777' />
+  <node id='-40997' action='modify' visible='true' lat='41.61544643148' lon='24.50499938965' />
+  <node id='-40999' action='modify' visible='true' lat='41.59490919178' lon='21.65954040527' />
+  <node id='-41002' action='modify' visible='true' lat='41.76312154438' lon='24.42260192871' />
+  <node id='-41003' action='modify' visible='true' lat='40.28791080272' lon='24.44457458496' />
+  <node id='-41005' action='modify' visible='true' lat='40.27533899832' lon='26.69127868652' />
+  <node id='-41007' action='modify' visible='true' lat='41.78360516255' lon='26.69127868652' />
+  <node id='-41014' action='modify' visible='true' lat='40.96124219155' lon='21.8078503418' />
+  <node id='-41015' action='modify' visible='true' lat='40.95709388078' lon='19.20958374023' />
+  <node id='-41017' action='modify' visible='true' lat='39.12580750396' lon='19.20958374023' />
+  <node id='-41019' action='modify' visible='true' lat='39.10023452763' lon='21.74742553711' />
+  <node id='-41021' action='modify' visible='true' lat='40.93634841641' lon='21.74193237305' />
+  <node id='-41048' action='modify' visible='true' lat='38.3330431313' lon='20.24779724121' />
+  <node id='-41049' action='modify' visible='true' lat='38.32011515473' lon='23.40087341309' />
+  <node id='-41051' action='modify' visible='true' lat='36.02245112456' lon='23.38988708496' />
+  <node id='-41053' action='modify' visible='true' lat='36.02689379685' lon='20.21483825684' />
+  <node id='-864778' action='modify' visible='true' lat='39.95186734858' lon='21.68150756836' />
+  <node id='-864779' action='modify' visible='true' lat='39.04479458107' lon='21.66502807617' />
+  <node id='-864781' action='modify' visible='true' lat='39.04479458107' lon='24.33470581055' />
+  <node id='-864783' action='modify' visible='true' lat='39.93080924529' lon='24.33470581055' />
+  <node id='-901439' action='modify' visible='true' lat='39.11301791366' lon='20.3082220459' />
+  <node id='-901440' action='modify' visible='true' lat='38.22631838242' lon='20.27388977051' />
+  <node id='-901445' action='modify' visible='true' lat='39.12154172407' lon='22.62633728027' />
+  <node id='-901486' action='modify' visible='true' lat='38.20914530833' lon='22.61857703945' />
+  <node id='-901503' action='modify' visible='true' lat='37.18220659758' lon='24.65331481934' />
+  <node id='-901504' action='modify' visible='true' lat='39.07038339583' lon='24.67528747559' />
+  <node id='-901510' action='modify' visible='true' lat='39.07251360153' lon='22.54119598389' />
+  <node id='-901512' action='modify' visible='true' lat='37.17783434684' lon='22.51646850586' />
+  <node id='-901545' action='modify' visible='true' lat='36.20883195737' lon='23.07127807617' />
+  <node id='-901546' action='modify' visible='true' lat='34.54277143671' lon='23.04930541992' />
+  <node id='-901548' action='modify' visible='true' lat='34.50656567505' lon='28.58641479492' />
+  <node id='-901550' action='modify' visible='true' lat='37.25657483049' lon='28.55345581055' />
+  <node id='-901552' action='modify' visible='true' lat='37.30028402064' lon='23.04930541992' />
+  <node id='-901562' action='modify' visible='true' lat='40.34655249433' lon='24.08202026367' />
+  <node id='-901563' action='modify' visible='true' lat='37.08148441352' lon='24.07103393555' />
+  <node id='-901565' action='modify' visible='true' lat='37.05518587436' lon='27.49876831055' />
+  <node id='-901567' action='modify' visible='true' lat='40.37166726154' lon='27.48778198242' />
+  <node id='-901589' action='modify' visible='true' lat='37.21502103286' lon='23.39263641357' />
+  <way id='-40990' action='modify' visible='true'>
+    <nd ref='-40986' />
+    <nd ref='-40989' />
+    <nd ref='-40995' />
+    <nd ref='-40997' />
+    <nd ref='-40999' />
+    <nd ref='-40986' />
+    <tag k='id' v='makedonia' />
+    <tag k='name' v='Κεντρική Μακεδονία' />
+  </way>
+  <way id='-41004' action='modify' visible='true'>
+    <nd ref='-41002' />
+    <nd ref='-41003' />
+    <nd ref='-41005' />
+    <nd ref='-41007' />
+    <nd ref='-41002' />
+    <tag k='id' v='thraki' />
+    <tag k='name' v='Ανατολική Μακεδονία &amp; Θράκη' />
+  </way>
+  <way id='-41016' action='modify' visible='true'>
+    <nd ref='-41014' />
+    <nd ref='-41015' />
+    <nd ref='-41017' />
+    <nd ref='-41019' />
+    <nd ref='-41021' />
+    <nd ref='-41014' />
+    <tag k='id' v='west-makedonia-epirus' />
+    <tag k='name' v='Δυτική Μακεδονία &amp; Ήπειρος' />
+  </way>
+  <way id='-41050' action='modify' visible='true'>
+    <nd ref='-41048' />
+    <nd ref='-41049' />
+    <nd ref='-901589' />
+    <nd ref='-41051' />
+    <nd ref='-41053' />
+    <nd ref='-41048' />
+    <tag k='id' v='peloponese' />
+    <tag k='name' v='Πελοπόνησσος' />
+  </way>
+  <way id='-864780' action='modify' visible='true'>
+    <nd ref='-864778' />
+    <nd ref='-864779' />
+    <nd ref='-864781' />
+    <nd ref='-864783' />
+    <nd ref='-864778' />
+    <tag k='id' v='thessaly' />
+    <tag k='name' v='Θεσσαλία' />
+  </way>
+  <way id='-901441' action='modify' visible='true'>
+    <nd ref='-901439' />
+    <nd ref='-901440' />
+    <nd ref='-901486' />
+    <nd ref='-901445' />
+    <nd ref='-901439' />
+    <tag k='id' v='sterea' />
+    <tag k='name' v='Στερεά Ελλάδα' />
+  </way>
+  <way id='-901505' action='modify' visible='true'>
+    <nd ref='-901503' />
+    <nd ref='-901504' />
+    <nd ref='-901510' />
+    <nd ref='-901512' />
+    <nd ref='-901503' />
+    <tag k='id' v='attika' />
+    <tag k='name' v='Αττική &amp; Ευβοια' />
+  </way>
+  <way id='-901547' action='modify' visible='true'>
+    <nd ref='-901545' />
+    <nd ref='-901546' />
+    <nd ref='-901548' />
+    <nd ref='-901550' />
+    <nd ref='-901552' />
+    <nd ref='-901545' />
+    <tag k='id' v='crete' />
+    <tag k='name' v='Κρήτη, Νότο Αιγαίο' />
+  </way>
+  <way id='-901564' action='modify' visible='true'>
+    <nd ref='-901562' />
+    <nd ref='-901563' />
+    <nd ref='-901565' />
+    <nd ref='-901567' />
+    <nd ref='-901562' />
+    <tag k='id' v='aegean' />
+    <tag k='name' v='Βόρειο Αιγαίο' />
+  </way>
+</osm>

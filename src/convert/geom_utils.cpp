@@ -28,12 +28,13 @@ gaiaGeomCollAutoPtr makeLineString(const OSM::Way &way, OSM::Storage &reader, in
 
     gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_line, way.nodes_.size());
 
-    int j = 0 ;
+    size_t j = 0 ;
     reader.forAllWayCoords(way.id_, [&](osm_id_t id, double lat, double lon) {
         gaiaSetPoint (ls->Coords, j, lon, lat); ++j ;
     }) ;
 
-    return gaiaGeomCollAutoPtr(geo_line) ;
+    if ( j != way.nodes_.size() ) return nullptr ;
+    else return gaiaGeomCollAutoPtr(geo_line) ;
 }
 
 gaiaGeomCollAutoPtr makeMultiLineString(const vector<OSM::Way> &ways, OSM::Storage &reader, int srid) {
@@ -48,10 +49,12 @@ gaiaGeomCollAutoPtr makeMultiLineString(const vector<OSM::Way> &ways, OSM::Stora
 
         gaiaLinestringPtr ls = gaiaAddLinestringToGeomColl (geo_mline, way.nodes_.size());
 
-        int j=0 ;
+        size_t j=0 ;
         reader.forAllNodeCoordList(way.nodes_, [&](double lat, double lon) {
             gaiaSetPoint (ls->Coords, j, lon, lat); ++j ;
         }) ;
+
+        if ( j != way.nodes_.size() ) return nullptr ;
     }
 
     return gaiaGeomCollAutoPtr(geo_mline) ;
