@@ -361,7 +361,6 @@ bool OSMProcessor::processOsmFile(const string &osm_file, TagFilter &cfg)
 
         SQLite::Transaction trans(db_) ;
 
-
         SQLite::Statement cmd_pois(db_, insert_feature_sql("pois")) ;
         SQLite::Statement cmd_lines(db_, insert_feature_sql("lines", "ST_Multi(?)")) ;
         SQLite::Statement cmd_polygons(db_, insert_feature_sql("polygons", "ST_Multi(?)")) ;
@@ -625,7 +624,7 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
 
     sql << " AS _geom_ " ;
     if ( centroid ) sql << ", ST_Centroid(geom) " ;
-    sql << " FROM " << tableName << " AS g, (SELECT ST_Transform(?, 4326) AS box) ";
+    sql << " FROM " << tableName << " AS g, (SELECT ST_Transform(BuildMbr(?, ?, ?, ?, 3857), 4326) AS box) ";
 
     sql << " WHERE " ;
     sql << "g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = box) " ;
@@ -644,14 +643,25 @@ bool OSMProcessor::forAllGeometries(const std::string &tableName, const BBox &bb
         string sql = make_bbox_query(tableName, bbox, minz, maxz, clip, buffer, tol, centroid) ;
         SQLite::Query q(db_, sql) ;
 
-        gaiaGeomCollAutoPtr clip_box = makeBoxGeometry(bbox, buffer, 3857) ;
-        WKBBuffer buffer(clip_box) ;
-        q.bind(1, buffer.blob()) ;
+//        gaiaGeomCollAutoPtr clip_box = makeBoxGeometry(bbox, buffer, 3857) ;
+ //       WKBBuffer buffer(clip_box) ;
+        q.bind(1, bbox.minx_) ;
+        q.bind(2, bbox.miny_) ;
+        q.bind(3, bbox.maxx_) ;
+        q.bind(4, bbox.maxy_) ;
+        //q.bind(1, buffer.blob()) ;
+
+        cout << sql << endl ;
+        cout << std::fixed << std::setw( 11 ) << std::setprecision( 0 ) << bbox.minx_ <<","<< bbox.miny_ << "," << bbox.maxx_ << "," << bbox.maxy_ << endl ;
 
         for( const SQLite::Row &r: q.exec() ) {
 
             osm_id_t osm_id = r[0].as<osm_id_t>() ;
             osm_feature_t osm_type = static_cast<osm_feature_t>(r[1].as<int>()) ;
+
+            if ( osm_id == 4052075 ) {
+                cout << "break" << endl ;
+            }
 
             uint8_t minz = r[2].as<int>() ;
             uint8_t maxz = r[3].as<int>() ;

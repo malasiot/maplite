@@ -695,6 +695,10 @@ static string escape_xml_string(const std::string &src) {
         case '\'': buffer.append("&apos;");      break;
         case '<':  buffer.append("&lt;");        break;
         case '>':  buffer.append("&gt;");        break;
+        case '\t':
+        case '\r':
+        case '\b':
+        case '\n':  buffer.append(" ") ; break ;
         default:   buffer.append(&src[pos], 1); break;
         }
     }
