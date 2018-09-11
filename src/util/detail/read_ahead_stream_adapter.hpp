@@ -12,10 +12,11 @@ public:
         nra_ = 0 ;
     }
 
-    bool next(char &c) {
+    bool next(unsigned char &c) {
+        if ( strm_.eof() ) return false ;
         int rc = read() ;
-        if ( rc > 0 ) c = char(rc) ;
-        return rc > 0 ;
+        c = (unsigned char)(rc) ;
+        return true ;
     }
 
      int read() {
@@ -34,12 +35,11 @@ public:
             line_++ ; column_ = 1 ;
         }
 
-        if ( strm_.eof() ) return -1 ;
-        else return c ;
+        return c ;
     }
 
 
-    void putback(char c) {
+    void putback(unsigned char c) {
         read_ahead_[nra_++] = c ;
         chars_ -- ;
         column_ -- ;
@@ -49,7 +49,7 @@ public:
     }
 
     bool expect(const char *seq) {
-        char buf[256] ;
+        unsigned char buf[256] ;
         bool match = true ;
         const char *p = seq ;
 
@@ -102,7 +102,7 @@ private:
     std::istream &strm_ ;
     size_t line_, chars_, column_ ;
     size_t nra_ ;
-    char read_ahead_[max_read_ahead];
+    unsigned char read_ahead_[max_read_ahead];
 };
 
 

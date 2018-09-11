@@ -4,6 +4,9 @@ from lxml import etree as ET
 import sys, os, codecs
 import datetime
 import shutil
+import zipfile
+
+downloadUrl = "https://vision.iti.gr/hellaspath/data/maps/" ;
 
 def getBoundingBox(map_extract, coords):
 	
@@ -66,17 +69,17 @@ class OSMImporter(xml.sax.ContentHandler):
 	def makeScript(self, dataDir):
 		ofile = codecs.open('make_maps.sh', 'w', "utf-8") 
 		ofile.write("#!/bin/bash\n\n")
-		ofile.write("wget -O osm/greece.pbf http://download.geofabrik.de/europe/greece-latest.osm.pbf\n\n")
+		ofile.write("wget -O osm/greece-latest.pbf http://download.geofabrik.de/europe/greece-latest.osm.pbf\n\n")
 		for seg in self.maps:
 			ofile.write(u'# {0}\n'.format(seg['title']))
-			cmd = "osmosis --read-pbf osm/greece.pbf --bb left=%2.4f top=%2.4f bottom=%2.4f right=%2.4f completeWays=yes completeRelations=yes --write-pbf osm/%s.pbf\n" % ( seg['bbox'][1], seg['bbox'][2], seg['bbox'][0], seg['bbox'][3], seg['id'])
+			cmd = "osmosis --read-pbf osm/greece-latest.pbf --bb left=%2.4f top=%2.4f bottom=%2.4f right=%2.4f completeWays=yes completeRelations=yes --write-pbf osm/%s.pbf\n" % ( seg['bbox'][1], seg['bbox'][2], seg['bbox'][0], seg['bbox'][3], seg['id'])
 			ofile.write(cmd) ;
 			cmd = " ogr2ogr -overwrite -f \"ESRI Shapefile\" land-polygons-split-4326/land_polygons_{0}.shp land-polygons-split-4326/land_polygons.shp -clipsrc {1:2.4f} {2:2.4f} {3:2.4f} {4:2.4f}\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2])
 			ofile.write(cmd) ;
 			cntr_path = "contours/{0}/contours".format(seg['id']) ;
 			if not os.path.exists(cntr_path):
 				os.makedirs(cntr_path)
-			cmd = "phyghtmap -a {1:2.4f}:{2:2.4f}:{3:2.4f}:{4:2.4f} -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=10000000000 --pbf --source=view3\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2])
+			cmd = "phyghtmap -a {1:2.4f}:{2:2.4f}:{3:2.4f}:{4:2.4f} -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=1000000000 --start-way-id=1000000000 --pbf --source=view3\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2])
 			ofile.write(cmd) ;
 			cmd = "/home/malasiot/source/maplite/build/src/convert/osm2map --filter filter.cfg --land-polygon land-polygons-split-4326/land_polygons_{0}.shp --bbox \"{1:2.4f} {2:2.4f} {3:2.4f} {4:2.4f}\" --out osm/{0}.map --map-start-position \"{5:2.4f} {6:2.4f}\" --map-start-zoom 14  osm/{0}.pbf contours/{0}/*.pbf\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2], seg['centroid'][0], seg['centroid'][1])
 			ofile.write(cmd) ;
@@ -85,15 +88,21 @@ class OSMImporter(xml.sax.ContentHandler):
 	def makeMaps(self, outDir):
 		root = ET.Element("maps")
 		for seg in self.maps:
-			outFile = outDir + "/maps/" + seg['id'] + ".map"
+			outFile = outDir + "/maps/" + seg['id'] + ".zip"
 			inFile = 'osm/' + seg['id'] + ".map"
-			shutil.copyfile(inFile, outFile)
+			zf = zipfile.ZipFile(outFile, "w", zipfile.ZIP_DEFLATED)
+			zf.write(inFile, seg['id'] + ".map")
+#			shutil.copyfile(inFile, outFile)
 			fileSize = os.path.getsize(outFile) >> 20
 			emap = ET.SubElement(root, "MapsforgeTileSource", attrib={"id": seg['id']})
-			downloadUrl = ET.SubElement(emap, "downloadUrl") ;
-			downloadUrl.text = "https://vision.iti.gr/trails/data/hellaspath/maps/" + seg['id'] + ".map" ;
+			downloadUrlElement = ET.SubElement(emap, "downloadUrl") ;
+			downloadUrlElement.text = downloadUrl + seg['id'] + ".zip" ;
 			localFileName = ET.SubElement(emap, "localFileName") ;
 			localFileName.text = "maps/hellaspath/" + seg['id'] + ".map";
+			downloadFileName = ET.SubElement(emap, "downloadFileName") ;
+			downloadFileName.text = seg['id'] + ".zip";
+			unzipFolder = ET.SubElement(emap, "unzipFolder") ;
+			unzipFolder.text = "maps/hellaspath/" ;
 			title = ET.SubElement(emap, "title") ;
 			title.text = seg['title'] ;
 			desc = ET.SubElement(emap, "description") ;

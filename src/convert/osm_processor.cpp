@@ -651,17 +651,13 @@ bool OSMProcessor::forAllGeometries(const std::string &tableName, const BBox &bb
         q.bind(4, bbox.maxy_) ;
         //q.bind(1, buffer.blob()) ;
 
-        cout << sql << endl ;
-        cout << std::fixed << std::setw( 11 ) << std::setprecision( 0 ) << bbox.minx_ <<","<< bbox.miny_ << "," << bbox.maxx_ << "," << bbox.maxy_ << endl ;
+       // cout << sql << endl ;
+    //    cout << std::fixed << std::setw( 11 ) << std::setprecision( 0 ) << bbox.minx_ <<","<< bbox.miny_ << "," << bbox.maxx_ << "," << bbox.maxy_ << endl ;
 
         for( const SQLite::Row &r: q.exec() ) {
 
             osm_id_t osm_id = r[0].as<osm_id_t>() ;
             osm_feature_t osm_type = static_cast<osm_feature_t>(r[1].as<int>()) ;
-
-            if ( osm_id == 4052075 ) {
-                cout << "break" << endl ;
-            }
 
             uint8_t minz = r[2].as<int>() ;
             uint8_t maxz = r[3].as<int>() ;

@@ -14,7 +14,7 @@ static bool is_valid_name_char(char c, int idx) {
 }
 
 bool XmlPullParser::parseBOM() {
-    static const char c[4] = {  char(0xef), char(0xbb), char(0xbf), char(0) } ;
+    static const char c[4] = {  (char)(0xef), (char)(0xbb), (char)(0xbf), (char)(0) } ;
     return cursor_.expect(c) ;
 }
 
@@ -49,7 +49,7 @@ bool XmlPullParser::escapeString(string &value) {
 
     uint k = 0 ;
     string quot ;
-    char c ;
+    unsigned char c ;
 
     while ( cursor_.next(c) && c != ';' && k < 5 )  {
         quot += char(c) ;
@@ -113,7 +113,7 @@ bool XmlPullParser::parseXmlDecl() {
 
 bool XmlPullParser::parseAttributeValue(std::string &val) {
 
-    char c ;
+    unsigned char c ;
     if ( !cursor_.next(c)|| ( c != '"' && c != '\'') ) return false ;
     char oc = c ;
 
@@ -152,7 +152,7 @@ static void breakDownName(const string &name, string &prefix, string &local) {
 bool XmlPullParser::parseName(std::string &name) {
     name.clear() ;
 
-    char c ;
+    unsigned char c ;
     int count = 0 ;
     while ( cursor_.next(c) ) {
         if ( !is_valid_name_char(c, count) ) {
@@ -201,6 +201,8 @@ bool XmlPullParser::parseStartElement()
 
     parseAttributeList(attributes_) ;
 
+    cursor_.skipWhite() ;
+
     if ( process_ns_ ) {
         parseNameSpaceAttributes() ;
         breakDownName(name_, prefix_, local_name_) ;
@@ -245,7 +247,7 @@ bool XmlPullParser::parseCharacters()
     text_.clear() ;
     is_whitespace_ = true ;
 
-    char c ;
+    unsigned char c ;
     while ( cursor_.next(c) ) {
         if ( c == '\r') {
             continue ;
@@ -316,7 +318,7 @@ bool XmlPullParser::fatal(const string &msg) {
 bool XmlPullParser::parseDocType() {
     if ( cursor_.expect("!DOCTYPE") ) {
         // ignore section
-        char c ;
+        unsigned char c ;
         while ( cursor_.next(c) ) {
             if ( c == '>' ) break ;
             else if ( c == '[') { // skip until ending bracket (maybe nested)
@@ -340,7 +342,7 @@ bool XmlPullParser::parseCData()
 {
     if ( cursor_.expect("![CDATA[") ) {
         text_.clear() ;
-        char c ;
+        unsigned char c ;
         while ( cursor_.next(c) ) {
             if ( c != ']' ) text_ += c ;
             else {
@@ -358,7 +360,7 @@ bool XmlPullParser::parseComment()
 {
     if ( cursor_.expect("!--") ) {
         text_.clear() ;
-        char c ;
+        unsigned char c ;
         while ( cursor_.next(c) && !cursor_.expect("-->") ) text_ += c ;
         if ( !cursor_ ) fatal("End of input reached while parsing comment") ;
         else return true ;
@@ -369,7 +371,7 @@ bool XmlPullParser::parseComment()
 bool XmlPullParser::parsePI()
 {
     if ( cursor_.expect("?") ) {
-        char c ;
+        unsigned char c ;
         text_.clear() ;
         while ( cursor_.next(c) && !cursor_.expect("?>")) text_ += c ;
         return true ;
@@ -395,7 +397,7 @@ XmlPullParser::TokenType XmlPullParser::nextToken() {
         return token_ ;
     }
 
-    char c ;
+    unsigned char c ;
 
     if ( !cursor_.next(c) ) {
         token_ = END_DOCUMENT ;

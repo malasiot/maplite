@@ -40,11 +40,21 @@
   <node id='-39158' action='modify' visible='true' lat='37.05518587436' lon='27.49876831055' />
   <node id='-39160' action='modify' visible='true' lat='40.37166726154' lon='27.48778198242' />
   <node id='-39162' action='modify' visible='true' lat='37.21502103286' lon='23.39263641357' />
-  <node id='-41094' action='modify' visible='true' lat='40.40094815442' lon='23.26766899109' />
-  <node id='-41095' action='modify' visible='true' lat='40.56806797591' lon='23.26766899109' />
-  <node id='-41097' action='modify' visible='true' lat='40.56911116616' lon='23.62335136414' />
-  <node id='-41099' action='modify' visible='true' lat='40.40199394528' lon='23.62609794617' />
-  <way id='-39164' action='modify' visible='true'>
+  <node id='-39172' action='modify' visible='true' lat='41.75493036347' lon='19.14915893555' />
+  <node id='-39174' action='modify' visible='true' lat='41.80408633379' lon='28.63036010742' />
+  <node id='-39176' action='modify' visible='true' lat='34.53372147185' lon='28.65233276367' />
+  <node id='-39178' action='modify' visible='true' lat='34.57896145591' lon='19.11619995117' />
+  <way id='-39200' action='modify' visible='true'>
+    <nd ref='-39172' />
+    <nd ref='-39174' />
+    <nd ref='-39176' />
+    <nd ref='-39178' />
+    <nd ref='-39172' />
+    <tag k='desc' v='Αναλυτικός χάρτης Ελλάδας με ισουψείς' />
+    <tag k='id' v='greece' />
+    <tag k='title' v='Ελλάδα' />
+  </way>
+  <way id='-39180' action='modify' visible='true'>
     <nd ref='-39084' />
     <nd ref='-39086' />
     <nd ref='-39088' />
@@ -55,7 +65,7 @@
     <tag k='id' v='makedonia' />
     <tag k='title' v='Κεντρική Μακεδονία' />
   </way>
-  <way id='-39166' action='modify' visible='true'>
+  <way id='-39182' action='modify' visible='true'>
     <nd ref='-39094' />
     <nd ref='-39096' />
     <nd ref='-39098' />
@@ -65,7 +75,7 @@
     <tag k='id' v='thraki' />
     <tag k='title' v='Ανατολική Μακεδονία &amp; Θράκη' />
   </way>
-  <way id='-39168' action='modify' visible='true'>
+  <way id='-39184' action='modify' visible='true'>
     <nd ref='-39102' />
     <nd ref='-39104' />
     <nd ref='-39106' />
@@ -76,7 +86,7 @@
     <tag k='id' v='west-makedonia-epirus' />
     <tag k='title' v='Δυτική Μακεδονία &amp; Ήπειρος' />
   </way>
-  <way id='-39170' action='modify' visible='true'>
+  <way id='-39186' action='modify' visible='true'>
     <nd ref='-39112' />
     <nd ref='-39114' />
     <nd ref='-39162' />
@@ -87,7 +97,7 @@
     <tag k='id' v='peloponese' />
     <tag k='title' v='Πελοπόνησσος' />
   </way>
-  <way id='-39172' action='modify' visible='true'>
+  <way id='-39188' action='modify' visible='true'>
     <nd ref='-39120' />
     <nd ref='-39122' />
     <nd ref='-39124' />
@@ -97,7 +107,7 @@
     <tag k='id' v='thessaly' />
     <tag k='title' v='Θεσσαλία' />
   </way>
-  <way id='-39174' action='modify' visible='true'>
+  <way id='-39190' action='modify' visible='true'>
     <nd ref='-39128' />
     <nd ref='-39130' />
     <nd ref='-39134' />
@@ -107,7 +117,7 @@
     <tag k='id' v='sterea' />
     <tag k='title' v='Στερεά Ελλάδα' />
   </way>
-  <way id='-39176' action='modify' visible='true'>
+  <way id='-39192' action='modify' visible='true'>
     <nd ref='-39136' />
     <nd ref='-39138' />
     <nd ref='-39140' />
@@ -117,7 +127,7 @@
     <tag k='id' v='attika' />
     <tag k='title' v='Αττική &amp; Ευβοια' />
   </way>
-  <way id='-39178' action='modify' visible='true'>
+  <way id='-39194' action='modify' visible='true'>
     <nd ref='-39144' />
     <nd ref='-39146' />
     <nd ref='-39148' />
@@ -128,7 +138,7 @@
     <tag k='id' v='crete' />
     <tag k='title' v='Κρήτη, Νότο Αιγαίο' />
   </way>
-  <way id='-39180' action='modify' visible='true'>
+  <way id='-39196' action='modify' visible='true'>
     <nd ref='-39154' />
     <nd ref='-39156' />
     <nd ref='-39158' />
@@ -137,15 +147,5 @@
     <tag k='desc' v='Λήμνος, Λέσβος, Χίος, Σάμος, Σύρος, Σκύρος, Άνδρος, Τήνος' />
     <tag k='id' v='aegean' />
     <tag k='title' v='Βόρειο Αιγαίο' />
-  </way>
-  <way id='-41096' action='modify' visible='true'>
-    <nd ref='-41094' />
-    <nd ref='-41095' />
-    <nd ref='-41097' />
-    <nd ref='-41099' />
-    <nd ref='-41094' />
-    <tag k='desc' v='test' />
-    <tag k='id' v='test' />
-    <tag k='title' v='test' />
   </way>
 </osm>
