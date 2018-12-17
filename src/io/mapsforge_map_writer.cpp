@@ -16,6 +16,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 using namespace std ;
 
@@ -104,6 +105,20 @@ void MapFileWriter::setPreferredLanguages(const std::string &langs) {
 void MapFileWriter::setComment(const std::string &comment) {
     info_.comment_ = comment ;
     info_.flags_ |= 0x08 ;
+}
+
+void MapFileWriter::setDate(const std::string &date_str) {
+    using namespace boost::posix_time ;
+    std::locale loc(std::locale::classic(), new time_input_facet("%Y-%m-%d %H:%M:%S")) ;
+
+    ptime pt ;
+    std::istringstream is(date_str);
+    is.imbue(loc);
+    is >> pt;
+    const ptime timet_start(boost::gregorian::date(1970,1,1));
+    time_duration diff = pt - timet_start;
+
+    info_.date_ = diff.total_nanoseconds() ;
 }
 
 void MapFileWriter::setCreator(const std::string &creator) {

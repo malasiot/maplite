@@ -629,7 +629,7 @@ static string make_bbox_query(const std::string &tableName, const BBox &bbox, in
     sql << " WHERE " ;
     sql << "g.ROWID IN ( SELECT ROWID FROM SpatialIndex WHERE f_table_name='" << tableName << "' AND search_frame = box) " ;
     sql << "AND (( g.zmin BETWEEN " << (int)min_zoom << " AND " << max_zoom << " ) OR ( g.zmax BETWEEN " << min_zoom << " AND " << max_zoom << " ) OR ( g.zmin <= " << min_zoom << " AND g.zmax >= " << max_zoom << "))" ;
-    sql << "AND _geom_ NOT NULL AND ST_IsValid(_geom_) " ;
+    sql << "AND _geom_ NOT NULL AND ST_IsValid(_geom_)" ;
 
     return sql.str() ;
 }
@@ -645,10 +645,10 @@ bool OSMProcessor::forAllGeometries(const std::string &tableName, const BBox &bb
 
 //        gaiaGeomCollAutoPtr clip_box = makeBoxGeometry(bbox, buffer, 3857) ;
  //       WKBBuffer buffer(clip_box) ;
-        q.bind(1, bbox.minx_) ;
-        q.bind(2, bbox.miny_) ;
-        q.bind(3, bbox.maxx_) ;
-        q.bind(4, bbox.maxy_) ;
+        q.bind(1, bbox.minx_ - buffer) ;
+        q.bind(2, bbox.miny_ - buffer) ;
+        q.bind(3, bbox.maxx_ + buffer) ;
+        q.bind(4, bbox.maxy_ + buffer) ;
         //q.bind(1, buffer.blob()) ;
 
        // cout << sql << endl ;

@@ -38,5 +38,18 @@ ADD_EXECUTABLE(query_poi
 
 TARGET_LINK_LIBRARIES(query_poi sqlite3 ${Boost_LIBRARIES} dl)
 
+ADD_EXECUTABLE(map_info
+    ${SRC_ROOT}/io/mapsforge_map_reader.cpp
+    ${SRC_ROOT}/io/serializer.cpp
+    ${SRC_ROOT}/util/tms.cpp
+
+    ${SRC_ROOT}/util/dictionary.cpp
+    ${SRC_ROOT}/util/dictionary.hpp
+    ${SRC_ROOT}/3rdparty/pugixml/pugixml.cpp
+
+    ${SRC_ROOT}/tools/map_info.cpp)
+
+TARGET_LINK_LIBRARIES(map_info ${Boost_LIBRARIES})
+
 #ADD_EXECUTABLE(test_spirit test_spirit.cpp ${SRC_ROOT}/tools/luapp/impl.cpp)
 #TARGET_LINK_LIBRARIES(test_spirit ${LUA_LIBRARIES} ${LUABIND_LIBRARIES} ${Boost_LIBRARIES})

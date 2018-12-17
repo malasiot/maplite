@@ -3,6 +3,7 @@ import argparse
 from lxml import etree as ET
 import sys, os, codecs
 import datetime
+import time
 import shutil
 import zipfile
 
@@ -70,6 +71,9 @@ class OSMImporter(xml.sax.ContentHandler):
 		ofile = codecs.open('make_maps.sh', 'w', "utf-8") 
 		ofile.write("#!/bin/bash\n\n")
 		ofile.write("wget -O osm/greece-latest.pbf http://download.geofabrik.de/europe/greece-latest.osm.pbf\n\n")
+		
+		st = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+		
 		for seg in self.maps:
 			ofile.write(u'# {0}\n'.format(seg['title']))
 			cmd = "osmosis --read-pbf osm/greece-latest.pbf --bb left=%2.4f top=%2.4f bottom=%2.4f right=%2.4f completeWays=yes completeRelations=yes --write-pbf osm/%s.pbf\n" % ( seg['bbox'][1], seg['bbox'][2], seg['bbox'][0], seg['bbox'][3], seg['id'])
@@ -81,7 +85,7 @@ class OSMImporter(xml.sax.ContentHandler):
 				os.makedirs(cntr_path)
 			cmd = "phyghtmap -a {1:2.4f}:{2:2.4f}:{3:2.4f}:{4:2.4f} -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=1000000000 --start-way-id=1000000000 --pbf --source=view3\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2])
 			ofile.write(cmd) ;
-			cmd = "/home/malasiot/source/maplite/build/src/convert/osm2map --filter filter.cfg --land-polygon land-polygons-split-4326/land_polygons_{0}.shp --bbox \"{1:2.4f} {2:2.4f} {3:2.4f} {4:2.4f}\" --out osm/{0}.map --map-start-position \"{5:2.4f} {6:2.4f}\" --map-start-zoom 14  osm/{0}.pbf contours/{0}/*.pbf\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2], seg['centroid'][0], seg['centroid'][1])
+			cmd = "/home/malasiot/source/maplite/build/src/convert/osm2map --filter filter.cfg --land-polygon land-polygons-split-4326/land_polygons_{0}.shp --bbox \"{1:2.4f} {2:2.4f} {3:2.4f} {4:2.4f}\" --out osm/{0}.map --map-start-position \"{5:2.4f} {6:2.4f}\" --date \"{7}\" --map-start-zoom 14  osm/{0}.pbf mountains.osm contours/{0}/*.pbf\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2], seg['centroid'][0], seg['centroid'][1], st)
 			ofile.write(cmd) ;
 			ofile.write('\n') ;
 

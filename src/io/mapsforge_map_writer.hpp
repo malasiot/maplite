@@ -84,6 +84,7 @@ public:
     void setComment(const std::string &comment) ;
     void setCreator(const std::string &creator) ;
     void setDebug(bool debug);
+    void setDate(const std::string &date_str) ;
 
     void setZoomIntervalConf(const std::string &str) ;
 
