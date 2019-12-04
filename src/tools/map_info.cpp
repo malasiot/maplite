@@ -40,10 +40,8 @@ int main(int argc, char *argv[])
 
     std::time_t btime_ = info.date_/1000.0 ;
 
-
-
-       std::cout.imbue(std::locale(std::cout.getloc(), new boost::posix_time::time_facet("%Y-%m-%d %H:%M:%S")));
-       std::cout << boost::posix_time::from_time_t(btime_) << "\n";
+    std::cout.imbue(std::locale(std::cout.getloc(), new boost::posix_time::time_facet("%Y-%m-%d %H:%M:%S")));
+    std::cout << boost::posix_time::from_time_t(btime_) << "\n";
 
 
        return 0 ;

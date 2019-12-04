@@ -1,5 +1,7 @@
 #include "mapsforge_poi_reader.hpp"
 
+#include <iostream>
+
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
 

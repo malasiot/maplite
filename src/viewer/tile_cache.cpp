@@ -1,5 +1,7 @@
 #include "tile_cache.hpp"
 
+#include <iostream>
+
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/date_time/local_time_adjustor.hpp>

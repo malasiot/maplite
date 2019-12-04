@@ -180,7 +180,7 @@ void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<ve
 
     PrecisionModel pm(PrecisionModel::FLOATING) ;
 
-    GeometryFactory *gfactory = new GeometryFactory(&pm) ;
+    GeometryFactory::unique_ptr gfactory = GeometryFactory::create(&pm) ;
 
     res.resize(geom.size()) ;
 
@@ -216,5 +216,5 @@ void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<ve
 
         delete bgeom ;
     }
-    delete gfactory ;
+
 }

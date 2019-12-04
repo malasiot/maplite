@@ -28,6 +28,27 @@ def getBoundingBox(map_extract, coords):
 	centroid[1] /= count ;
 	return { "box": [min_lat, min_lon, max_lat, max_lon], "centroid": centroid }	
 
+def getPolygon(map_extract, coords):
+	
+	poly = []
+	count = 0 ;
+	for ref in map_extract['refs']:
+		latlon = coords[ref]
+		poly.append(latlon)
+
+	return poly ;
+
+def writePolygon(fileName, coords):
+	file = open(fileName, "w+") 
+	file.write(fileName)
+	file.write('\n') ;
+	file.write("poly\n")
+	for latlon in coords:
+		file.write("   {0} {1}\n".format(latlon[1], latlon[0]) )
+	file.write("END\n") ;
+	file.write("END") ;
+	file.close()
+
 class OSMImporter(xml.sax.ContentHandler):
 	def __init__(self):
 		xml.sax.ContentHandler.__init__(self)
@@ -60,12 +81,14 @@ class OSMImporter(xml.sax.ContentHandler):
 				tags = self.current['tags']
 				if name == "way":
 					bbox = getBoundingBox(self.current, self.coords) ;
+					
 					map_segment = {}
 					map_segment['id'] = tags['id'] ;
 					map_segment['title'] = tags['title'] ;
 					map_segment['desc'] = tags['desc'] ;
 					map_segment['bbox'] = bbox['box'] ;
 					map_segment['centroid'] = bbox['centroid'] ;
+					map_segment['polygon'] = getPolygon(self.current, self.coords);
 					self.maps.append(map_segment);
 	def makeScript(self, dataDir):
 		ofile = codecs.open('make_maps.sh', 'w', "utf-8") 
@@ -75,15 +98,21 @@ class OSMImporter(xml.sax.ContentHandler):
 		st = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 		
 		for seg in self.maps:
+			polyName = "osm/{0}.poly".format(seg['id'])
+			writePolygon(polyName, seg['polygon'])
 			ofile.write(u'# {0}\n'.format(seg['title']))
-			cmd = "osmosis --read-pbf osm/greece-latest.pbf --bb left=%2.4f top=%2.4f bottom=%2.4f right=%2.4f completeWays=yes completeRelations=yes --write-pbf osm/%s.pbf\n" % ( seg['bbox'][1], seg['bbox'][2], seg['bbox'][0], seg['bbox'][3], seg['id'])
+#			cmd = "osmosis --read-pbf osm/greece-latest.pbf --bb left=%2.4f top=%2.4f bottom=%2.4f right=%2.4f completeWays=yes completeRelations=yes --write-pbf osm/%s.pbf\n" % ( seg['bbox'][1], seg['bbox'][2], seg['bbox'][0], seg['bbox'][3], seg['id'])
+			cmd = 'osmosis --read-pbf osm/greece-latest.pbf --bounding-polygon file="%s" completeWays=yes completeRelations=yes --write-pbf osm/%s.pbf\n' % ( polyName, seg['id'])
 			ofile.write(cmd) ;
 			cmd = " ogr2ogr -overwrite -f \"ESRI Shapefile\" land-polygons-split-4326/land_polygons_{0}.shp land-polygons-split-4326/land_polygons.shp -clipsrc {1:2.4f} {2:2.4f} {3:2.4f} {4:2.4f}\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2])
 			ofile.write(cmd) ;
 			cntr_path = "contours/{0}/contours".format(seg['id']) ;
 			if not os.path.exists(cntr_path):
 				os.makedirs(cntr_path)
-			cmd = "phyghtmap -a {1:2.4f}:{2:2.4f}:{3:2.4f}:{4:2.4f} -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=1000000000 --start-way-id=1000000000 --pbf --source=view3\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2])
+#			cmd = "phyghtmap -a {1:2.4f}:{2:2.4f}:{3:2.4f}:{4:2.4f} -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=1000000000 --start-way-id=1000000000 --pbf --source=view3\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2])
+			cmd = 'mkdir -p contours/{0}/\n'.format(seg['id'])
+			ofile.write(cmd) ;
+			cmd = 'phyghtmap --polygon="{1}" -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=1000000000 --start-way-id=1000000000 --pbf --source=view3\n'.format(seg['id'], polyName)
 			ofile.write(cmd) ;
 			cmd = "/home/malasiot/source/maplite/build/src/convert/osm2map --filter filter.cfg --land-polygon land-polygons-split-4326/land_polygons_{0}.shp --bbox \"{1:2.4f} {2:2.4f} {3:2.4f} {4:2.4f}\" --out osm/{0}.map --map-start-position \"{5:2.4f} {6:2.4f}\" --date \"{7}\" --map-start-zoom 14  osm/{0}.pbf mountains.osm contours/{0}/*.pbf\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2], seg['centroid'][0], seg['centroid'][1], st)
 			ofile.write(cmd) ;

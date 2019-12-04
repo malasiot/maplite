@@ -1,5 +1,7 @@
 #include "osm_storage_db.hpp"
 
+#include <iostream>
+
 using namespace std ;
 
 namespace OSM {

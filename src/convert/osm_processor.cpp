@@ -322,6 +322,7 @@ void OSMProcessor::addTags(const TagWriteList &tags, osm_id_t id, osm_feature_t 
 
 void OSMProcessor::addTag(osm_id_t id, osm_feature_t ftype, const string &key, const string &val, uint8_t zmin, uint8_t zmax)
 {
+
     switch ( ftype ) {
     case osm_node_t:
         ntags_.emplace(std::make_pair(id, Tag{key, val, zmin, zmax})) ;
@@ -597,10 +598,11 @@ bool OSMProcessor::processLandPolygon(const string &shp_file, const BBox &clip_b
 
 bool OSMProcessor::addDefaultLandPolygon(const BBox &clip_box)
 {
-    osm_id_t id = 10000000000LL ; // we have to take sure that somehow this is unique
+ /*   osm_id_t id = 10000000000LL ; // we have to take sure that somehow this is unique
 
     write_box_geometry(db_, clip_box, id) ;
     addTag(id, osm_way_t, "natural", "nosea", 0, 255) ;
+    */
 }
 
 
