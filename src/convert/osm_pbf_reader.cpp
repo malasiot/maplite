@@ -143,7 +143,7 @@ bool PBFReader::process_osm_data_dense_nodes(Storage &doc, const PrimitiveGroup 
 
         n.id_ = deltaid ;
 
-        if ( n.id_ < 0 ) std::cout << n.id_ << std::endl ;
+      //  if ( n.id_ < 0 ) std::cout << n.id_ << std::endl ;
 
         if ( l < dense.keys_vals_size() )
         {
