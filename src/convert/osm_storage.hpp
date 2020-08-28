@@ -16,6 +16,7 @@ struct Feature {
 
     osm_id_t id_ ; // feature id
     Dictionary tags_ ; // tags associated with this feature
+    bool delete_ = false ;
 };
 
 struct Node: public Feature {

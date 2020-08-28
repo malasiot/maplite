@@ -27,13 +27,20 @@ bool XMLReader::read(istream &strm, Storage &doc)
                     context = ParseContext::Node ;
                     node.tags_.clear() ;
                     node.id_ = stoll(parser.getAttribute("id")) ;
-                    node.lat_ = stof(parser.getAttribute("lat").c_str()) ;
-                    node.lon_ = stof(parser.getAttribute("lon").c_str()) ;
+                    string action = parser.getAttribute("action") ;
+                    node.delete_ = ( action == "delete" );
+                    if ( !node.delete_ ) {
+                        node.delete_ = false ;
+                        node.lat_ = stof(parser.getAttribute("lat").c_str()) ;
+                        node.lon_ = stof(parser.getAttribute("lon").c_str()) ;
+                    }
                 } else if ( tag == "way" ) {
                     context = ParseContext::Way ;
                     way.tags_.clear() ;
                     way.nodes_.clear() ;
                     way.id_ = stoll(parser.getAttribute("id")) ;
+                    string action = parser.getAttribute("action") ;
+                    way.delete_ = ( action == "delete" );
                 } else if ( tag == "relation" ) {
                     context = ParseContext::Relation ;
                     relation.id_ = stoll(parser.getAttribute("id")) ;
@@ -44,6 +51,8 @@ bool XMLReader::read(istream &strm, Storage &doc)
                     relation.nodes_role_.clear() ;
                     relation.ways_.clear() ;
                     relation.ways_role_.clear() ;
+                    string action = parser.getAttribute("action") ;
+                    way.delete_ = ( action == "delete" );
                 } else if ( tag == "nd" ) {
                     osm_id_t ref = stoll(parser.getAttribute("ref"))  ;
                     way.nodes_.push_back(ref) ;
@@ -82,11 +91,11 @@ bool XMLReader::read(istream &strm, Storage &doc)
             }
             case XmlPullParser::END_TAG: {
                 string tag = parser.getName() ;
-                if ( tag == "node" )
+                if ( tag == "node" && !node.delete_  )
                     doc.writeNode(node) ;
-                else if ( tag == "way" )
+                else if ( tag == "way" && !node.delete_)
                     doc.writeWay(way) ;
-                else if ( tag == "relation" )
+                else if ( tag == "relation" && !node.delete_ )
                     doc.writeRelation(relation) ;
                 break ;
             }
@@ -99,7 +108,8 @@ bool XMLReader::read(istream &strm, Storage &doc)
     catch ( XmlPullParserException &e ) {
         return false ;
     }
-    catch ( std::invalid_argument & ) {
+    catch ( std::invalid_argument &e ) {
+        cout << e.what() << endl ;
         return false ;
     }
     catch ( std::out_of_range & ) {

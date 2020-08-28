@@ -323,6 +323,9 @@ void OSMProcessor::addTags(const TagWriteList &tags, osm_id_t id, osm_feature_t 
 void OSMProcessor::addTag(osm_id_t id, osm_feature_t ftype, const string &key, const string &val, uint8_t zmin, uint8_t zmax)
 {
 
+    if ( ftype == osm_way_t && key == "place" ) {
+        cout << "oke here" << endl ;
+    }
     switch ( ftype ) {
     case osm_node_t:
         ntags_.emplace(std::make_pair(id, Tag{key, val, zmin, zmax})) ;
