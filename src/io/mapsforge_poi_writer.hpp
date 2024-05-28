@@ -69,7 +69,7 @@ private:
 
     void writeMetadata();
     void writeCategories(const POICategoryContainer &categories) ;
-    void writePOIData(OSMProcessor &db, const POICategoryContainer &categories, POIWriteOptions &options) ;
+    void writePOIData(POIWriteOptions &options) ;
 
     POIFileInfo info_ ;
     SQLite::Connection db_ ;

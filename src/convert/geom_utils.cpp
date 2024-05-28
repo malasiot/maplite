@@ -109,13 +109,13 @@ gaiaGeomCollAutoPtr makeMultiPolygon(const OSM::Polygon &poly, OSM::Storage &rea
 }
 
 
-gaiaGeomCollAutoPtr makePoint(const OSM::Node &poi, int srid)
+gaiaGeomCollAutoPtr makePoint(double lon, double lat, int srid)
 {
     gaiaGeomCollPtr geo_pt = gaiaAllocGeomColl();
     geo_pt->DeclaredType = GAIA_POINT ;
     geo_pt->Srid = srid ;
 
-    gaiaAddPointToGeomColl (geo_pt, poi.lon_, poi.lat_);
+    gaiaAddPointToGeomColl (geo_pt, lon, lat);
 
     return gaiaGeomCollAutoPtr(geo_pt) ;
 }

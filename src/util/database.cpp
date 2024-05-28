@@ -83,8 +83,8 @@ void Statement::clear()
 {
      check();
      if ( sqlite3_reset(handle_.get()) != SQLITE_OK ) throwStmtException();
-//    if ( sqlite3_clear_bindings(handle_.get()) != SQLITE_OK ) throwStmtException() ;
-     last_arg_idx_ = 0 ;
+    //if ( sqlite3_clear_bindings(handle_.get()) != SQLITE_OK ) throwStmtException() ;
+    last_arg_idx_ = 0 ;
 }
 
 void Statement::finalize() {
@@ -205,7 +205,9 @@ Statement &Statement::bind(int idx, const string &v){
 
 Statement &Statement::bind(int idx, const Blob &blob){
     check() ;
-    if ( sqlite3_bind_blob(handle_.get(), idx, blob.data(), blob.size(), SQLITE_TRANSIENT ) != SQLITE_OK ) throwStmtException();
+    int rc = sqlite3_bind_blob(handle_.get(), idx, blob.data(), blob.size(), SQLITE_TRANSIENT) ;
+    if ( rc != SQLITE_OK )
+            throwStmtException();
     return *this ;
 }
 

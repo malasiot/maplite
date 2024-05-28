@@ -91,11 +91,12 @@ bool XMLReader::read(istream &strm, Storage &doc)
             }
             case XmlPullParser::END_TAG: {
                 string tag = parser.getName() ;
+
                 if ( tag == "node" && !node.delete_  )
                     doc.writeNode(node) ;
-                else if ( tag == "way" && !node.delete_)
+                else if ( tag == "way" && !way.delete_)
                     doc.writeWay(way) ;
-                else if ( tag == "relation" && !node.delete_ )
+                else if ( tag == "relation" && !way.delete_ )
                     doc.writeRelation(relation) ;
                 break ;
             }

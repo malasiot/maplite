@@ -302,7 +302,7 @@ bool RenderTheme::match(const string &layer_id, const Dictionary &tags, uint8_t 
     LayerPtr layer = get_safe_layer(layer_id) ;
     get_categories(layer, categories) ;
 
-    if ( !layer ) return false ;
+ //   if ( !layer ) return false ;
 
     string key = make_match_key(tags, layer_id, zoom, is_closed, is_way) ;
 

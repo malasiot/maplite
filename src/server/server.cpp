@@ -34,7 +34,7 @@ Server::Server(const std::shared_ptr<RequestHandlerFactory> &handlers, const std
     do_await_stop();
 
     // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
-    boost::asio::ip::tcp::resolver resolver(acceptor_.get_io_service());
+    boost::asio::ip::tcp::resolver resolver(acceptor_.get_io_context());
     boost::asio::ip::tcp::resolver::query query(address, port);
     boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
 

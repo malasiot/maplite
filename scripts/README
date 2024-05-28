@@ -1,0 +1,8 @@
+# how to update maps
+
+# create script make_maps.sh
+python3 make_script.py . 
+# run script
+sh make_maps.sh
+# install maps
+python3 make_maps.py /var/www/hellaspath/data/

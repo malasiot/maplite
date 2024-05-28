@@ -21,6 +21,7 @@ SET ( OSM2MAP_SOURCES
 	${SRC_ROOT}/convert/geom_utils.cpp
 	${SRC_ROOT}/convert/geom_utils.hpp
 
+
 	${SRC_ROOT}/convert/osm_polygon.cpp
 
 	${SRC_ROOT}/convert/osm_pbf_reader.cpp
@@ -88,8 +89,8 @@ SET ( OSM2POI_SOURCES
         ${SRC_ROOT}/convert/tag_filter_rule.hpp
         ${SRC_ROOT}/convert/tag_filter_rule.cpp
 
-        ${SRC_ROOT}/convert/osm_processor.cpp
-        ${SRC_ROOT}/convert/osm_processor.hpp
+        ${SRC_ROOT}/convert/poi_processor.cpp
+        ${SRC_ROOT}/convert/poi_processor.hpp
 
         ${SRC_ROOT}/convert/geom_utils.cpp
         ${SRC_ROOT}/convert/geom_utils.hpp
@@ -143,6 +144,8 @@ SET ( OSM2POI_SOURCES
         ${SRC_ROOT}/util/xml_pull_parser.hpp
         ${SRC_ROOT}/util/xml_pull_parser.cpp
 
+        ${SRC_ROOT}/util/text_util.cpp
+        ${SRC_ROOT}/util/text_util.hpp
 )
 
 SET ( OSM2SQLITE_SOURCES
@@ -252,6 +255,6 @@ LIST(APPEND OSM2POI_SOURCES ${FLEX_TAG_FILTER_SCANNER_OUTPUTS} ${BISON_TAG_FILTE
 )
 
 ADD_EXECUTABLE(osm2poi ${OSM2POI_SOURCES})
-TARGET_LINK_LIBRARIES(osm2poi ${PROTOBUF_LIBRARIES} ${ZLIB_LIBRARIES} sqlite3 ${SPATIALITE_LIBRARY} ${SHAPELIB_LIBRARY} ${Boost_LIBRARIES} ${LUA_LIBRARIES} dl)
+TARGET_LINK_LIBRARIES(osm2poi ${PROTOBUF_LIBRARIES} ${ZLIB_LIBRARIES} sqlite3 ${ICU_LIBRARIES} ${SPATIALITE_LIBRARY} ${SHAPELIB_LIBRARY} ${Boost_LIBRARIES} ${LUA_LIBRARIES} dl)
 
 INSTALL(TARGETS osm2poi DESTINATION bin  )

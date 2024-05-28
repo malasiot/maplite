@@ -12,8 +12,6 @@ void POIWriter::create(const std::string &name)
 
     db_.open(name, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE) ;
 
-    db_.exec("DROP TABLE IF EXISTS poi_categories;");
-    db_.exec("DROP TABLE IF EXISTS poi_category_map;");
     db_.exec("DROP TABLE IF EXISTS poi_data;") ;
     db_.exec("DROP TABLE IF EXISTS metadata;");
     db_.exec("DROP TABLE IF EXISTS poi_key;");
@@ -24,20 +22,18 @@ void POIWriter::create(const std::string &name)
     db_.exec("PRAGMA encoding=\"UTF-8\"") ;
 
     db_.exec("CREATE TABLE metadata (key TEXT, value TEXT)") ;
-    db_.exec("CREATE TABLE poi_categories (id INTEGER, name TEXT, parent INTEGER, PRIMARY KEY (id))") ;
-    db_.exec("CREATE TABLE poi_category_map (id INTEGER, category INTEGER, PRIMARY KEY (id, category));") ;
-    db_.exec("CREATE TABLE poi_data (id INTEGER, tags BLOB, PRIMARY KEY (id))") ;
-    db_.exec("CREATE VIRTUAL TABLE poi_key USING fts5(content)") ;
+    db_.exec("CREATE TABLE poi_data (id INTEGER, name TEXT, name_nrm TEXT, area TEXT, PRIMARY KEY (id))") ;
+    db_.exec("CREATE VIRTUAL TABLE poi_key USING fts5(name_nrm)") ;
     db_.exec("SELECT AddGeometryColumn( 'poi_data', 'geom', 4326, 'POINT', 2);") ;
     db_.exec("SELECT CreateSpatialIndex('poi_data', 'geom');") ;
 
 }
 
-void POIWriter::write(OSMProcessor &db, const POICategoryContainer &categories, POIWriteOptions &options)
+void POIWriter::write(OSMProcessor &proc, const POICategoryContainer &categories, POIWriteOptions &options)
 {
     writeMetadata() ;
-    writeCategories(categories) ;
- //   writePOIData(proc, categories, options) ;
+ //   writeCategories(categories) ;
+    writePOIData(options) ;
 }
 
 void POIWriter::setBoundingBox(const BBox &box) {
@@ -105,38 +101,9 @@ void POIWriter::writeMetadata()
     addMetaData(stmt, true, "version", info_.version_) ;
 }
 
-void POIWriter::writeCategories(const POICategoryContainer &categories)
+void POIWriter::writePOIData(POIWriteOptions &options)
 {
-    // map string ids to numbers
-
-    uint count = 0 ;
-    for ( const auto &cp: categories.categories() ) {
-        string id = cp.first ;
-        cat_id_map_[id] = count++ ;
-    }
-
-    // write poi categories table
-
-    SQLite::Statement cat_insert_sql(db_, "INSERT INTO poi_categories VALUES (?, ?, ?);");
-
-    SQLite::Transaction cat_insert_trans(db_) ;
-
-    for ( const auto &cp: categories.categories() ) {
-        string id = cp.first ;
-        auto cat = cp.second ;
-
-        cat_insert_sql.bind(1, cat_id_map_[id]) ;
-        cat_insert_sql.bind(2, cat->title()) ;
-        auto parent = cat->parent() ;
-        if ( parent )
-            cat_insert_sql.bind(3, cat_id_map_[parent->ID()]);
-        else
-            cat_insert_sql.bind(3, SQLite::Nil);
-
-        cat_insert_sql.exec() ;
-        cat_insert_sql.clear() ;
-    }
-
-    cat_insert_trans.commit() ;
-
+    SQLite::Query q(db_, "SELECT * FROM ") ;
 }
+
+

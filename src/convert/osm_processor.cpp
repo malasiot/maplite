@@ -46,7 +46,7 @@ bool OSMProcessor::createGeometriesTable(const std::string &desc)
         string sql ;
 
         sql = "CREATE TABLE geom_" + desc;
-        sql += " (osm_id INTEGER PRIMARY KEY, osm_type INTEGER, zmin INTEGER, zmax INTEGER)" ;
+        sql += " (osm_id INTEGER, osm_type INTEGER, zmin INTEGER, zmax INTEGER, UNIQUE(osm_id, osm_type) ON CONFLICT ABORT)" ;
 
         SQLite::Statement(db_, sql).exec() ;
 
@@ -186,6 +186,8 @@ bool OSMProcessor::addLineGeometry(SQLite::Statement &cmd, OSM::Storage &reader,
         gaiaGeomCollAutoPtr geo_line = makeLineString(way, reader) ;
         if ( geo_line == nullptr ) return false ;
 
+        cmd.clear() ;
+
         WKBBuffer buffer(geo_line) ;
 
         cmd.bindm(buffer.blob(), way.id_, osm_way_t, zmin, zmax) ;
@@ -207,6 +209,8 @@ bool OSMProcessor::addMultiLineGeometry(SQLite::Statement &cmd, OSM::Storage &re
         gaiaGeomCollAutoPtr geo_mline = makeMultiLineString(ways, reader) ;
         if ( geo_mline == nullptr ) return false ;
 
+        cmd.clear() ;
+
         WKBBuffer buffer(geo_mline) ;
         cmd.bindm(buffer.blob(), id, ftype, zmin, zmax) ;
         cmd.exec() ;
@@ -222,16 +226,24 @@ bool OSMProcessor::addMultiLineGeometry(SQLite::Statement &cmd, OSM::Storage &re
 bool OSMProcessor::addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi, uint8_t zmin, uint8_t zmax)
 {
     try {
-        gaiaGeomCollAutoPtr geo_pt = makePoint(poi) ;
+
+        if ( poi.id_== 11238827505 ) {
+            cerr << "break here" ;
+        }
+
+        cmd.clear() ;
+
+        gaiaGeomCollAutoPtr geo_pt = makePoint(poi.lon_, poi.lat_) ;
         WKBBuffer buffer(geo_pt) ;
         cmd.bindm(buffer.blob(), poi.id_, osm_node_t, zmin, zmax) ;
         cmd.exec() ;
-        cmd.clear() ;
+
         return true ;
 
     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
+
         return false ;
     }
 }
@@ -243,12 +255,17 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Statement &cmd, OSM::Storage &read
     try {
         gaiaGeomCollAutoPtr geom ;
 
+        if ( id == 707878039 ) {
+            cout << "break here" << endl ;
+        }
         if ( poly.rings_.size() == 1 )  // simple polygon case
             geom = makeSimplePolygon(poly.rings_[0], reader) ;
         else  // multipolygon, use gaiaPolygonize to find outer and inner rings
             geom = makeMultiPolygon(poly, reader) ;
 
         if ( geom ) {
+            cmd.clear() ;
+
             WKBBuffer buffer(geom) ;
             cmd.bindm(buffer.blob(), id, ftype, zmin, zmax) ;
             cmd.exec() ;
@@ -262,6 +279,7 @@ bool OSMProcessor::addPolygonGeometry(SQLite::Statement &cmd, OSM::Storage &read
     }
     catch ( SQLite::Exception &e ) {
         cerr << e.what() << endl ;
+
         return false ;
     }
 }
@@ -323,9 +341,6 @@ void OSMProcessor::addTags(const TagWriteList &tags, osm_id_t id, osm_feature_t 
 void OSMProcessor::addTag(osm_id_t id, osm_feature_t ftype, const string &key, const string &val, uint8_t zmin, uint8_t zmax)
 {
 
-    if ( ftype == osm_way_t && key == "place" ) {
-        cout << "oke here" << endl ;
-    }
     switch ( ftype ) {
     case osm_node_t:
         ntags_.emplace(std::make_pair(id, Tag{key, val, zmin, zmax})) ;

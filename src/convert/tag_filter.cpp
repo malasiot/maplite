@@ -176,10 +176,6 @@ bool TagFilter::match(TagFilterContext &ctx, uint8_t &zmin, uint8_t &zmax) {
 
     bool cont = false;
 
-    if ( ctx.type_ == TagFilterContext::FeatureType::Way && ctx.tags_.contains("place") ) {
-        cout << "ok here" << endl ;
-    }
-
     for( const RulePtr &rule: rules_ ) {
         if ( matchRule( rule, ctx, cont) ) {
             if ( !cont ) break ;
@@ -188,3 +184,4 @@ bool TagFilter::match(TagFilterContext &ctx, uint8_t &zmin, uint8_t &zmax) {
 
     return normalize_tags(ctx.tw_, zmin, zmax)  ;
 }
+

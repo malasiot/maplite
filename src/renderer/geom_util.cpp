@@ -180,12 +180,12 @@ void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<ve
 
     PrecisionModel pm(PrecisionModel::FLOATING) ;
 
-    GeometryFactory::unique_ptr gfactory = GeometryFactory::create(&pm) ;
+    GeometryFactory::Ptr gfactory = GeometryFactory::create(&pm) ;
 
     res.resize(geom.size()) ;
 
     for( uint j=0 ; j<geom.size() ; j++ ) {
-        CoordinateSequence *cl = new CoordinateArraySequence();
+        CoordinateArraySequence *cl = new CoordinateArraySequence();
 
         for( uint i=0 ; i<geom[j].size() ; i++ ) {
             const Coord &c = geom[j][i] ;
@@ -203,7 +203,7 @@ void offset_geometry(const vector<vector<Coord>> &geom, double offset, vector<ve
 
         delete cl ;
 
-        CoordinateSequence *seq = bgeom->getCoordinates() ;
+        CoordinateSequence *seq = bgeom->getCoordinates().get() ;
 
         if ( seq->size() == 0 ) return ;
 

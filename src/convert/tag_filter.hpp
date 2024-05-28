@@ -19,6 +19,8 @@ public:
     // returns false if no actions are found
     bool match(TagFilterContext &ctx, uint8_t &zmin, uint8_t &zmax);
 
+    bool matchPOI(TagFilterContext &ctx) ;
+
 private:
 
     std::deque<tag_filter::RulePtr> rules_ ;

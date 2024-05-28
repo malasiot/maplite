@@ -92,6 +92,7 @@ MapServerHandlerFactory::MapServerHandlerFactory(const string &cfg_file, const s
             }
         }
         catch ( fs::filesystem_error &e ) {
+            cout << e.what() << endl ;
             LOG_WARN(e.what()) ;
             return ;
         }

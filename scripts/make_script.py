@@ -6,8 +6,20 @@ import datetime
 import time
 import shutil
 import zipfile
+import hashlib
 
 downloadUrl = "https://vision.iti.gr/hellaspath/data/maps/" ;
+
+def md5(fileName):
+	digest = hashlib.md5()
+	buf_size = 65536
+	with open(fileName, 'rb') as f:
+		data = f.read(buf_size)
+		while data:
+			digest.update(data)
+			data = f.read(buf_size)
+	
+	return digest.hexdigest()
 
 def getBoundingBox(map_extract, coords):
 	
@@ -112,9 +124,9 @@ class OSMImporter(xml.sax.ContentHandler):
 #			cmd = "phyghtmap -a {1:2.4f}:{2:2.4f}:{3:2.4f}:{4:2.4f} -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=1000000000 --start-way-id=1000000000 --pbf --source=view3\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2])
 			cmd = 'mkdir -p contours/{0}/\n'.format(seg['id'])
 			ofile.write(cmd) ;
-			cmd = 'phyghtmap --polygon="{1}" -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=1000000000 --start-way-id=1000000000 --pbf --source=view3\n'.format(seg['id'], polyName)
+			cmd = 'phyghtmap --polygon="{1}" -s 20 -0 -o contours/{0}/contours -c 1000,100 --start-node-id=20000000000 --start-way-id=20000000000 --pbf --source=srtm1 --srtm-version=3.0 --earthexplorer-user=malasiot --earthexplorer-password="5&|a?GfF%Tu&TXV"\n'.format(seg['id'], polyName)
 			ofile.write(cmd) ;
-			cmd = "/home/malasiot/source/maplite/build/src/convert/osm2map --filter filter.cfg --land-polygon land-polygons-split-4326/land_polygons_{0}.shp --bbox \"{1:2.4f} {2:2.4f} {3:2.4f} {4:2.4f}\" --out osm/{0}.map --map-start-position \"{5:2.4f} {6:2.4f}\" --date \"{7}\" --map-start-zoom 14  osm/{0}.pbf mountains.osm contours/{0}/*.pbf\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2], seg['centroid'][0], seg['centroid'][1], st)
+			cmd = "/home/malasiot/source/maplite/build/src/convert/osm2map --filter filter.cfg --land-polygon land-polygons-split-4326/land_polygons_{0}.shp --bbox \"{1:2.4f} {2:2.4f} {3:2.4f} {4:2.4f}\" --out osm/{0}.map --map-start-position \"{5:2.4f} {6:2.4f}\" --date \"{7}\" --map-start-zoom 14  osm/{0}.pbf mountains.osm contours/{0}/*srtm1v3.0.osm.pbf\n".format(seg['id'], seg['bbox'][1], seg['bbox'][0], seg['bbox'][3], seg['bbox'][2], seg['centroid'][0], seg['centroid'][1], st)
 			ofile.write(cmd) ;
 			ofile.write('\n') ;
 
@@ -125,9 +137,17 @@ class OSMImporter(xml.sax.ContentHandler):
 			inFile = 'osm/' + seg['id'] + ".map"
 			zf = zipfile.ZipFile(outFile, "w", zipfile.ZIP_DEFLATED)
 			zf.write(inFile, seg['id'] + ".map")
+			zf.close() ;
 #			shutil.copyfile(inFile, outFile)
 			fileSize = os.path.getsize(outFile) >> 20
 			emap = ET.SubElement(root, "MapsforgeTileSource", attrib={"id": seg['id']})
+			print(outFile)
+			md5hash = md5(outFile)
+#			md5hash = hashlib.md5(open(outFile,'rb').read()).hexdigest()
+			print(md5hash)
+			hashElement = ET.SubElement(emap, "hash")
+			hashElement.text = md5hash
+			hashElement.tail = '\n'
 			downloadUrlElement = ET.SubElement(emap, "downloadUrl") ;
 			downloadUrlElement.text = downloadUrl + seg['id'] + ".zip" ;
 			localFileName = ET.SubElement(emap, "localFileName") ;

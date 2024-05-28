@@ -239,7 +239,7 @@ bool OSMConverter::addMultiLineGeometry(SQLite::Statement &cmd, OSM::Storage &re
 bool OSMConverter::addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi)
 {
     try {
-        gaiaGeomCollAutoPtr geo_pt = makePoint(poi) ;
+        gaiaGeomCollAutoPtr geo_pt = makePoint(poi.lon_, poi.lat_) ;
         WKBBuffer buffer(geo_pt) ;
 
         cmd.bind(buffer.blob()) ;
@@ -264,7 +264,7 @@ bool OSMConverter::addPointGeometry(SQLite::Statement &cmd, const OSM::Node &poi
 }
 
 
-bool OSMConverter::addPolygonGeometry(SQLite::Statement &cmd, OSM::Storage &reader, const OSM::Polygon &poly, osm_id_t id, osm_feature_t ftype)
+bool OSMConverter::addPolygonGeometry(SQLite::Statement &cmd, OSM::Storage &reader, const OSM::Polygon &poly, const Dictionary &tags, osm_id_t id, osm_feature_t ftype)
 {
     try {
         gaiaGeomCollAutoPtr geom ;
@@ -282,8 +282,8 @@ bool OSMConverter::addPolygonGeometry(SQLite::Statement &cmd, OSM::Storage &read
             cmd.bind(ftype) ;
 
             for ( const string &tag: tags_ ) {
-                if ( poly.tags_.contains(tag) ) {
-                    cmd.bind(poly.tags_.get(tag)) ;
+                if ( tags.contains(tag) ) {
+                    cmd.bind(tags.get(tag)) ;
                 } else
                     cmd.bind(SQLite::Nil) ;
             }
@@ -370,7 +370,7 @@ bool OSMConverter::processOsmFile(const string &osm_file)
                 if ( !storage.makePolygonsFromRelation(relation, polygon) ) return ;
 
                 if ( !polygon.rings_.empty() ) {
-                    addPolygonGeometry(cmd_polygons, storage, polygon, relation.id_, osm_relation_t) ;
+                    addPolygonGeometry(cmd_polygons, storage, polygon, relation.tags_, relation.id_, osm_relation_t) ;
  //                   addTags(ctx.tw_, relation.id_, osm_relation_t) ;
                 }
             }
@@ -396,7 +396,7 @@ bool OSMConverter::processOsmFile(const string &osm_file)
                 ring.nodes_.insert(ring.nodes_.end(), way.nodes_.begin(), way.nodes_.end()) ;
                 poly.rings_.push_back(ring) ;
 
-                addPolygonGeometry(cmd_polygons, storage, poly, way.id_, osm_way_t) ;
+                addPolygonGeometry(cmd_polygons, storage, poly, way.tags_, way.id_, osm_way_t) ;
  //               addTags(ctx.tw_, way.id_, osm_way_t) ;
             }
             else {
